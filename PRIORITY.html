@@ -150,6 +150,33 @@ input:focus, .select:focus, textarea:focus {
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
+/* ---------- Pestañas ---------- */
+.tabs-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 4px 24px 0; flex-wrap: wrap;
+}
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.tab {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid var(--border); border-bottom: none;
+  background: var(--surface-2);
+  border-radius: 10px 10px 0 0;
+  padding: 9px 16px; font-size: 13.5px; font-weight: 700;
+  color: var(--muted); cursor: pointer; position: relative; top: 1px;
+}
+.tab:hover { background: #eef2fb; color: var(--text); }
+.tab.active {
+  background: var(--surface); color: var(--primary);
+  border-color: var(--border);
+  box-shadow: 0 -2px 0 var(--primary) inset;
+}
+.tab-count {
+  background: var(--border); color: var(--text);
+  border-radius: 999px; padding: 1px 8px; font-size: 11px; font-weight: 700;
+}
+.tab.active .tab-count { background: var(--primary-soft); color: var(--primary); }
+.pest-badge { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+
 /* ---------- Table ---------- */
 .table-wrap {
   margin: 0 24px 24px;
@@ -460,6 +487,14 @@ select.cell-editor { cursor: pointer; }
     </div>
   </section>
 
+  <!-- Pestañas -->
+  <section class="tabs-bar">
+    <div class="tabs" id="tabs"></div>
+    <button id="btn-jalar" class="btn btn-primary btn-sm" title="Mueve a la pestaña «Mi trabajo» los requerimientos marcados como «a mi cargo»">
+      ⇄ Traer a mi trabajo (los que tengo a mi cargo)
+    </button>
+  </section>
+
   <!-- Filtros -->
   <section class="toolbar">
     <div class="search">
@@ -491,6 +526,7 @@ select.cell-editor { cursor: pointer; }
       <thead>
         <tr>
           <th data-sort="nro" class="num">N°</th>
+          <th data-sort="pestana">Pestaña</th>
           <th data-sort="aCargo">A cargo</th>
           <th data-sort="prioridad">Prioridad</th>
           <th data-sort="estado">Estado</th>
@@ -543,6 +579,10 @@ select.cell-editor { cursor: pointer; }
 
         <h3 class="form-section">Identificación</h3>
         <div class="grid-form">
+          <label class="field">
+            <span>Pestaña</span>
+            <select id="f-pestana" class="select"></select>
+          </label>
           <label class="field field-narrow">
             <span>N°</span>
             <input type="text" id="f-nro" placeholder="Correlativo" />
@@ -693,7 +733,7 @@ select.cell-editor { cursor: pointer; }
 
   <script>
 /* PRIORITY · Seguimiento de Requerimientos · Logística UPROG
-   App 100% local: los datos y la configuración se guardan en localStorage. */
+   App 100% local: datos, configuración y pestañas se guardan en localStorage. */
 
 (function () {
   "use strict";
@@ -701,31 +741,32 @@ select.cell-editor { cursor: pointer; }
   // ---------- Claves de almacenamiento ----------
   const STORAGE_KEY = "priority_requerimientos_v1";
   const CONFIG_KEY = "priority_config_v1";
+  const TABS_KEY = "priority_tabs_v1";
+  const ACTIVA_KEY = "priority_tab_activa";
 
   // Campos para exportar / importar CSV
   const CAMPOS_CSV = [
-    "nro", "fechaIngreso", "expLogistica", "expDireccion", "docArea",
+    "nro", "pestana", "fechaIngreso", "expLogistica", "expDireccion", "docArea",
     "areaEstrategica", "areaUsuaria", "tipo", "denominacion", "item",
     "especialista", "fechaPase", "estado", "prioridad", "observaciones",
     "tengoExp", "aCargo",
   ];
 
   const ENCABEZADOS_CSV = {
-    nro: "N°", fechaIngreso: "Fecha ingreso a UPROG", expLogistica: "N° Exp. Logística",
-    expDireccion: "N° Exp. Dirección", docArea: "N° de documento del área",
-    areaEstrategica: "Área usuaria estratégica", areaUsuaria: "Área usuaria",
-    tipo: "Tipo", denominacion: "Denominación del requerimiento", item: "Ítem",
-    especialista: "Especialista a cargo", fechaPase: "Fecha de pase a especialista",
+    nro: "N°", pestana: "Pestaña", fechaIngreso: "Fecha ingreso a UPROG",
+    expLogistica: "N° Exp. Logística", expDireccion: "N° Exp. Dirección",
+    docArea: "N° de documento del área", areaEstrategica: "Área usuaria estratégica",
+    areaUsuaria: "Área usuaria", tipo: "Tipo", denominacion: "Denominación del requerimiento",
+    item: "Ítem", especialista: "Especialista a cargo", fechaPase: "Fecha de pase a especialista",
     estado: "Estado del requerimiento", prioridad: "Prioridad",
-    observaciones: "Observaciones", tengoExp: "¿Tengo el expediente?",
-    aCargo: "¿A mi cargo?",
+    observaciones: "Observaciones", tengoExp: "¿Tengo el expediente?", aCargo: "¿A mi cargo?",
   };
 
   // Tipo de editor en línea por campo (lo no listado es texto)
   const FIELD_EDITOR = {
     fechaIngreso: "date", fechaPase: "date",
     prioridad: "select", estado: "select", tipo: "select",
-    aCargo: "select", tengoExp: "select",
+    aCargo: "select", tengoExp: "select", pestana: "select",
   };
 
   // Listas configurables por defecto (el usuario puede cambiarlas en ⚙ Configurar)
@@ -753,6 +794,11 @@ select.cell-editor { cursor: pointer; }
     ],
   };
 
+  const DEF_TABS = [
+    { id: "t1", nombre: "Heredados" },
+    { id: "t2", nombre: "Mi trabajo" },
+  ];
+
   const PALETA = ["#3b56d6", "#1f9d57", "#c77700", "#d63b4b", "#7b3fd1", "#2f5fd0",
     "#b03a78", "#15824a", "#8a5a00", "#0f8a8a", "#6b7280", "#c0392b"];
 
@@ -765,6 +811,8 @@ select.cell-editor { cursor: pointer; }
   let items = [];
   let config = clone(DEF_CONFIG);
   let configDraft = null;
+  let tabs = clone(DEF_TABS);
+  let pestanaActiva = "t1";
   const filtro = { q: "", cargo: "", estado: "", prioridad: "", tipo: "", tengo: "" };
   const orden = { key: "nro", dir: "asc" };
 
@@ -823,6 +871,58 @@ select.cell-editor { cursor: pointer; }
     return `background:rgba(${r},${g},${b},0.15);color:rgb(${t(r)},${t(g)},${t(b)})`;
   }
 
+  // ---------- Pestañas ----------
+  function cargarTabs() {
+    try {
+      const raw = localStorage.getItem(TABS_KEY);
+      const t = raw ? JSON.parse(raw) : null;
+      tabs = (Array.isArray(t) && t.length >= 2) ? t : clone(DEF_TABS);
+    } catch (e) { tabs = clone(DEF_TABS); }
+    try { pestanaActiva = localStorage.getItem(ACTIVA_KEY) || tabs[0].id; }
+    catch (e) { pestanaActiva = tabs[0].id; }
+    if (!tabs.some((t) => t.id === pestanaActiva)) pestanaActiva = tabs[0].id;
+  }
+  function guardarTabs() {
+    try { localStorage.setItem(TABS_KEY, JSON.stringify(tabs)); } catch (e) {}
+  }
+  function tabNombre(id) {
+    const t = tabs.find((x) => x.id === id);
+    return t ? t.nombre : "—";
+  }
+  function idTabPorNombre(nombre) {
+    if (!nombre) return tabs[0].id;
+    const t = tabs.find((x) => x.nombre.toLowerCase() === nombre.trim().toLowerCase());
+    return t ? t.id : tabs[0].id;
+  }
+  function setPestana(id) {
+    pestanaActiva = id;
+    try { localStorage.setItem(ACTIVA_KEY, id); } catch (e) {}
+    render();
+  }
+  function renombrarTab(id) {
+    const t = tabs.find((x) => x.id === id);
+    if (!t) return;
+    const nuevo = prompt("Nombre de la pestaña:", t.nombre);
+    if (nuevo === null) return;
+    const v = nuevo.trim();
+    if (!v) return;
+    t.nombre = v;
+    guardarTabs(); render();
+    toast("Pestaña renombrada.");
+  }
+  function jalarACargo() {
+    const destino = tabs[1] ? tabs[1].id : "t2";
+    let n = 0;
+    items.forEach((it) => {
+      if ((it.aCargo || "") === "SÍ" && it.pestana !== destino) { it.pestana = destino; n++; }
+    });
+    if (n) guardar();
+    setPestana(destino);
+    toast(n
+      ? `Se trajeron ${n} requerimientos a «${tabNombre(destino)}».`
+      : "No hay requerimientos marcados «a mi cargo» para traer. Márcalos primero en la columna «A cargo».");
+  }
+
   // ---------- Persistencia ----------
   function cargar() {
     try {
@@ -830,6 +930,10 @@ select.cell-editor { cursor: pointer; }
       items = raw ? JSON.parse(raw) : [];
       if (!Array.isArray(items)) items = [];
     } catch (e) { items = []; }
+    // Migración: requerimientos sin pestaña van a la primera
+    let changed = false;
+    items.forEach((it) => { if (!it.pestana) { it.pestana = tabs[0].id; changed = true; } });
+    if (changed) guardar();
   }
   function guardar() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
@@ -883,6 +987,7 @@ select.cell-editor { cursor: pointer; }
   function visibles() {
     const q = filtro.q.trim().toLowerCase();
     let lista = items.filter((it) => {
+      if (it.pestana !== pestanaActiva) return false;
       if (filtro.cargo) {
         const v = it.aCargo || "";
         if (filtro.cargo === "__sin") { if (v !== "") return false; }
@@ -921,39 +1026,55 @@ select.cell-editor { cursor: pointer; }
   }
 
   // ---------- Render ----------
-  function render() { renderKpis(); renderTabla(); renderCabeceraOrden(); }
+  function render() { renderTabs(); renderKpis(); renderTabla(); renderCabeceraOrden(); }
+
+  function renderTabs() {
+    const cont = $("#tabs");
+    cont.innerHTML = tabs.map((t) => {
+      const count = items.filter((it) => it.pestana === t.id).length;
+      return `<button class="tab ${t.id === pestanaActiva ? "active" : ""}" data-tab="${t.id}" title="Doble clic para renombrar">
+        <span class="tab-name">${esc(t.nombre)}</span><span class="tab-count">${count}</span>
+      </button>`;
+    }).join("");
+  }
 
   function renderKpis() {
     const top = prioridadTop();
-    $("#kpi-total").textContent = items.length;
-    $("#kpi-cargo").textContent = items.filter((it) => (it.aCargo || "") === "SÍ").length;
-    $("#kpi-alta").textContent = items.filter((it) => it.prioridad === top).length;
+    const tabItems = items.filter((it) => it.pestana === pestanaActiva);
+    $("#kpi-total").textContent = tabItems.length;
+    $("#kpi-cargo").textContent = tabItems.filter((it) => (it.aCargo || "") === "SÍ").length;
+    $("#kpi-alta").textContent = tabItems.filter((it) => it.prioridad === top).length;
     $("#kpi-alta-label").textContent = "Prioridad " + (top || "—").toLowerCase();
-    $("#kpi-sinexp").textContent = items.filter((it) => (it.tengoExp || "") === "NO").length;
-    $("#kpi-pend").textContent = items.filter((it) => !it.estado || it.estado === defEstado()).length;
+    $("#kpi-sinexp").textContent = tabItems.filter((it) => (it.tengoExp || "") === "NO").length;
+    $("#kpi-pend").textContent = tabItems.filter((it) => !it.estado || it.estado === defEstado()).length;
   }
 
   function renderTabla() {
     const lista = visibles();
     const tbody = $("#tbody");
     const vacio = $("#vacio");
+    const tabTotal = items.filter((it) => it.pestana === pestanaActiva).length;
 
     if (!lista.length) {
-      if (items.length === 0) { tbody.innerHTML = ""; vacio.classList.remove("hidden"); }
-      else {
+      if (items.length === 0) {
+        tbody.innerHTML = ""; vacio.classList.remove("hidden");
+      } else {
         vacio.classList.add("hidden");
-        tbody.innerHTML = `<tr><td colspan="18" class="empty" style="padding:34px">Ningún requerimiento coincide con los filtros.</td></tr>`;
+        const msg = tabTotal === 0
+          ? `La pestaña «${esc(tabNombre(pestanaActiva))}» aún no tiene requerimientos. Usa «⇄ Traer a mi trabajo» o «+ Nuevo requerimiento».`
+          : "Ningún requerimiento coincide con los filtros.";
+        tbody.innerHTML = `<tr><td colspan="19" class="empty" style="padding:34px">${msg}</td></tr>`;
       }
-      $("#footer-count").textContent = `${items.length} requerimiento${items.length === 1 ? "" : "s"}`;
+      $("#footer-count").textContent = `${tabTotal} en «${tabNombre(pestanaActiva)}»`;
       return;
     }
     vacio.classList.add("hidden");
     tbody.innerHTML = lista.map(filaHTML).join("");
 
-    const total = items.length, mostrados = lista.length;
-    $("#footer-count").textContent = mostrados === total
-      ? `${total} requerimiento${total === 1 ? "" : "s"}`
-      : `${mostrados} de ${total} requerimientos`;
+    const mostrados = lista.length;
+    $("#footer-count").textContent = mostrados === tabTotal
+      ? `${tabTotal} en «${tabNombre(pestanaActiva)}»`
+      : `${mostrados} de ${tabTotal} en «${tabNombre(pestanaActiva)}»`;
   }
 
   function filaHTML(it) {
@@ -973,6 +1094,7 @@ select.cell-editor { cursor: pointer; }
     return `
       <tr class="${vieja ? "row-vieja" : ""} ${cargo === "SÍ" ? "row-cargo" : ""}">
         ${ed("nro", esc(it.nro) || GUION, "num cell-strong")}
+        ${ed("pestana", `<span class="badge pest-badge">${esc(tabNombre(it.pestana))}</span>`)}
         ${ed("aCargo", cargoBadge)}
         ${ed("prioridad", badge(it.prioridad, COL.prioridad))}
         ${ed("estado", badge(it.estado, COL.estado))}
@@ -1020,12 +1142,17 @@ select.cell-editor { cursor: pointer; }
 
     if (tipo === "select") {
       editor = document.createElement("select");
-      let ops = opcionesDe(field);
-      if (actual && ops.indexOf(actual) === -1) ops = [actual].concat(ops);
-      ops.forEach((o) => {
+      let pares;
+      if (field === "pestana") pares = tabs.map((t) => [t.id, t.nombre]);
+      else {
+        let ops = opcionesDe(field);
+        if (actual && ops.indexOf(actual) === -1) ops = [actual].concat(ops);
+        pares = ops.map((o) => [o, o || "—"]);
+      }
+      pares.forEach(([val, lab]) => {
         const op = document.createElement("option");
-        op.value = o; op.textContent = o || "—";
-        if (actual === o) op.selected = true;
+        op.value = val; op.textContent = lab;
+        if (actual === val) op.selected = true;
         editor.appendChild(op);
       });
     } else {
@@ -1067,12 +1194,13 @@ select.cell-editor { cursor: pointer; }
     }
   }
 
-  // ---------- Modal requerimiento (crear / editar completo) ----------
+  // ---------- Modal requerimiento ----------
   function abrirModal(id) {
     const it = id ? items.find((x) => x.id === id) : null;
     $("#modal-titulo").textContent = it ? "Editar requerimiento" : "Nuevo requerimiento";
     const set = (sel, val) => { $(sel).value = val == null ? "" : val; };
     $("#f-id").value = it ? it.id : "";
+    set("#f-pestana", it ? it.pestana : pestanaActiva);
     set("#f-nro", it ? it.nro : nextNro());
     set("#f-fechaIngreso", it ? it.fechaIngreso : hoyISO());
     set("#f-expLogistica", it ? it.expLogistica : "");
@@ -1100,6 +1228,7 @@ select.cell-editor { cursor: pointer; }
     const expLogistica = $("#f-expLogistica").value.trim();
     if (!expLogistica) { toast("El N° de Exp. Logística es obligatorio."); return; }
     const datos = {
+      pestana: $("#f-pestana").value,
       nro: $("#f-nro").value.trim(),
       fechaIngreso: $("#f-fechaIngreso").value,
       expLogistica,
@@ -1250,10 +1379,11 @@ select.cell-editor { cursor: pointer; }
     if (/[",\n;]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
     return s;
   }
+  function valorCSV(it, c) { return c === "pestana" ? tabNombre(it.pestana) : it[c]; }
   function exportarCSV() {
     if (!items.length) { toast("No hay requerimientos para exportar."); return; }
     const cabecera = CAMPOS_CSV.map((c) => csvCampo(ENCABEZADOS_CSV[c])).join(",");
-    const filas = items.map((it) => CAMPOS_CSV.map((c) => csvCampo(it[c])).join(","));
+    const filas = items.map((it) => CAMPOS_CSV.map((c) => csvCampo(valorCSV(it, c))).join(","));
     const contenido = "﻿" + [cabecera].concat(filas).join("\r\n");
     const blob = new Blob([contenido], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -1322,6 +1452,7 @@ select.cell-editor { cursor: pointer; }
       if (!exp && !item && !den) continue;
       items.push({
         id: uid(),
+        pestana: idTabPorNombre(get("pestana")),
         nro: get("nro") || nextNro(),
         fechaIngreso: normalizarFecha(get("fechaIngreso")),
         expLogistica: exp, expDireccion: get("expDireccion"), docArea: get("docArea"),
@@ -1346,11 +1477,11 @@ select.cell-editor { cursor: pointer; }
     let n = 0;
     DATOS_JUNIO.forEach((d) => {
       if (existentes.has(String(d.expLogistica))) return;
-      items.push(Object.assign({ id: uid(), creado: Date.now(), aCargo: "" }, d));
+      items.push(Object.assign({ id: uid(), creado: Date.now(), aCargo: "", pestana: tabs[0].id }, d));
       n++;
     });
     guardar(); render();
-    toast(n ? `Cargados ${n} requerimientos de junio.` : "Tus datos de junio ya estaban cargados.");
+    toast(n ? `Cargados ${n} requerimientos de junio en «${tabNombre(tabs[0].id)}».` : "Tus datos de junio ya estaban cargados.");
   }
   function borrarTodo() {
     if (!items.length) { toast("No hay datos para borrar."); return; }
@@ -1373,6 +1504,7 @@ select.cell-editor { cursor: pointer; }
     $("#f-tipo").innerHTML = optList(config.tipos);
     $("#f-estado").innerHTML = optList(config.estados);
     $("#f-prioridad").innerHTML = optList(config.prioridades);
+    $("#f-pestana").innerHTML = tabs.map((t) => `<option value="${t.id}">${esc(t.nombre)}</option>`).join("");
     $("#filtro-estado").innerHTML = '<option value="">Todo estado</option>' + optList(config.estados);
     $("#filtro-prioridad").innerHTML = '<option value="">Toda prioridad</option>' + optList(config.prioridades);
     $("#filtro-tipo").innerHTML = '<option value="">Todo tipo</option>' + optList(config.tipos);
@@ -1388,10 +1520,19 @@ select.cell-editor { cursor: pointer; }
     $("#btn-nuevo-2").addEventListener("click", () => abrirModal(null));
     $("#btn-junio").addEventListener("click", cargarJunio);
     $("#btn-junio-2").addEventListener("click", cargarJunio);
+    $("#btn-jalar").addEventListener("click", jalarACargo);
     $("#modal-close").addEventListener("click", cerrarModal);
     $("#btn-cancelar").addEventListener("click", cerrarModal);
     $("#form").addEventListener("submit", guardarDesdeForm);
     $("#modal").addEventListener("click", (e) => { if (e.target.id === "modal") cerrarModal(); });
+
+    // Pestañas
+    $("#tabs").addEventListener("click", (e) => {
+      const b = e.target.closest(".tab"); if (b) setPestana(b.getAttribute("data-tab"));
+    });
+    $("#tabs").addEventListener("dblclick", (e) => {
+      const b = e.target.closest(".tab"); if (b) renombrarTab(b.getAttribute("data-tab"));
+    });
 
     // Edición en línea y eliminación (delegación en el tbody)
     $("#tbody").addEventListener("click", (e) => {
@@ -1446,6 +1587,7 @@ select.cell-editor { cursor: pointer; }
   }
 
   document.addEventListener("DOMContentLoaded", () => {
+    cargarTabs();
     cargarConfig();
     poblarSelects();
     conectarEventos();

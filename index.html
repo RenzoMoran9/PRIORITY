@@ -48,6 +48,14 @@
     </div>
   </section>
 
+  <!-- Pestañas -->
+  <section class="tabs-bar">
+    <div class="tabs" id="tabs"></div>
+    <button id="btn-jalar" class="btn btn-primary btn-sm" title="Mueve a la pestaña «Mi trabajo» los requerimientos marcados como «a mi cargo»">
+      ⇄ Traer a mi trabajo (los que tengo a mi cargo)
+    </button>
+  </section>
+
   <!-- Filtros -->
   <section class="toolbar">
     <div class="search">
@@ -79,6 +87,7 @@
       <thead>
         <tr>
           <th data-sort="nro" class="num">N°</th>
+          <th data-sort="pestana">Pestaña</th>
           <th data-sort="aCargo">A cargo</th>
           <th data-sort="prioridad">Prioridad</th>
           <th data-sort="estado">Estado</th>
@@ -131,6 +140,10 @@
 
         <h3 class="form-section">Identificación</h3>
         <div class="grid-form">
+          <label class="field">
+            <span>Pestaña</span>
+            <select id="f-pestana" class="select"></select>
+          </label>
           <label class="field field-narrow">
             <span>N°</span>
             <input type="text" id="f-nro" placeholder="Correlativo" />

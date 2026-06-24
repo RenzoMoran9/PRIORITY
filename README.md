@@ -31,9 +31,26 @@ Basados en tu hoja "JUNIO MEJORADO":
 - **¿Tengo el expediente físico?** (Sí / No)
 - **Observaciones**
 
+## Pestañas (dos hojas de trabajo)
+
+La app tiene **dos pestañas**, como hojas de Excel:
+
+- **Heredados**: los expedientes que venían de la persona anterior.
+- **Mi trabajo**: lo que llevas tú ahora.
+
+Cómo usarlas:
+
+1. En **Heredados**, marca en la columna **A cargo = Sí** los requerimientos que estás viendo tú.
+2. Pulsa **«⇄ Traer a mi trabajo»**: esos requerimientos se **mueven** a la pestaña «Mi trabajo».
+3. Los **nuevos** que te asignen los registras con **+ Nuevo requerimiento** (quedan en la pestaña activa).
+4. Puedes **mover cualquier fila** entre pestañas editando su celda **Pestaña**.
+5. **Doble clic** en el nombre de una pestaña para **renombrarla**.
+
+Cada pestaña muestra su propio conteo y su propio tablero de indicadores.
+
 ## Funciones
 
-- **Tablero** arriba: total, **a mi cargo**, prioridad más alta, sin expediente físico y pendientes.
+- **Tablero** arriba (por pestaña): total, **a mi cargo**, prioridad más alta, sin expediente físico y pendientes.
 - **Edición tipo Excel**: haz clic en cualquier celda y cámbiala ahí mismo (texto, fecha o lista
   desplegable). Se guarda al instante; no hay que abrir ninguna ventana ni usar lápiz.
 - **A mi cargo**: marca con "Sí/No" los requerimientos que llevas tú (los demás son de otra persona)

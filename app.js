@@ -1,5 +1,5 @@
 /* PRIORITY · Seguimiento de Requerimientos · Logística UPROG
-   App 100% local: los datos y la configuración se guardan en localStorage. */
+   App 100% local: datos, configuración y pestañas se guardan en localStorage. */
 
 (function () {
   "use strict";
@@ -7,31 +7,32 @@
   // ---------- Claves de almacenamiento ----------
   const STORAGE_KEY = "priority_requerimientos_v1";
   const CONFIG_KEY = "priority_config_v1";
+  const TABS_KEY = "priority_tabs_v1";
+  const ACTIVA_KEY = "priority_tab_activa";
 
   // Campos para exportar / importar CSV
   const CAMPOS_CSV = [
-    "nro", "fechaIngreso", "expLogistica", "expDireccion", "docArea",
+    "nro", "pestana", "fechaIngreso", "expLogistica", "expDireccion", "docArea",
     "areaEstrategica", "areaUsuaria", "tipo", "denominacion", "item",
     "especialista", "fechaPase", "estado", "prioridad", "observaciones",
     "tengoExp", "aCargo",
   ];
 
   const ENCABEZADOS_CSV = {
-    nro: "N°", fechaIngreso: "Fecha ingreso a UPROG", expLogistica: "N° Exp. Logística",
-    expDireccion: "N° Exp. Dirección", docArea: "N° de documento del área",
-    areaEstrategica: "Área usuaria estratégica", areaUsuaria: "Área usuaria",
-    tipo: "Tipo", denominacion: "Denominación del requerimiento", item: "Ítem",
-    especialista: "Especialista a cargo", fechaPase: "Fecha de pase a especialista",
+    nro: "N°", pestana: "Pestaña", fechaIngreso: "Fecha ingreso a UPROG",
+    expLogistica: "N° Exp. Logística", expDireccion: "N° Exp. Dirección",
+    docArea: "N° de documento del área", areaEstrategica: "Área usuaria estratégica",
+    areaUsuaria: "Área usuaria", tipo: "Tipo", denominacion: "Denominación del requerimiento",
+    item: "Ítem", especialista: "Especialista a cargo", fechaPase: "Fecha de pase a especialista",
     estado: "Estado del requerimiento", prioridad: "Prioridad",
-    observaciones: "Observaciones", tengoExp: "¿Tengo el expediente?",
-    aCargo: "¿A mi cargo?",
+    observaciones: "Observaciones", tengoExp: "¿Tengo el expediente?", aCargo: "¿A mi cargo?",
   };
 
   // Tipo de editor en línea por campo (lo no listado es texto)
   const FIELD_EDITOR = {
     fechaIngreso: "date", fechaPase: "date",
     prioridad: "select", estado: "select", tipo: "select",
-    aCargo: "select", tengoExp: "select",
+    aCargo: "select", tengoExp: "select", pestana: "select",
   };
 
   // Listas configurables por defecto (el usuario puede cambiarlas en ⚙ Configurar)
@@ -59,6 +60,11 @@
     ],
   };
 
+  const DEF_TABS = [
+    { id: "t1", nombre: "Heredados" },
+    { id: "t2", nombre: "Mi trabajo" },
+  ];
+
   const PALETA = ["#3b56d6", "#1f9d57", "#c77700", "#d63b4b", "#7b3fd1", "#2f5fd0",
     "#b03a78", "#15824a", "#8a5a00", "#0f8a8a", "#6b7280", "#c0392b"];
 
@@ -71,6 +77,8 @@
   let items = [];
   let config = clone(DEF_CONFIG);
   let configDraft = null;
+  let tabs = clone(DEF_TABS);
+  let pestanaActiva = "t1";
   const filtro = { q: "", cargo: "", estado: "", prioridad: "", tipo: "", tengo: "" };
   const orden = { key: "nro", dir: "asc" };
 
@@ -129,6 +137,58 @@
     return `background:rgba(${r},${g},${b},0.15);color:rgb(${t(r)},${t(g)},${t(b)})`;
   }
 
+  // ---------- Pestañas ----------
+  function cargarTabs() {
+    try {
+      const raw = localStorage.getItem(TABS_KEY);
+      const t = raw ? JSON.parse(raw) : null;
+      tabs = (Array.isArray(t) && t.length >= 2) ? t : clone(DEF_TABS);
+    } catch (e) { tabs = clone(DEF_TABS); }
+    try { pestanaActiva = localStorage.getItem(ACTIVA_KEY) || tabs[0].id; }
+    catch (e) { pestanaActiva = tabs[0].id; }
+    if (!tabs.some((t) => t.id === pestanaActiva)) pestanaActiva = tabs[0].id;
+  }
+  function guardarTabs() {
+    try { localStorage.setItem(TABS_KEY, JSON.stringify(tabs)); } catch (e) {}
+  }
+  function tabNombre(id) {
+    const t = tabs.find((x) => x.id === id);
+    return t ? t.nombre : "—";
+  }
+  function idTabPorNombre(nombre) {
+    if (!nombre) return tabs[0].id;
+    const t = tabs.find((x) => x.nombre.toLowerCase() === nombre.trim().toLowerCase());
+    return t ? t.id : tabs[0].id;
+  }
+  function setPestana(id) {
+    pestanaActiva = id;
+    try { localStorage.setItem(ACTIVA_KEY, id); } catch (e) {}
+    render();
+  }
+  function renombrarTab(id) {
+    const t = tabs.find((x) => x.id === id);
+    if (!t) return;
+    const nuevo = prompt("Nombre de la pestaña:", t.nombre);
+    if (nuevo === null) return;
+    const v = nuevo.trim();
+    if (!v) return;
+    t.nombre = v;
+    guardarTabs(); render();
+    toast("Pestaña renombrada.");
+  }
+  function jalarACargo() {
+    const destino = tabs[1] ? tabs[1].id : "t2";
+    let n = 0;
+    items.forEach((it) => {
+      if ((it.aCargo || "") === "SÍ" && it.pestana !== destino) { it.pestana = destino; n++; }
+    });
+    if (n) guardar();
+    setPestana(destino);
+    toast(n
+      ? `Se trajeron ${n} requerimientos a «${tabNombre(destino)}».`
+      : "No hay requerimientos marcados «a mi cargo» para traer. Márcalos primero en la columna «A cargo».");
+  }
+
   // ---------- Persistencia ----------
   function cargar() {
     try {
@@ -136,6 +196,10 @@
       items = raw ? JSON.parse(raw) : [];
       if (!Array.isArray(items)) items = [];
     } catch (e) { items = []; }
+    // Migración: requerimientos sin pestaña van a la primera
+    let changed = false;
+    items.forEach((it) => { if (!it.pestana) { it.pestana = tabs[0].id; changed = true; } });
+    if (changed) guardar();
   }
   function guardar() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
@@ -189,6 +253,7 @@
   function visibles() {
     const q = filtro.q.trim().toLowerCase();
     let lista = items.filter((it) => {
+      if (it.pestana !== pestanaActiva) return false;
       if (filtro.cargo) {
         const v = it.aCargo || "";
         if (filtro.cargo === "__sin") { if (v !== "") return false; }
@@ -227,39 +292,55 @@
   }
 
   // ---------- Render ----------
-  function render() { renderKpis(); renderTabla(); renderCabeceraOrden(); }
+  function render() { renderTabs(); renderKpis(); renderTabla(); renderCabeceraOrden(); }
+
+  function renderTabs() {
+    const cont = $("#tabs");
+    cont.innerHTML = tabs.map((t) => {
+      const count = items.filter((it) => it.pestana === t.id).length;
+      return `<button class="tab ${t.id === pestanaActiva ? "active" : ""}" data-tab="${t.id}" title="Doble clic para renombrar">
+        <span class="tab-name">${esc(t.nombre)}</span><span class="tab-count">${count}</span>
+      </button>`;
+    }).join("");
+  }
 
   function renderKpis() {
     const top = prioridadTop();
-    $("#kpi-total").textContent = items.length;
-    $("#kpi-cargo").textContent = items.filter((it) => (it.aCargo || "") === "SÍ").length;
-    $("#kpi-alta").textContent = items.filter((it) => it.prioridad === top).length;
+    const tabItems = items.filter((it) => it.pestana === pestanaActiva);
+    $("#kpi-total").textContent = tabItems.length;
+    $("#kpi-cargo").textContent = tabItems.filter((it) => (it.aCargo || "") === "SÍ").length;
+    $("#kpi-alta").textContent = tabItems.filter((it) => it.prioridad === top).length;
     $("#kpi-alta-label").textContent = "Prioridad " + (top || "—").toLowerCase();
-    $("#kpi-sinexp").textContent = items.filter((it) => (it.tengoExp || "") === "NO").length;
-    $("#kpi-pend").textContent = items.filter((it) => !it.estado || it.estado === defEstado()).length;
+    $("#kpi-sinexp").textContent = tabItems.filter((it) => (it.tengoExp || "") === "NO").length;
+    $("#kpi-pend").textContent = tabItems.filter((it) => !it.estado || it.estado === defEstado()).length;
   }
 
   function renderTabla() {
     const lista = visibles();
     const tbody = $("#tbody");
     const vacio = $("#vacio");
+    const tabTotal = items.filter((it) => it.pestana === pestanaActiva).length;
 
     if (!lista.length) {
-      if (items.length === 0) { tbody.innerHTML = ""; vacio.classList.remove("hidden"); }
-      else {
+      if (items.length === 0) {
+        tbody.innerHTML = ""; vacio.classList.remove("hidden");
+      } else {
         vacio.classList.add("hidden");
-        tbody.innerHTML = `<tr><td colspan="18" class="empty" style="padding:34px">Ningún requerimiento coincide con los filtros.</td></tr>`;
+        const msg = tabTotal === 0
+          ? `La pestaña «${esc(tabNombre(pestanaActiva))}» aún no tiene requerimientos. Usa «⇄ Traer a mi trabajo» o «+ Nuevo requerimiento».`
+          : "Ningún requerimiento coincide con los filtros.";
+        tbody.innerHTML = `<tr><td colspan="19" class="empty" style="padding:34px">${msg}</td></tr>`;
       }
-      $("#footer-count").textContent = `${items.length} requerimiento${items.length === 1 ? "" : "s"}`;
+      $("#footer-count").textContent = `${tabTotal} en «${tabNombre(pestanaActiva)}»`;
       return;
     }
     vacio.classList.add("hidden");
     tbody.innerHTML = lista.map(filaHTML).join("");
 
-    const total = items.length, mostrados = lista.length;
-    $("#footer-count").textContent = mostrados === total
-      ? `${total} requerimiento${total === 1 ? "" : "s"}`
-      : `${mostrados} de ${total} requerimientos`;
+    const mostrados = lista.length;
+    $("#footer-count").textContent = mostrados === tabTotal
+      ? `${tabTotal} en «${tabNombre(pestanaActiva)}»`
+      : `${mostrados} de ${tabTotal} en «${tabNombre(pestanaActiva)}»`;
   }
 
   function filaHTML(it) {
@@ -279,6 +360,7 @@
     return `
       <tr class="${vieja ? "row-vieja" : ""} ${cargo === "SÍ" ? "row-cargo" : ""}">
         ${ed("nro", esc(it.nro) || GUION, "num cell-strong")}
+        ${ed("pestana", `<span class="badge pest-badge">${esc(tabNombre(it.pestana))}</span>`)}
         ${ed("aCargo", cargoBadge)}
         ${ed("prioridad", badge(it.prioridad, COL.prioridad))}
         ${ed("estado", badge(it.estado, COL.estado))}
@@ -326,12 +408,17 @@
 
     if (tipo === "select") {
       editor = document.createElement("select");
-      let ops = opcionesDe(field);
-      if (actual && ops.indexOf(actual) === -1) ops = [actual].concat(ops);
-      ops.forEach((o) => {
+      let pares;
+      if (field === "pestana") pares = tabs.map((t) => [t.id, t.nombre]);
+      else {
+        let ops = opcionesDe(field);
+        if (actual && ops.indexOf(actual) === -1) ops = [actual].concat(ops);
+        pares = ops.map((o) => [o, o || "—"]);
+      }
+      pares.forEach(([val, lab]) => {
         const op = document.createElement("option");
-        op.value = o; op.textContent = o || "—";
-        if (actual === o) op.selected = true;
+        op.value = val; op.textContent = lab;
+        if (actual === val) op.selected = true;
         editor.appendChild(op);
       });
     } else {
@@ -373,12 +460,13 @@
     }
   }
 
-  // ---------- Modal requerimiento (crear / editar completo) ----------
+  // ---------- Modal requerimiento ----------
   function abrirModal(id) {
     const it = id ? items.find((x) => x.id === id) : null;
     $("#modal-titulo").textContent = it ? "Editar requerimiento" : "Nuevo requerimiento";
     const set = (sel, val) => { $(sel).value = val == null ? "" : val; };
     $("#f-id").value = it ? it.id : "";
+    set("#f-pestana", it ? it.pestana : pestanaActiva);
     set("#f-nro", it ? it.nro : nextNro());
     set("#f-fechaIngreso", it ? it.fechaIngreso : hoyISO());
     set("#f-expLogistica", it ? it.expLogistica : "");
@@ -406,6 +494,7 @@
     const expLogistica = $("#f-expLogistica").value.trim();
     if (!expLogistica) { toast("El N° de Exp. Logística es obligatorio."); return; }
     const datos = {
+      pestana: $("#f-pestana").value,
       nro: $("#f-nro").value.trim(),
       fechaIngreso: $("#f-fechaIngreso").value,
       expLogistica,
@@ -556,10 +645,11 @@
     if (/[",\n;]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
     return s;
   }
+  function valorCSV(it, c) { return c === "pestana" ? tabNombre(it.pestana) : it[c]; }
   function exportarCSV() {
     if (!items.length) { toast("No hay requerimientos para exportar."); return; }
     const cabecera = CAMPOS_CSV.map((c) => csvCampo(ENCABEZADOS_CSV[c])).join(",");
-    const filas = items.map((it) => CAMPOS_CSV.map((c) => csvCampo(it[c])).join(","));
+    const filas = items.map((it) => CAMPOS_CSV.map((c) => csvCampo(valorCSV(it, c))).join(","));
     const contenido = "﻿" + [cabecera].concat(filas).join("\r\n");
     const blob = new Blob([contenido], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -628,6 +718,7 @@
       if (!exp && !item && !den) continue;
       items.push({
         id: uid(),
+        pestana: idTabPorNombre(get("pestana")),
         nro: get("nro") || nextNro(),
         fechaIngreso: normalizarFecha(get("fechaIngreso")),
         expLogistica: exp, expDireccion: get("expDireccion"), docArea: get("docArea"),
@@ -652,11 +743,11 @@
     let n = 0;
     DATOS_JUNIO.forEach((d) => {
       if (existentes.has(String(d.expLogistica))) return;
-      items.push(Object.assign({ id: uid(), creado: Date.now(), aCargo: "" }, d));
+      items.push(Object.assign({ id: uid(), creado: Date.now(), aCargo: "", pestana: tabs[0].id }, d));
       n++;
     });
     guardar(); render();
-    toast(n ? `Cargados ${n} requerimientos de junio.` : "Tus datos de junio ya estaban cargados.");
+    toast(n ? `Cargados ${n} requerimientos de junio en «${tabNombre(tabs[0].id)}».` : "Tus datos de junio ya estaban cargados.");
   }
   function borrarTodo() {
     if (!items.length) { toast("No hay datos para borrar."); return; }
@@ -679,6 +770,7 @@
     $("#f-tipo").innerHTML = optList(config.tipos);
     $("#f-estado").innerHTML = optList(config.estados);
     $("#f-prioridad").innerHTML = optList(config.prioridades);
+    $("#f-pestana").innerHTML = tabs.map((t) => `<option value="${t.id}">${esc(t.nombre)}</option>`).join("");
     $("#filtro-estado").innerHTML = '<option value="">Todo estado</option>' + optList(config.estados);
     $("#filtro-prioridad").innerHTML = '<option value="">Toda prioridad</option>' + optList(config.prioridades);
     $("#filtro-tipo").innerHTML = '<option value="">Todo tipo</option>' + optList(config.tipos);
@@ -694,10 +786,19 @@
     $("#btn-nuevo-2").addEventListener("click", () => abrirModal(null));
     $("#btn-junio").addEventListener("click", cargarJunio);
     $("#btn-junio-2").addEventListener("click", cargarJunio);
+    $("#btn-jalar").addEventListener("click", jalarACargo);
     $("#modal-close").addEventListener("click", cerrarModal);
     $("#btn-cancelar").addEventListener("click", cerrarModal);
     $("#form").addEventListener("submit", guardarDesdeForm);
     $("#modal").addEventListener("click", (e) => { if (e.target.id === "modal") cerrarModal(); });
+
+    // Pestañas
+    $("#tabs").addEventListener("click", (e) => {
+      const b = e.target.closest(".tab"); if (b) setPestana(b.getAttribute("data-tab"));
+    });
+    $("#tabs").addEventListener("dblclick", (e) => {
+      const b = e.target.closest(".tab"); if (b) renombrarTab(b.getAttribute("data-tab"));
+    });
 
     // Edición en línea y eliminación (delegación en el tbody)
     $("#tbody").addEventListener("click", (e) => {
@@ -752,6 +853,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
+    cargarTabs();
     cargarConfig();
     poblarSelects();
     conectarEventos();
