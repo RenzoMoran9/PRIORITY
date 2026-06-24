@@ -1,70 +1,58 @@
-# PRIORITY · Seguimiento de Contrataciones Directas
+# PRIORITY · Seguimiento de Requerimientos · Logística UPROG
 
-Aplicación web sencilla para hacer seguimiento a las **contrataciones directas**
-de logística, mapeadas por **prioridad** y **estado**, con un espacio tipo Excel
-para ingresar y consultar los datos de cada expediente.
+Aplicación web para hacer seguimiento a los **requerimientos / expedientes** que
+ingresan a UPROG, mapeados por **prioridad** y **estado**, con todos los datos de
+cada expediente. Pensada sobre la estructura real de la hoja de control mensual.
 
 No requiere instalación ni internet: es HTML + CSS + JavaScript puro y los datos
 se guardan en tu propio navegador.
 
 ## Cómo usarla
 
-1. Descarga o clona esta carpeta.
-2. Abre el archivo **`index.html`** con doble clic (se abre en tu navegador).
-3. ¡Listo! Empieza a cargar tus expedientes.
+1. Abre el archivo **`index.html`** (o el único archivo `PRIORITY.html`) con doble clic.
+2. Pulsa **"Cargar mis datos de JUNIO (50)"** para tener tus requerimientos de junio cargados de una vez.
+3. Empieza a actualizar prioridades, estados y a registrar nuevos.
 
-> Sugerencia: si quieres ver cómo se ve con datos, pulsa **"Cargar datos de
-> ejemplo"** en la pantalla inicial. Puedes borrarlos luego con **"Borrar todos
-> los datos"**.
+## Campos de cada requerimiento
 
-## Qué puedes hacer
+Basados en tu hoja "JUNIO MEJORADO":
 
-- **Registrar expedientes** con: código, objeto de la contratación, proveedor,
-  área solicitante, responsable, monto y moneda, prioridad, estado, fecha de
-  ingreso, fecha límite y observaciones.
-- **Prioridad**: Alta · Media · Baja (con colores).
-- **Estado**: Pendiente, En evaluación, En proceso, Observado, Adjudicado,
-  Contratado, Finalizado, Anulado.
-- **Tablero de indicadores**: total de expedientes, activos, vencidos / por
-  vencer y monto total por moneda.
-- **Buscar** por código, objeto, proveedor o responsable.
-- **Filtrar** por prioridad y estado.
-- **Ordenar** haciendo clic en el encabezado de cualquier columna.
-- **Alertas de vencimiento**: las filas vencidas se resaltan y se avisa cuando
-  un expediente vence en 3 días o menos.
-- **Exportar a CSV** (se abre directamente en Excel).
-- **Importar desde CSV** (para cargar varios expedientes de golpe).
+- **N°** (correlativo, se autocompleta)
+- **Fecha de ingreso a UPROG**
+- **N° Exp. Logística** y **N° Exp. Dirección**
+- **N° de documento del área que solicita** (ej. NOTA INFORMATIVA N°…)
+- **Área usuaria estratégica** y **Área usuaria**
+- **Tipo** (Bien / Insumo / Servicio / Activo no financiero / Paciente)
+- **Denominación del requerimiento** (completo) e **Ítem** (resumen corto)
+- **Especialista a cargo** y **Fecha de pase a especialista**
+- **Estado del requerimiento**: Pendiente, Disponibilidad presupuestal, Invitación,
+  Cuadro comparativo, Validado, Entregado a Grisel, Para saldo
+- **Prioridad**: Alta / Media / Baja
+- **¿Tengo el expediente físico?** (Sí / No)
+- **Observaciones**
 
-## Importar desde Excel
+## Funciones
 
-1. En Excel, arma una tabla cuya **primera fila** tenga estos encabezados
-   (mínimo `codigo` y `objeto`):
+- **Tablero** arriba: total de requerimientos, prioridad alta, sin expediente físico y pendientes.
+- **Buscar** por expediente, documento, área, denominación o especialista.
+- **Filtrar** por estado, prioridad, tipo y si tienes o no el expediente.
+- **Ordenar** haciendo clic en cualquier encabezado de columna.
+- **Antigüedad en UPROG**: muestra los días desde el ingreso y resalta los que llevan más de 30 días.
+- **Exportar a CSV** (se abre en Excel) e **Importar CSV**.
+- Los datos quedan guardados en tu navegador (no se borran al cerrar).
 
-   ```
-   codigo, objeto, proveedor, area, responsable, monto, moneda,
-   prioridad, estado, fechaIngreso, fechaLimite, observaciones
-   ```
+## Respaldo y traslado de datos
 
-2. Guarda como **CSV (delimitado por comas)**.
-3. En la app, pulsa **Importar** y selecciona el archivo.
+Los datos se guardan en el navegador de **esa** computadora. Para respaldarlos o
+pasarlos a otra PC: usa **⬇ Exportar** (te baja un CSV que abre Excel) y, en la otra
+máquina, **⬆ Importar**. El importador reconoce tanto el CSV exportado por la app
+como columnas con los mismos nombres.
 
-Las fechas se aceptan como `AAAA-MM-DD` o `DD/MM/AAAA`. Si `prioridad` o `estado`
-no coinciden con los valores válidos, se asignan `Media` y `Pendiente`.
+## Archivos
 
-## Dónde se guardan los datos
-
-Los expedientes se almacenan en el **`localStorage`** del navegador donde abres
-la app. Eso significa que:
-
-- Son privados de ese equipo y navegador.
-- Se conservan aunque cierres la pestaña.
-- **No** se sincronizan entre computadoras. Para mover/respaldar datos, usa
-  **Exportar** e **Importar**.
-
-## Archivos del proyecto
-
-| Archivo       | Contenido                                  |
-|---------------|--------------------------------------------|
-| `index.html`  | Estructura de la página                     |
-| `styles.css`  | Estilos y diseño visual                     |
-| `app.js`      | Lógica: registro, filtros, CSV, almacenado  |
+| Archivo        | Contenido                                   |
+|----------------|---------------------------------------------|
+| `index.html`   | Estructura de la página                      |
+| `styles.css`   | Estilos y diseño visual                      |
+| `app.js`       | Lógica: registro, filtros, CSV, datos de junio, almacenado |
+| `PRIORITY.html`| Versión todo-en-uno (los 3 anteriores en un solo archivo) |

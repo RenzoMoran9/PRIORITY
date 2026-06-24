@@ -1,3 +1,549 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PRIORITY · Seguimiento de Requerimientos · UPROG</title>
+  <style>
+:root {
+  --bg: #f4f6fb;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --border: #e3e8f0;
+  --text: #1d2433;
+  --muted: #6b7689;
+  --primary: #3b56d6;
+  --primary-dark: #2c43b8;
+  --primary-soft: #e8ecfb;
+  --danger: #d63b4b;
+  --danger-soft: #fdecee;
+  --warn: #c77700;
+  --warn-soft: #fff4e0;
+  --ok: #1f9d57;
+  --shadow: 0 1px 3px rgba(18, 28, 53, .08), 0 8px 24px rgba(18, 28, 53, .06);
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+/* ---------- Topbar ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  flex-wrap: wrap;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-logo {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--primary), #6f86ff);
+  color: #fff;
+  font-weight: 800;
+  font-size: 20px;
+  display: grid; place-items: center;
+  box-shadow: var(--shadow);
+}
+.brand-text h1 { margin: 0; font-size: 17px; letter-spacing: .5px; }
+.brand-text span { color: var(--muted); font-size: 12px; }
+.topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s ease;
+  background: var(--surface);
+  color: var(--text);
+  white-space: nowrap;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-ghost { background: var(--surface); border-color: var(--border); color: var(--text); }
+.btn-ghost:hover { background: var(--surface-2); }
+.btn-sm { padding: 7px 11px; font-size: 12px; }
+
+/* ---------- KPIs ---------- */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  padding: 20px 24px 6px;
+}
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: var(--shadow);
+}
+.kpi-label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
+.kpi-value { font-size: 26px; font-weight: 800; }
+.kpi-danger .kpi-value { color: var(--danger); }
+.kpi-warn .kpi-value { color: var(--warn); }
+.kpi-accent .kpi-value { color: var(--primary); }
+
+/* ---------- Toolbar / filters ---------- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 24px;
+  flex-wrap: wrap;
+}
+.search {
+  position: relative;
+  flex: 1 1 320px;
+  max-width: 460px;
+}
+.search-icon {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  font-size: 13px; opacity: .6;
+}
+.search input {
+  width: 100%;
+  padding: 10px 12px 10px 34px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  font-size: 13px;
+}
+.filters { display: flex; gap: 8px; flex-wrap: wrap; }
+.select {
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+input:focus, .select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+/* ---------- Table ---------- */
+.table-wrap {
+  margin: 0 24px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow-x: auto;
+}
+.grid { width: 100%; border-collapse: collapse; min-width: 1380px; }
+.grid thead th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  color: var(--muted);
+  padding: 12px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+}
+.grid thead th.acciones-col { cursor: default; text-align: right; }
+.grid thead th.num { text-align: right; }
+.grid thead th[data-sort]:hover { color: var(--text); }
+.grid thead th.sorted-asc::after { content: " ▲"; font-size: 9px; }
+.grid thead th.sorted-desc::after { content: " ▼"; font-size: 9px; }
+.grid tbody td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.grid tbody tr:last-child td { border-bottom: none; }
+.grid tbody tr:hover { background: var(--surface-2); }
+.grid td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cell-strong { font-weight: 700; white-space: nowrap; }
+.cell-item { min-width: 240px; max-width: 340px; }
+.cell-item .item-main { font-weight: 600; }
+.cell-item .item-sub { color: var(--muted); font-size: 11.5px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 320px; }
+.cell-area { min-width: 180px; max-width: 240px; font-size: 12.5px; }
+.cell-doc { min-width: 160px; font-size: 12.5px; }
+.muted-cell { color: var(--muted); }
+.row-vieja td { box-shadow: inset 3px 0 0 var(--warn); }
+
+/* ---------- Badges ---------- */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.prio-alta { background: var(--danger-soft); color: var(--danger); }
+.prio-media { background: var(--warn-soft); color: var(--warn); }
+.prio-baja { background: #e7f6ee; color: var(--ok); }
+
+.tipo { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); font-size: 11px; }
+.tipo[data-t="SERVICIO"] { background: #eef4ff; color: #2f5fd0; border-color: #d6e2fb; }
+.tipo[data-t="BIEN"] { background: #f0f4ec; color: #4a7a2e; border-color: #dde9d3; }
+.tipo[data-t="INSUMO"] { background: #fdf0f6; color: #b03a78; border-color: #f6d8e8; }
+
+/* Estados */
+.estado { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+.estado[data-e="PENDIENTE"] { background: #eef1f6; color: #5a6678; }
+.estado[data-e="DISPONIBILIDAD PRESUPUESTAL"] { background: #fff4e0; color: #b06f00; }
+.estado[data-e="INVITACION"] { background: #e8ecfb; color: var(--primary); }
+.estado[data-e="CUADRO COMPARATIVO"] { background: #e6f0ff; color: #1f5fd6; }
+.estado[data-e="VALIDADO"] { background: #e7f6ee; color: var(--ok); }
+.estado[data-e="ENTREGADO A GRISEL"] { background: #eaf7ef; color: #15824a; }
+.estado[data-e="PARA SALDO"] { background: #f3eafc; color: #7b3fd1; }
+
+.tengo-si { background: #e7f6ee; color: var(--ok); }
+.tengo-no { background: var(--danger-soft); color: var(--danger); }
+
+.antig-tag { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.antig-tag.alerta { color: var(--warn); font-weight: 700; }
+
+/* ---------- Row actions ---------- */
+.row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.icon-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 7px;
+  padding: 5px 8px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+.icon-btn:hover { background: var(--surface-2); }
+.icon-btn.danger:hover { background: var(--danger-soft); border-color: #f3c4ca; }
+
+/* ---------- Empty ---------- */
+.empty { padding: 50px 24px; text-align: center; color: var(--muted); }
+.empty-actions { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+
+/* ---------- Footer ---------- */
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px 30px;
+  color: var(--muted);
+  font-size: 12.5px;
+  flex-wrap: wrap;
+}
+.footer-sep { opacity: .5; }
+.muted { color: var(--muted); }
+.link-danger, .link-accent { background: none; border: none; cursor: pointer; font-size: 12.5px; padding: 0; }
+.link-danger { color: var(--danger); }
+.link-accent { color: var(--primary); }
+.link-danger:hover, .link-accent:hover { text-decoration: underline; }
+
+/* ---------- Modal ---------- */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(18, 28, 53, .45);
+  display: grid; place-items: center;
+  padding: 20px;
+  z-index: 50;
+}
+.modal {
+  background: var(--surface);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 720px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(18, 28, 53, .3);
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--surface); z-index: 2;
+}
+.modal-head h2 { margin: 0; font-size: 17px; }
+.modal-close { border: none; background: none; font-size: 17px; cursor: pointer; color: var(--muted); }
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 16px 22px 20px; }
+.form-section {
+  margin: 18px 0 4px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--primary);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+.form-section:first-of-type { margin-top: 4px; }
+.grid-form { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-top: 10px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field span { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.field input, .field textarea, .field .select { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 9px; font-size: 13px; font-family: inherit; }
+.field textarea { resize: vertical; }
+.field-wide { grid-column: 1 / -1; }
+.field-narrow { max-width: 140px; }
+.modal-foot {
+  display: flex; justify-content: flex-end; gap: 10px;
+  margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--border);
+}
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed;
+  bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--text); color: #fff;
+  padding: 11px 18px; border-radius: 10px;
+  font-size: 13px; font-weight: 600;
+  box-shadow: var(--shadow); z-index: 80;
+}
+
+.hidden { display: none !important; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 880px) {
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+  .grid-form { grid-template-columns: 1fr; }
+  .field-narrow { max-width: none; }
+}
+@media (max-width: 520px) {
+  .kpis { grid-template-columns: 1fr; }
+  .topbar { padding: 12px 14px; }
+  .toolbar, .table-wrap, .kpis, .footer { padding-left: 14px; padding-right: 14px; }
+  .table-wrap { margin-left: 14px; margin-right: 14px; }
+}
+
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo">P</div>
+      <div class="brand-text">
+        <h1>PRIORITY</h1>
+        <span>Seguimiento de Requerimientos · Logística UPROG</span>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button id="btn-importar" class="btn btn-ghost" title="Importar desde CSV/Excel">⬆ Importar</button>
+      <button id="btn-exportar" class="btn btn-ghost" title="Exportar a CSV (Excel)">⬇ Exportar</button>
+      <button id="btn-nuevo" class="btn btn-primary">+ Nuevo requerimiento</button>
+      <input type="file" id="file-import" accept=".csv,text/csv" hidden />
+    </div>
+  </header>
+
+  <!-- Tablero de indicadores -->
+  <section class="kpis" id="kpis">
+    <div class="kpi">
+      <span class="kpi-label">Total requerimientos</span>
+      <span class="kpi-value" id="kpi-total">0</span>
+    </div>
+    <div class="kpi kpi-danger">
+      <span class="kpi-label">Prioridad alta</span>
+      <span class="kpi-value" id="kpi-alta">0</span>
+    </div>
+    <div class="kpi kpi-warn">
+      <span class="kpi-label">Sin expediente físico</span>
+      <span class="kpi-value" id="kpi-sinexp">0</span>
+    </div>
+    <div class="kpi kpi-accent">
+      <span class="kpi-label">Pendientes / por iniciar</span>
+      <span class="kpi-value" id="kpi-pend">0</span>
+    </div>
+  </section>
+
+  <!-- Filtros -->
+  <section class="toolbar">
+    <div class="search">
+      <span class="search-icon">🔎</span>
+      <input type="search" id="buscar" placeholder="Buscar por exp., documento, área, denominación, especialista…" />
+    </div>
+    <div class="filters">
+      <select id="filtro-estado" class="select"><option value="">Todo estado</option></select>
+      <select id="filtro-prioridad" class="select"><option value="">Toda prioridad</option></select>
+      <select id="filtro-tipo" class="select"><option value="">Todo tipo</option></select>
+      <select id="filtro-tengo" class="select">
+        <option value="">Exp.: todos</option>
+        <option value="SÍ">Con expediente</option>
+        <option value="NO">Sin expediente</option>
+      </select>
+      <button id="btn-limpiar" class="btn btn-ghost btn-sm" title="Limpiar filtros">Limpiar</button>
+    </div>
+  </section>
+
+  <!-- Tabla -->
+  <main class="table-wrap">
+    <table class="grid" id="tabla">
+      <thead>
+        <tr>
+          <th data-sort="nro" class="num">N°</th>
+          <th data-sort="prioridad">Prioridad</th>
+          <th data-sort="estado">Estado</th>
+          <th data-sort="fechaIngreso">Ingreso a UPROG</th>
+          <th data-sort="expLogistica">Exp. Logística</th>
+          <th data-sort="expDireccion">Exp. Dirección</th>
+          <th data-sort="docArea">Doc. del área</th>
+          <th data-sort="areaUsuaria">Área usuaria</th>
+          <th data-sort="tipo">Tipo</th>
+          <th data-sort="item">Ítem / Denominación</th>
+          <th data-sort="especialista">Especialista</th>
+          <th data-sort="tengoExp">¿Tengo exp.?</th>
+          <th class="acciones-col">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="vacio" class="empty hidden">
+      <p>No hay requerimientos que mostrar.</p>
+      <div class="empty-actions">
+        <button id="btn-nuevo-2" class="btn btn-primary">+ Cargar el primero</button>
+        <button id="btn-junio" class="btn btn-ghost">Cargar mis datos de JUNIO (50)</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <span id="footer-count">0 requerimientos</span>
+    <span class="footer-sep">·</span>
+    <button id="btn-junio-2" class="link-accent">Cargar datos de JUNIO</button>
+    <span class="footer-sep">·</span>
+    <button id="btn-borrar-todo" class="link-danger">Borrar todos los datos</button>
+    <span class="footer-sep">·</span>
+    <span class="muted">Los datos se guardan en este navegador.</span>
+  </footer>
+
+  <!-- Modal de formulario -->
+  <div class="modal-backdrop hidden" id="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+      <div class="modal-head">
+        <h2 id="modal-titulo">Nuevo requerimiento</h2>
+        <button class="modal-close" id="modal-close" aria-label="Cerrar">✕</button>
+      </div>
+      <form id="form" class="modal-body" novalidate>
+        <input type="hidden" id="f-id" />
+
+        <h3 class="form-section">Identificación</h3>
+        <div class="grid-form">
+          <label class="field field-narrow">
+            <span>N°</span>
+            <input type="text" id="f-nro" placeholder="Correlativo" />
+          </label>
+          <label class="field">
+            <span>Fecha de ingreso a UPROG</span>
+            <input type="date" id="f-fechaIngreso" />
+          </label>
+          <label class="field">
+            <span>N° Exp. Logística *</span>
+            <input type="text" id="f-expLogistica" required placeholder="Ej. 2728" />
+          </label>
+          <label class="field">
+            <span>N° Exp. Dirección</span>
+            <input type="text" id="f-expDireccion" placeholder="Ej. 4249" />
+          </label>
+          <label class="field field-wide">
+            <span>N° de documento del área que solicita</span>
+            <input type="text" id="f-docArea" placeholder="Ej. NOTA INFORMATIVA N°040-2026-DP-HNAL" />
+          </label>
+        </div>
+
+        <h3 class="form-section">Área usuaria</h3>
+        <div class="grid-form">
+          <label class="field field-wide">
+            <span>Área usuaria estratégica</span>
+            <input type="text" id="f-areaEstrategica" placeholder="Departamento / unidad estratégica" />
+          </label>
+          <label class="field field-wide">
+            <span>Área usuaria</span>
+            <input type="text" id="f-areaUsuaria" placeholder="Servicio / área que solicita" />
+          </label>
+        </div>
+
+        <h3 class="form-section">Requerimiento</h3>
+        <div class="grid-form">
+          <label class="field">
+            <span>Tipo</span>
+            <select id="f-tipo" class="select"></select>
+          </label>
+          <label class="field">
+            <span>Ítem (resumen corto)</span>
+            <input type="text" id="f-item" placeholder="Ej. ESTANTE DE MELAMINA" />
+          </label>
+          <label class="field field-wide">
+            <span>Denominación del requerimiento (completo)</span>
+            <textarea id="f-denominacion" rows="2" placeholder="Descripción completa del requerimiento"></textarea>
+          </label>
+        </div>
+
+        <h3 class="form-section">Seguimiento</h3>
+        <div class="grid-form">
+          <label class="field">
+            <span>Prioridad *</span>
+            <select id="f-prioridad" class="select" required></select>
+          </label>
+          <label class="field">
+            <span>Estado del requerimiento</span>
+            <select id="f-estado" class="select"></select>
+          </label>
+          <label class="field">
+            <span>Especialista a cargo</span>
+            <input type="text" id="f-especialista" placeholder="Nombre del especialista" />
+          </label>
+          <label class="field">
+            <span>Fecha de pase a especialista</span>
+            <input type="date" id="f-fechaPase" />
+          </label>
+          <label class="field">
+            <span>¿Tengo el expediente físico?</span>
+            <select id="f-tengoExp" class="select">
+              <option value="">—</option>
+              <option value="SÍ">SÍ</option>
+              <option value="NO">NO</option>
+            </select>
+          </label>
+          <label class="field field-wide">
+            <span>Observaciones</span>
+            <textarea id="f-observaciones" rows="2" placeholder="Notas y seguimiento"></textarea>
+          </label>
+        </div>
+
+        <div class="modal-foot">
+          <button type="button" class="btn btn-ghost" id="btn-cancelar">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar requerimiento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
 /* PRIORITY · Seguimiento de Requerimientos · Logística UPROG
    App 100% local: los datos se guardan en localStorage del navegador. */
 
@@ -511,3 +1057,7 @@
     render();
   });
 })();
+
+  </script>
+</body>
+</html>
