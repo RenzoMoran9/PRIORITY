@@ -81,7 +81,7 @@ body {
 /* ---------- KPIs ---------- */
 .kpis {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 14px;
   padding: 20px 24px 6px;
 }
@@ -152,7 +152,25 @@ input:focus, .select:focus, textarea:focus {
   box-shadow: var(--shadow);
   overflow-x: auto;
 }
-.grid { width: 100%; border-collapse: collapse; min-width: 1380px; }
+.grid { width: 100%; border-collapse: collapse; min-width: 2100px; }
+
+/* Edición en línea (tipo Excel) */
+.grid td.ed { cursor: cell; position: relative; }
+.grid td.ed:hover { background: #eef2fb; box-shadow: inset 0 0 0 1px var(--primary-soft); }
+.grid td.ed:hover::after {
+  content: "✎";
+  position: absolute; top: 3px; right: 4px;
+  font-size: 9px; color: var(--primary); opacity: .5;
+}
+.grid td.editing { padding: 4px 6px; background: #fff; box-shadow: inset 0 0 0 2px var(--primary); }
+.grid td.editing:hover::after { content: none; }
+.cell-editor {
+  width: 100%; box-sizing: border-box;
+  padding: 6px 7px; border: 1px solid var(--primary);
+  border-radius: 6px; font: inherit; font-size: 13px;
+  background: #fff; color: var(--text);
+}
+select.cell-editor { cursor: pointer; }
 .grid thead th {
   text-align: left;
   font-size: 11px;
@@ -220,6 +238,15 @@ input:focus, .select:focus, textarea:focus {
 
 .tengo-si { background: #e7f6ee; color: var(--ok); }
 .tengo-no { background: var(--danger-soft); color: var(--danger); }
+.cargo-si { background: var(--primary-soft); color: var(--primary); }
+.cargo-no { background: #eef1f6; color: #5a6678; }
+.row-cargo > td { background: #f5f8ff; }
+.row-cargo:hover > td { background: #eef3ff; }
+
+/* Anchos de celdas de la tabla editable */
+.cell-den { min-width: 240px; max-width: 360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cell-item2 { min-width: 150px; max-width: 240px; font-weight: 600; }
+.cell-obs { min-width: 160px; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .antig-tag { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
 .antig-tag.alerta { color: var(--warn); font-weight: 700; }

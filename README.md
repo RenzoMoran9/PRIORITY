@@ -33,13 +33,20 @@ Basados en tu hoja "JUNIO MEJORADO":
 
 ## Funciones
 
-- **Tablero** arriba: total de requerimientos, prioridad más alta, sin expediente físico y pendientes.
+- **Tablero** arriba: total, **a mi cargo**, prioridad más alta, sin expediente físico y pendientes.
+- **Edición tipo Excel**: haz clic en cualquier celda y cámbiala ahí mismo (texto, fecha o lista
+  desplegable). Se guarda al instante; no hay que abrir ninguna ventana ni usar lápiz.
+- **A mi cargo**: marca con "Sí/No" los requerimientos que llevas tú (los demás son de otra persona)
+  y usa el filtro **"A cargo"** para ver solo los tuyos, los de otra persona o los aún sin marcar.
 - **Buscar** por expediente, documento, área, denominación o especialista.
-- **Filtrar** por estado, prioridad, tipo y si tienes o no el expediente.
+- **Filtrar** por a cargo, estado, prioridad, tipo y si tienes o no el expediente.
 - **Ordenar** haciendo clic en cualquier encabezado de columna.
 - **Antigüedad en UPROG**: muestra los días desde el ingreso y resalta los que llevan más de 30 días.
 - **Exportar a CSV** (se abre en Excel) e **Importar CSV**.
 - Los datos quedan guardados en tu navegador (no se borran al cerrar).
+
+> Para agregar un requerimiento nuevo usa **+ Nuevo requerimiento**; para modificar uno existente,
+> edita directamente sus celdas en la tabla.
 
 ## Configurar tus listas (⚙ Configurar)
 

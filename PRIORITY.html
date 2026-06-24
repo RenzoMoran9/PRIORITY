@@ -88,7 +88,7 @@ body {
 /* ---------- KPIs ---------- */
 .kpis {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 14px;
   padding: 20px 24px 6px;
 }
@@ -159,7 +159,25 @@ input:focus, .select:focus, textarea:focus {
   box-shadow: var(--shadow);
   overflow-x: auto;
 }
-.grid { width: 100%; border-collapse: collapse; min-width: 1380px; }
+.grid { width: 100%; border-collapse: collapse; min-width: 2100px; }
+
+/* Edición en línea (tipo Excel) */
+.grid td.ed { cursor: cell; position: relative; }
+.grid td.ed:hover { background: #eef2fb; box-shadow: inset 0 0 0 1px var(--primary-soft); }
+.grid td.ed:hover::after {
+  content: "✎";
+  position: absolute; top: 3px; right: 4px;
+  font-size: 9px; color: var(--primary); opacity: .5;
+}
+.grid td.editing { padding: 4px 6px; background: #fff; box-shadow: inset 0 0 0 2px var(--primary); }
+.grid td.editing:hover::after { content: none; }
+.cell-editor {
+  width: 100%; box-sizing: border-box;
+  padding: 6px 7px; border: 1px solid var(--primary);
+  border-radius: 6px; font: inherit; font-size: 13px;
+  background: #fff; color: var(--text);
+}
+select.cell-editor { cursor: pointer; }
 .grid thead th {
   text-align: left;
   font-size: 11px;
@@ -227,6 +245,15 @@ input:focus, .select:focus, textarea:focus {
 
 .tengo-si { background: #e7f6ee; color: var(--ok); }
 .tengo-no { background: var(--danger-soft); color: var(--danger); }
+.cargo-si { background: var(--primary-soft); color: var(--primary); }
+.cargo-no { background: #eef1f6; color: #5a6678; }
+.row-cargo > td { background: #f5f8ff; }
+.row-cargo:hover > td { background: #eef3ff; }
+
+/* Anchos de celdas de la tabla editable */
+.cell-den { min-width: 240px; max-width: 360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cell-item2 { min-width: 150px; max-width: 240px; font-weight: 600; }
+.cell-obs { min-width: 160px; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .antig-tag { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
 .antig-tag.alerta { color: var(--warn); font-weight: 700; }
@@ -415,6 +442,10 @@ input:focus, .select:focus, textarea:focus {
       <span class="kpi-label">Total requerimientos</span>
       <span class="kpi-value" id="kpi-total">0</span>
     </div>
+    <div class="kpi kpi-accent">
+      <span class="kpi-label">A mi cargo</span>
+      <span class="kpi-value" id="kpi-cargo">0</span>
+    </div>
     <div class="kpi kpi-danger">
       <span class="kpi-label" id="kpi-alta-label">Prioridad alta</span>
       <span class="kpi-value" id="kpi-alta">0</span>
@@ -423,7 +454,7 @@ input:focus, .select:focus, textarea:focus {
       <span class="kpi-label">Sin expediente físico</span>
       <span class="kpi-value" id="kpi-sinexp">0</span>
     </div>
-    <div class="kpi kpi-accent">
+    <div class="kpi">
       <span class="kpi-label">Pendientes / por iniciar</span>
       <span class="kpi-value" id="kpi-pend">0</span>
     </div>
@@ -436,6 +467,12 @@ input:focus, .select:focus, textarea:focus {
       <input type="search" id="buscar" placeholder="Buscar por exp., documento, área, denominación, especialista…" />
     </div>
     <div class="filters">
+      <select id="filtro-cargo" class="select">
+        <option value="">A cargo: todos</option>
+        <option value="SÍ">Solo a mi cargo</option>
+        <option value="NO">De otra persona</option>
+        <option value="__sin">Sin marcar</option>
+      </select>
       <select id="filtro-estado" class="select"><option value="">Todo estado</option></select>
       <select id="filtro-prioridad" class="select"><option value="">Toda prioridad</option></select>
       <select id="filtro-tipo" class="select"><option value="">Todo tipo</option></select>
@@ -454,17 +491,22 @@ input:focus, .select:focus, textarea:focus {
       <thead>
         <tr>
           <th data-sort="nro" class="num">N°</th>
+          <th data-sort="aCargo">A cargo</th>
           <th data-sort="prioridad">Prioridad</th>
           <th data-sort="estado">Estado</th>
           <th data-sort="fechaIngreso">Ingreso a UPROG</th>
           <th data-sort="expLogistica">Exp. Logística</th>
           <th data-sort="expDireccion">Exp. Dirección</th>
           <th data-sort="docArea">Doc. del área</th>
+          <th data-sort="areaEstrategica">Área estratégica</th>
           <th data-sort="areaUsuaria">Área usuaria</th>
           <th data-sort="tipo">Tipo</th>
-          <th data-sort="item">Ítem / Denominación</th>
+          <th data-sort="item">Ítem</th>
+          <th data-sort="denominacion">Denominación</th>
           <th data-sort="especialista">Especialista</th>
+          <th data-sort="fechaPase">F. pase</th>
           <th data-sort="tengoExp">¿Tengo exp.?</th>
+          <th data-sort="observaciones">Observaciones</th>
           <th class="acciones-col">Acciones</th>
         </tr>
       </thead>
@@ -577,6 +619,14 @@ input:focus, .select:focus, textarea:focus {
               <option value="NO">NO</option>
             </select>
           </label>
+          <label class="field">
+            <span>¿A mi cargo? (lo veo yo)</span>
+            <select id="f-aCargo" class="select">
+              <option value="">—</option>
+              <option value="SÍ">SÍ</option>
+              <option value="NO">NO (de otra persona)</option>
+            </select>
+          </label>
           <label class="field field-wide">
             <span>Observaciones</span>
             <textarea id="f-observaciones" rows="2" placeholder="Notas y seguimiento"></textarea>
@@ -656,7 +706,8 @@ input:focus, .select:focus, textarea:focus {
   const CAMPOS_CSV = [
     "nro", "fechaIngreso", "expLogistica", "expDireccion", "docArea",
     "areaEstrategica", "areaUsuaria", "tipo", "denominacion", "item",
-    "especialista", "fechaPase", "estado", "prioridad", "observaciones", "tengoExp",
+    "especialista", "fechaPase", "estado", "prioridad", "observaciones",
+    "tengoExp", "aCargo",
   ];
 
   const ENCABEZADOS_CSV = {
@@ -667,6 +718,14 @@ input:focus, .select:focus, textarea:focus {
     especialista: "Especialista a cargo", fechaPase: "Fecha de pase a especialista",
     estado: "Estado del requerimiento", prioridad: "Prioridad",
     observaciones: "Observaciones", tengoExp: "¿Tengo el expediente?",
+    aCargo: "¿A mi cargo?",
+  };
+
+  // Tipo de editor en línea por campo (lo no listado es texto)
+  const FIELD_EDITOR = {
+    fechaIngreso: "date", fechaPase: "date",
+    prioridad: "select", estado: "select", tipo: "select",
+    aCargo: "select", tengoExp: "select",
   };
 
   // Listas configurables por defecto (el usuario puede cambiarlas en ⚙ Configurar)
@@ -697,6 +756,8 @@ input:focus, .select:focus, textarea:focus {
   const PALETA = ["#3b56d6", "#1f9d57", "#c77700", "#d63b4b", "#7b3fd1", "#2f5fd0",
     "#b03a78", "#15824a", "#8a5a00", "#0f8a8a", "#6b7280", "#c0392b"];
 
+  const SINO = ["", "SÍ", "NO"];
+
   // Datos reales de JUNIO (cargables con un botón). Inyectados desde el Excel original.
   const DATOS_JUNIO = /*__DATOS_JUNIO__*/[{"nro":"1","fechaIngreso":"2026-02-26","expLogistica":"2728","expDireccion":"4249","docArea":"NOTA INFORMATIVA N°040-2026-DP-HNAL","areaEstrategica":"UNIDAD FUNCIONAL DE MAMIS - DPTO DE PEDIATRIA","areaUsuaria":"UNIDAD FUNCIONAL DE MAMIS - DPTO DE PEDIATRIA","tipo":"BIEN","denominacion":"SOLICITO ADQUISICION DE UN (01) ESTANTE DE MELAMINA PARA LA U.F MAMIS DE DPTO DE PEDIATRIA","item":"ESTANTE DE MELAMINA","especialista":"","fechaPase":"2026-06-03","estado":"INVITACION","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"2","fechaIngreso":"2026-04-21","expLogistica":"5733","expDireccion":"8151","docArea":"NOTA INFORMATIVA N°072-2026-DP-HNAL","areaEstrategica":"SERVICIO PEDIATRIA","areaUsuaria":"SERVICIO PEDIATRIA","tipo":"BIEN","denominacion":"ADQUISICION DE TRES CHOCHES METALICOS PARA TRANSPORTE DE MEDICAMENTOS","item":"3 COCHES METALICOS PARA TRANSPORTE DE MEDICAMENTOS","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"3","fechaIngreso":"2026-02-17","expLogistica":"2132","expDireccion":"2173","docArea":"NOTA INFORMATIVA N°18-2026/DRX-J-HNAL","areaEstrategica":"DPTO DIAGNOSTICO POR IMÁGENES","areaUsuaria":"DPTO DIAGNOSTICO POR IMÁGENES","tipo":"BIEN","denominacion":"ADQUISICION DE ACCESORIOS DE FLAT PANEL INALAMBRICO PARA (03) EQUIPOS DE RAYOS X ESTACIONARIO DIGITAL DIRECTO","item":"3 ACCESORIOS DE FLAT PANEL INALAMBRICO PARA (03) EQUIPOS DE RAYOS X ESTACIONARIO DIGITAL DIRECTO","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"4","fechaIngreso":"2026-02-23","expLogistica":"2359","expDireccion":"2626","docArea":"NOTA INFORMATIVA N°423-2026-DEyCC-HNAL","areaEstrategica":"DPTO EMERGENCIA Y CUIDADOS CRITICOS","areaUsuaria":"DPTO EMERGENCIA Y CUIDADOS CRITICOS","tipo":"SERVICIO","denominacion":"SE SOLICITA SERVICIO DE MANTENIMIENTO CORRECTIVO DE MONITORES MULTIPARAMETROS DE SIGNOS VITALES / EDAN","item":"SERVICIO DE MANTENIMIENTO CORRECTIVO DE 6 MONITORES MULTIPARAMETROS DE SIGNOS VITALES / EDAN","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"5","fechaIngreso":"2026-02-27","expLogistica":"2821","expDireccion":"4319","docArea":"NOTA INFORMATIVA N°45-2026-SCIyCC-DEyCC-HNAL","areaEstrategica":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","areaUsuaria":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","tipo":"BIEN","denominacion":"SOLICITO ADQUISICION DE ACCESORIOS PARA EQUIPOS MONITOR MULTIPARAMETROS MARCA MINDRAY DEL SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","item":"ACCESORIOS PARA 4 EQUIPOS MONITOR MULTIPARAMETROS MARCA MINDRAY","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"6","fechaIngreso":"2026-05-05","expLogistica":"6387","expDireccion":"9145","docArea":"NOTA INFORMATIVA N°85-2026-SCIyCC-DEyCC-HNAL","areaEstrategica":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","areaUsuaria":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","tipo":"SERVICIO","denominacion":"SOLICITO SERVICIO DE MANTENIMIENTO CORRECTIVO DE VENTILADOR MECANICO DRAGUE DEL SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","item":"2 SERVICIO DE MANTENIMIENTO CORRECTIVO DE VENTILADOR MECANICO DRAGUE","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"7","fechaIngreso":"2026-04-10","expLogistica":"5147","expDireccion":"23147","docArea":"NOTA INFORMATIVA N°32-2026-SC/C.COR-HNAL","areaEstrategica":"SERVICIO DE CARDIOLOGIA Y CUIDADOS CORONARIOS","areaUsuaria":"SERVICIO DE CARDIOLOGIA Y CUIDADOS CORONARIOS","tipo":"BIEN","denominacion":"SOLICITO ADQUISICION DE 02 COCHES DE PARO PARA EL SERVICIO DE CARDIOLOGIA Y CUIDADOS CORONARIOS","item":"ADQUISICION DE 02 COCHES DE PARO","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"8","fechaIngreso":"2026-04-30","expLogistica":"6176","expDireccion":"8811","docArea":"NOTA INFORMATIVA N°905-DF-HNAL-2026","areaEstrategica":"SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR","areaUsuaria":"SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE CANULAS Y PARCHE CARDIOVASCULAR, SOLICITADO POR EL SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR, PARA EL HOSPITAL NACIONAL ARZOBISPO LOAYZA","item":"ABASTECIMIENTO DE CANULAS Y PARCHE CARDIOVASCULAR","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"9","fechaIngreso":"2026-02-27","expLogistica":"2885","expDireccion":"4441","docArea":"NOTA INFORMATIVA N°46-2026-SCIyCC-DEyCC-HNAL","areaEstrategica":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","areaUsuaria":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","tipo":"BIEN","denominacion":"SOLICITO ADQUISICION DE REPUESTOS PARA EQUIPOS MONITOR MULTIPARAMETROS MARCA NIHON KOHDEN DEL SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","item":"REPUESTOS PARA EQUIPOS MONITOR MULTIPARAMETROS MARCA NIHON KOHDEN","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"10","fechaIngreso":"2026-02-16","expLogistica":"2085","expDireccion":"3370","docArea":"NOTA INFORMATIVA N°33-2026/DRX-J-HNAL","areaEstrategica":"DPTO DIAGNOSTICO POR IMÁGENES","areaUsuaria":"DPTO DIAGNOSTICO POR IMÁGENES","tipo":"BIEN","denominacion":"ADQUISICION DE DISPOSITIVOS MEDICOS","item":"ADQUISICION DE DISPOSITIVOS MEDICOS: 1 PERCHERO METALICOS PORTATIL CON RUEDAS Y 1 PECHERO METALICO","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"11","fechaIngreso":"2026-02-19","expLogistica":"2211","expDireccion":"3678","docArea":"NOTA INFORMATIVA N°49-DACQ-HNAL-2026","areaEstrategica":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS","areaUsuaria":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS","tipo":"SERVICIO","denominacion":"SOLICITUD DE SERVICIO DE CALIBRACION Y CERTIFICACION DE EQUIPOS TERMOHIGROMETROS UBICADOS EN LA SALA DE OPERACIONES DEL PAB 6, PERTENECIENTE AL DEPARTAMENTO DE ANESTESIOLOGIA Y CENTROS QUIRURGICOS","item":"SERVICIO DE CALIBRACION Y CERTIFICACION DE EQUIPOS TERMOHIGROMETRO","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"12","fechaIngreso":"2026-02-24","expLogistica":"2446","expDireccion":"25.007285.01","docArea":"NOTA INFORMATIVA N°18-2026-SC/C.COR-HNAL","areaEstrategica":"SERVICIO DE CARDIOLOGIA Y CUIDADOS CORONARIOS","areaUsuaria":"SERVICIO DE CARDIOLOGIA Y CUIDADOS CORONARIOS","tipo":"SERVICIO","denominacion":"REMITO ACTUALIZACION DE TERMINOS DE REFERENCIA PARA EL SERVICIO DE MANTENIMIENTO CORRECTIVO DE VENTILADOR MECANICO MARCA HAMILTON PARA SERVICIO DE CARDIOLOGIA Y CUIDADOS CORONARIOS","item":"SERVICIO DE MANTENIMIENTO CORRECTIVO DE VENTILADOR MECANICO MARCA HAMILTON","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"13","fechaIngreso":"2026-02-18","expLogistica":"2160","expDireccion":"18597","docArea":"NOTA INFORMATIVA N°0007-2026-SC/C.COR-HNAL","areaEstrategica":"SERVICIO DE CARDIOLOGIA Y CUIDADOS CORONARIOS","areaUsuaria":"SERVICIO DE CARDIOLOGIA Y CUIDADOS CORONARIOS","tipo":"BIEN","denominacion":"REMITO ACTUALIZACION DE ESPECIFICACIONES TECNICAS PARA LA ADQUISICION ACCESORIOS PARA ELECTROCARDIOGRAFO PARA EL SERVICIO DE CARDILOGIA Y CUIDADOS CORONARIOS","item":"ADQUISICION ACCESORIOS PARA ELECTROCARDIOGRAFO","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"14","fechaIngreso":"2026-02-27","expLogistica":"2860","expDireccion":"25.007026.02","docArea":"NOTA INFORMATIVA N°054-DN-HNAL-2026","areaEstrategica":"DEPARTAMENTO DE NUTRICION Y DIETETICA","areaUsuaria":"DEPARTAMENTO DE NUTRICION Y DIETETICA","tipo":"BIEN","denominacion":"SOLICITO ADQUISICION DE 02 REFIGERADORAS INDUSTRIALES INCLUIDA LA INSTALACION Y PUESTA EN FUNCIONAMIENTO PARA EL SERVICIO DE ALIMENTACION CENTRAL DEL DPTO NUTRICION Y DIETETICA","item":"ADQUISICION DE 02 REFIGERADORAS INDUSTRIALES INCLUIDA LA INSTALACION Y PUESTA EN FUNCIONAMIENTO","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"15","fechaIngreso":"2026-02-27","expLogistica":"2856","expDireccion":"4016","docArea":"NOTA INFORMATIVA N°39-2026-SCIyCC-DEyCC-HNAL","areaEstrategica":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","areaUsuaria":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","tipo":"BIEN","denominacion":"SOLICITO ADQUISICION DE RESPUESTOS PARA EQUIPOS DESFRIBILADORES DEL SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","item":"ADQUISICION DE RESPUESTOS PARA EQUIPOS DESFRIBILADORES","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"16","fechaIngreso":"2026-02-18","expLogistica":"2168","expDireccion":"2337","docArea":"NOTA INFORMATIVA N°0034-DACQ-HNAL-2026","areaEstrategica":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS","areaUsuaria":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS","tipo":"SERVICIO","denominacion":"REQUERIMIENTO PARA EL SERVICIO DE MANTENIMIENTO PREVENTIVO PARA UNA MAQUINA DE ANESTESIA DRAGER PERTENECIENTE AL DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS","item":"SERVICIO DE MANTENIMIENTO PREVENTIVO PARA UNA MAQUINA DE ANESTESIA DRAGER","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"17","fechaIngreso":"2026-05-08","expLogistica":"6536","expDireccion":"9418","docArea":"NOTA INFORMATIVA N°0143-DACQ-HNAL-2027","areaEstrategica":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS","areaUsuaria":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS","tipo":"BIEN","denominacion":"SOLICITUD DE ADQUISICION DE DOS (02) PISTOLAS PRESURIZADAS PARA LA LIMPIEZA Y ENJUAGUE CON DESTINO A CENTRAL DE ESTERALIAZACION DEL HOSPITAL NACIONAL ARZOBISPO LOAYZA","item":"ADQUISICION DE DOS (02) PISTOLAS PRESURIZADAS PARA LA LIMPIEZA Y ENJUAGUE","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"18","fechaIngreso":"2026-04-29","expLogistica":"3161 (3161)","expDireccion":"4537","docArea":"MEMORANDO N°2116-2026-OSGM-OEA-HNAL","areaEstrategica":"SERVICIO DE PEDIATRIA","areaUsuaria":"SERVICIO DE PEDIATRIA","tipo":"BIEN","denominacion":"SOLICITUD DE REVISION Y EVALUACION DE CUMPLIMIENTO DE LAS ESPECIFICACIONES TECNICAS","item":"ADQUISICION DE ESPIROMETRO","especialista":"","fechaPase":"2026-06-03","estado":"CUADRO COMPARATIVO","prioridad":"Media","observaciones":"CUADRO COMPARATIVO/ FRANK","tengoExp":"NO"},{"nro":"19","fechaIngreso":"2026-02-25","expLogistica":"2590","expDireccion":"19295","docArea":"NOTA INFORMATIVA 024-2026-JSO-HNAL","areaEstrategica":"SERVICIO DE OBSTETRICES","areaUsuaria":"SERVICIO DE OBSTETRICES","tipo":"BIEN","denominacion":"PERSISTENCIA DE LA NECESIDAD DE ADQUISICION CAMILLA METALICA PARA EXAMEN GINECOLOGICO","item":"ADQUISICION DE 4 CAMILLA METALICA PARA EXAMEN GINECOLOGICO","especialista":"","fechaPase":"2026-06-03","estado":"ENTREGADO A GRISEL","prioridad":"Media","observaciones":"VALIDADO/  ENTREGADO A GRISEL","tengoExp":"SÍ"},{"nro":"20","fechaIngreso":"2026-05-29","expLogistica":"2309","expDireccion":"3810","docArea":"MORANDO N°0479-DACQ-HNAL-2026","areaEstrategica":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS (CENTRAL ESTERILIZACION)","areaUsuaria":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS (CENTRAL ESTERILIZACION)","tipo":"BIEN","denominacion":"SE REMITE VALIDACION Y APROBACION DE CUMPLIMIENTO DE LAS ESPECIFICACIONES TECNICAS PARA LA ADQUISICION DE INDICADOR BIOLOGICO DE ESTERELIZIACION A GAS DE OXIDO DE ETILENO PARA EL ABASTECIMIENTO DE DOCE (12) MESES CON DESTINO A CENTRAL DE ESTERALIZACION","item":"INDICADOR BIOLOGICO DE ESTERELIZIACION A GAS DE OXIDO DE ETILENO","especialista":"","fechaPase":"2026-06-03","estado":"DISPONIBILIDAD PRESUPUESTAL","prioridad":"Media","observaciones":"CUADRO COMPARATIVO FRANK/ SE LO LLEVARA LA LIC JUDITH/PARA UNIDAD PRESUPUESTAL","tengoExp":"SÍ"},{"nro":"21","fechaIngreso":"2026-05-14","expLogistica":"6197","expDireccion":"8882","docArea":"MEMORANDUM N°2525-DF-HNAL-2026","areaEstrategica":"SERVICIO DE TORAX Y CARDIOVASCULAR","areaUsuaria":"SERVICIO DE TORAX Y CARDIOVASCULAR","tipo":"BIEN","denominacion":"VALIDACION Y APROBACION DE LAS ESPECIFICACIONES TECNICAS DE VALVULA CARDIACA AORTICA BIOLOGICA #23, SOLICITADO POR EL SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR, PARA EL HNAL","item":"VALVULA CARDIACA AORTICA BIOLOGICA #23","especialista":"","fechaPase":"2026-06-03","estado":"DISPONIBILIDAD PRESUPUESTAL","prioridad":"Media","observaciones":"CUADRO COMPARATIVO/ FRANK/ DISPONIBILIDAD PRESUPUESTAL","tengoExp":"SÍ"},{"nro":"22","fechaIngreso":"2026-04-30","expLogistica":"6200","expDireccion":"8880","docArea":"NOTA INFORMATIVA  N°913-DF-HNAL-2026","areaEstrategica":"SERVICIO DE TORAX Y CARDIOVASCULAR","areaUsuaria":"SERVICIO DE TORAX Y CARDIOVASCULAR","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DEVALVULA CARDIACA MITRAL MECANICA #31, SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR, PARA EL HNAL","item":"ABASTECIMIENTO DEVALVULA CARDIACA MITRAL MECANICA #31","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"23","fechaIngreso":"2026-04-04","expLogistica":"3160","expDireccion":"4516","docArea":"NOTA INFORMATIVA N°043-2026-DP-HNAL","areaEstrategica":"SERVICIO DE PEDIATRIA","areaUsuaria":"SERVICIO DE PEDIATRIA","tipo":"BIEN","denominacion":"ADQUISICION DE DOS TENSIOMETROS ANEORIDES PEDIATRICOS PARA EL SERVICIO DE PEDIATRIA","item":"ADQUISICION DE DOS TENSIOMETROS ANEORIDES PEDIATRICOS","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"24","fechaIngreso":"2026-02-04","expLogistica":"1518","expDireccion":"269","docArea":"NOTA INFORMATIVA N°155-DF-HNAL-2026","areaEstrategica":"DPTO DE ENFERMERIA","areaUsuaria":"DPTO DE ENFERMERIA","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE APLICACIONES DE APOSITOS HIDROCELULARES DE POLIURETANO ADHESIVO ESTERIL Y APOSITO HIDRCOLOIDE PARA EL HNAL","item":"ABASTECIMIENTO DE APLICACIONES DE APOSITOS HIDROCELULARES DE POLIURETANO ADHESIVO ESTERIL Y APOSITO HIDRCOLOIDE","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"25","fechaIngreso":"2026-02-23","expLogistica":"2349","expDireccion":"25120.02","docArea":"NOTA INFORMATIVAS N°29-202-SCIyCC-DEyCC-HNAL","areaEstrategica":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","areaUsuaria":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","tipo":"BIEN","denominacion":"SOLICITO ADQUISICION DE RACK PARA MONIORES MULTIPARAMETROS DEL SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","item":"ADQUISICION DE RACK PARA MONIORES MULTIPARAMETROS","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"26","fechaIngreso":"2026-05-27","expLogistica":"7447 (6434)","expDireccion":"9122","docArea":"MEMORANDO N°2573-2026-OSGM-OEA-HNAL","areaEstrategica":"SERVICIO DE GASTOENTEROLOGIA","areaUsuaria":"SERVICIO DE GASTOENTEROLOGIA","tipo":"SERVICIO","denominacion":"SOLICITUD DE REVISION Y EVALUACION DE CUMPLIMIENTO DE LOS TERMINOS DE REFERENCIA","item":"SERVICIO DE MANTENIMIENTO CORRECTIVO DE EQUIPO BIOMEDICO","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"NO"},{"nro":"27","fechaIngreso":"2026-03-23","expLogistica":"4201","expDireccion":"6183","docArea":"NOTA INFORMATIVA N°623-DF-HNAL-2026","areaEstrategica":"SERVICIO DE CIRUGIA DE CABEZA Y CUELLO Y MAXILOFACIAL","areaUsuaria":"SERVICIO DE CIRUGIA DECABEZA Y CUELLO Y MAXILOFACIAL","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE HOJA DE SIERRA, SOLICITADO POR EL SERVICIO DE CIRUGIA DE CABEZA Y CUELLO Y MAXILOFACIAL PARA EL HNAL","item":"ABASTECIMIENTO DE HOJA DE SIERRA","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"28","fechaIngreso":"2026-03-26","expLogistica":"4535","expDireccion":"6545","docArea":"NOTA INFORMATIVA N°627 -DF-HNAL-2026","areaEstrategica":"SERVICIO DE CIRUGIA DE CABEZA Y CUELLO Y MAXILOFACIAL","areaUsuaria":"SERVICIO DE CIRUGIA DECABEZA Y CUELLO Y MAXILOFACIAL","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE BROCAS, SOLICITADO POR EL SERVICIO DE CIRUGIA DE CABEZA Y CABEZA Y  MAXILOFACIAL PARA EL HNAL","item":"ABASTECIMIENTO DE BROCAS","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"29","fechaIngreso":"2026-03-26","expLogistica":"4538","expDireccion":"6543","docArea":"NOTA INFORMATIVA N°618 -DF-HNAL-2026","areaEstrategica":"SERVICIO DE CIRUGIA DE CABEZA Y CUELLO Y MAXILOFACIAL","areaUsuaria":"SERVICIO DE CIRUGIA DECABEZA Y CUELLO Y MAXILOFACIAL","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE CANULAS PARA TRAQUEOSTOMIA, SOLICITADO POR EL SERVICIO DE CIRUGIA DE CABEZA Y CABEZA Y  MAXILOFACIAL PARA EL HNAL","item":"ABASTECIMIENTO DE CANULAS PARA TRAQUEOSTOMIA","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"30","fechaIngreso":"2026-04-17","expLogistica":"5557","expDireccion":"7948","docArea":"NOTA INFORMATIVA N°824-DF-HNAL-2026","areaEstrategica":"DPTO DE EMERGENCIA Y CUIDADOS CRITICOS DEL HNAL","areaUsuaria":"DPTO DE EMERGENCIA Y CUIDADOS CRITICOS DEL HNAL","tipo":"BIEN","denominacion":"REQUERIMIENTO ANUAL DE JERINGA DESCARTABLE 3 ML PARA GASES ARTERIALES Y ELECTROLITOS CON HEPARINA DE LITIO PARA EL DPTO DE EMERGENCIA Y CUIDADOS CRITICOS DEL HNAL","item":"REQUERIMIENTO ANUAL DE JERINGA DESCARTABLE 3 ML PARA GASES ARTERIALES Y ELECTROLITOS CON HEPARINA DE LITIO","especialista":"","fechaPase":"2026-06-03","estado":"INVITACION","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"31","fechaIngreso":"2026-05-04","expLogistica":"6337","expDireccion":"9002","docArea":"NOTA INFORMATIVA N°926-DF-HNAL-2026","areaEstrategica":"SERVICIO DE PEDIATRIA","areaUsuaria":"SERVICIO DE PEDIATRIA","tipo":"BIEN","denominacion":"REQUERIMIENTO  DE MICROCUBETA DESCARTABLE PARA HEMOGLOBINOMETRO PORTATIL X 50 PARA EL SERVICIO DE PEDIATRIA DEL HNAL","item":"REQUERIMIENTO  DE MICROCUBETA DESCARTABLE PARA HEMOGLOBINOMETRO PORTATIL X 50","especialista":"","fechaPase":"2026-06-03","estado":"VALIDADO","prioridad":"Media","observaciones":"04-06-206: VINO LIC. ZOILA FLORIAN / CAMBIO DE FICHA TECNICA. MICROCUBETAS URGENTE/ INVITACION","tengoExp":"NO"},{"nro":"32","fechaIngreso":"2026-05-27","expLogistica":"6944 (6944)","expDireccion":"9891","docArea":"MEMORANDO N°1483 -OP-OEA-HNAL-2026","areaEstrategica":"OFICINA DE PERSONAL","areaUsuaria":"OFICINA DE PERSONAL","tipo":"SERVICIO","denominacion":"REVISION Y EVALUCION DE CUMPLIMIENTO DE LOS TERMINOS DE REFERENCIA - VALIDACION Y COTIZACION","item":"CAPACITACION  - OFIMATICA INTERMEDIO (EXCEL Y WORD)","especialista":"","fechaPase":"2026-06-03","estado":"PARA SALDO","prioridad":"Media","observaciones":"PARA SALDO","tengoExp":"SÍ"},{"nro":"33","fechaIngreso":"2026-01-06","expLogistica":"525","expDireccion":"4692","docArea":"NOTA INFORMATIVA N°002-DMI-HNAL-2026","areaEstrategica":"SERVICIO MEDICINA INTERNA 2-II","areaUsuaria":"SERVICIO MEDICINA INTERNA 2-II","tipo":"BIEN","denominacion":"PERSISTENCIA DE LA NECESIDAD DE BIENES","item":"4 BIOMBOS DE METAL DE CUERPOS","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"34","fechaIngreso":"2026-04-16","expLogistica":"5449","expDireccion":"7780","docArea":"NOTA INFORMATIVA N°75-2026-DEyCC-HNAL","areaEstrategica":"DPTO EMERGENCIA Y CUIDADOS CRITICOS","areaUsuaria":"DPTO EMERGENCIA Y CUIDADOS CRITICOS","tipo":"SERVICIO","denominacion":"SE SOLICITA EL SERVICIO DE MANTENIMIENTO CORRECTIVO DE VENTILADOR MECANICO MARCA DRAGUER","item":"SERVICIO DE MANTENIMIENTO CORRECTIVO DE VENTILADOR MECANICO MARCA DRAGUER","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"35","fechaIngreso":"2026-05-19","expLogistica":"7029","expDireccion":"10072","docArea":"NOTA INFORMATIVA N°0167-DACQ-HNAL-2026","areaEstrategica":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS (CENTRAL ESTERILIZACION)","areaUsuaria":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS (CENTRAL ESTERILIZACION)","tipo":"SERVICIO","denominacion":"REQUERIMIENTO PARA EL SERVICIO DE MANTENIMIENTO CORRECTIVO MOBILIARIO MEDICO UBICADO EN CENTRAL DE ESTERALIZACION DEL HNAL","item":"SERVICIO DE MANTENIMIENTO CORRECTIVO MOBILIARIO MEDICO","especialista":"","fechaPase":"2026-06-03","estado":"INVITACION","prioridad":"Media","observaciones":"INVITACION","tengoExp":"NO"},{"nro":"36","fechaIngreso":"2026-05-05","expLogistica":"6388","expDireccion":"9130","docArea":"NOTA INFORMATIVA N°948-DF-HNAL-2026","areaEstrategica":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS","areaUsuaria":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE SENSOR BIS PARA EQUIPO DE ANESTESIA, SOLCITADO POR DPTO DE ANESTESIOLOGIA Y CENTROS QUIRURGICOS PARA EL HNAL","item":"ABASTECIMIENTO DE SENSOR BIS PARA EQUIPO DE ANESTESIA","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"37","fechaIngreso":"2026-04-16","expLogistica":"5450","expDireccion":"7778","docArea":"NOTA INFORMATIVA N°795-DF-HNAL-2027","areaEstrategica":"DEPARTAMENTO DE ANESTESIOLOGIA Y CENTROS QUIRURGICOS","areaUsuaria":"DEPARTAMENTO DE ANESTESIOLOGIA Y CENTROS QUIRURGICOS","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTESIMIENTO DE FIBRA OPTICA DESCARTABLE 3.2/1.2 MM X 60 CM PARA BRONCOSCOPIO CON EQUIPOS DE CESION EN USO, SOLICITADO POR EL DEPARTAMENTO DE ANESTESIOLOGIA Y CENTROS QUIRURGICOS PARA EL HNAL","item":"ABASTESIMIENTO DE FIBRA OPTICA DESCARTABLE 3.2/1.2 MM X 60 CM PARA BRONCOSCOPIO CON EQUIPOS DE CESION EN USO","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"38","fechaIngreso":"2026-04-20","expLogistica":"5626","expDireccion":"7431","docArea":"NOTA INFORMATIVA N°292-HNAL-OP-2026","areaEstrategica":"OFICINA DE PERSONAL","areaUsuaria":"OFICINA DE PERSONAL","tipo":"SERVICIO","denominacion":"REQUERIMIENTO DE CAPACITACION ESPECIFICA \"TALLER DE REANIMACION CARDIO PULMONAR NEONATAL AVANZADA\"","item":"REQUERIMIENTO DE CAPACITACION ESPECIFICA \"TALLER DE REANIMACION CARDIO PULMONAR NEONATAL AVANZADA\"","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"39","fechaIngreso":"2026-04-30","expLogistica":"6173","expDireccion":"8809","docArea":"NOTA INFORMATIVA N°907-DF-HNAL-2026","areaEstrategica":"SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR","areaUsuaria":"SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE HEMOCONCENTRADOR Y SET DE TUBULADURA PARA CIRCULACION EXTRACORPOREA, SOLICITADO POR EL SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR, PARA EL HNAL","item":"ABASTECIMIENTO DE HEMOCONCENTRADOR Y SET DE TUBULADURA PARA CIRCULACION EXTRACORPOREA","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"40","fechaIngreso":"2026-03-30","expLogistica":"6172","expDireccion":"8808","docArea":"NOTA INFORMATIVA N°908-DF-HNAL-2026","areaEstrategica":"SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR","areaUsuaria":"SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE CANULAS, FILTRO ARTERIAL PARA CIRCULACION EXTRACOPOREA Y SET DE TUBULADURA, SOLICITADO POR EL SERVICIO DE TORAX Y CARDIOVASCULAR, PARA EL HNAL","item":"ABASTECIMIENTO DE CANULAS, FILTRO ARTERIAL PARA CIRCULACION EXTRACOPOREA Y SET DE TUBULADURA","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"41","fechaIngreso":"2026-04-23","expLogistica":"4196","expDireccion":"6189","docArea":"NOTA INFORMATIVA N°629-DF-HNAL-2026","areaEstrategica":"SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR","areaUsuaria":"SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE CANULA PARA TRAQUEOSTOMIA #7 EXTRA LARGA CON ANILLO DE SUJECCION MOVIL CON BALON, SOLICITADO POR EL SERVICIO DE TORAX Y CARDIOVASCULAR, PARA EL HNAL","item":"ABASTECIMIENTO DE CANULA PARA TRAQUEOSTOMIA #7 EXTRA LARGA CON ANILLO DE SUJECCION MOVIL CON BALON","especialista":"","fechaPase":"2026-06-03","estado":"ENTREGADO A GRISEL","prioridad":"Media","observaciones":"PARA VALIDAR/ ENTREGADO A GRISEL","tengoExp":"NO"},{"nro":"42","fechaIngreso":"2026-02-27","expLogistica":"2800","expDireccion":"4350","docArea":"NOTA INFORMATIVA N°371-DF-HNAL-2027","areaEstrategica":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","areaUsuaria":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","tipo":"BIEN","denominacion":"REQUERIMIENTO ANUAL DE DISPOSITIVOS MEDICOS PARA EL SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS DEL HNAL","item":"DISPOSITIVOS MEDICOS (SONDA NASOGASTRICA #14 Y #16)","especialista":"","fechaPase":"2026-06-03","estado":"ENTREGADO A GRISEL","prioridad":"Media","observaciones":"PARA VALIDAR/ ENTREGADO A GRISEL","tengoExp":"NO"},{"nro":"43","fechaIngreso":"2026-04-23","expLogistica":"4203","expDireccion":"6186","docArea":"NOTA INFORMATIVA N°625-DF-HNAL-2028","areaEstrategica":"SERVICIO DE CIRUGIA DE CABEZA Y CABEZA Y  MAXILOFACIAL","areaUsuaria":"SERVICIO DE CIRUGIA DE CABEZA Y CABEZA Y  MAXILOFACIAL","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE TORNILLOS DE TITANIO SOLICITADO POR EL SERVICIO DE CIRUGIA DE CABEZA Y CABEZA Y  MAXILOFACIAL PARA EL HNAL","item":"ABASTECIMIENTO DE TORNILLOS DE TITANIO","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"44","fechaIngreso":"2026-02-17","expLogistica":"2133","expDireccion":"2104","docArea":"NOTA INFORMATIVA N°0033-DACQ-HNAL-2026","areaEstrategica":"DEPARTAMENTO DE ANESTESIOLOGIA Y CENTROS QUIRURGICOS","areaUsuaria":"DEPARTAMENTO DE ANESTESIOLOGIA Y CENTROS QUIRURGICOS","tipo":"SERVICIO","denominacion":"REQUERIMIENTO PARA EL SERVICIO DE MANTENIMIENTO CORRECTIVO POR CASA ESPECIALIZADA DE UNA (1) MAQUINA DE ANESTESIA DRAGER PERTENECIENTE AL DPTO DE ANESTESIA Y CENTROS QUIRURGICOS","item":"SERVICIO DE MANTENIMIENTO CORRECTIVO POR CASA ESPECIALIZADA DE UNA (1) MAQUINA DE ANESTESIA DRAGER","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"45","fechaIngreso":"2026-02-06","expLogistica":"1699","expDireccion":"12679","docArea":"NOTA INFORMATIVA N°154-OL-J-HNAL-2026","areaEstrategica":"DEPARTAMENTO DE ESTOMATOLOGIA","areaUsuaria":"DEPARTAMENTO DE ESTOMATOLOGIA","tipo":"BIEN","denominacion":"PERSISTENCIA DE LA NECESIDAD DE EQUIPOS MEDICOS","item":"ADQUISICION DE EQUIPOS BIOMEDICOS  (LAMPARA DE FOTOLIMERIZACION - LASER DIODO DE LUZ - SENSOR DE RX)","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"46","fechaIngreso":"2026-02-25","expLogistica":"2583","expDireccion":"1561","docArea":"NOTA INFORMATIVA N°080-2026-OSGM-OEA-HNAL","areaEstrategica":"UNIDAD DE LIMPIEZA Y JARDINES","areaUsuaria":"UNIDAD DE LIMPIEZA Y JARDINES","tipo":"BIEN","denominacion":"ACTUALIZACION DE ADQUISICION DE LUSTRADORAS ELECTRICAS INDUSTRIALES Y ESCOBILLAS DE REPUESTO","item":"ADQUISICION DE LUSTRADORAS ELECTRICAS INDUSTRIALES Y ESCOBILLAS DE REPUESTO","especialista":"","fechaPase":"2026-06-03","estado":"VALIDADO","prioridad":"Media","observaciones":"VALIDADO/","tengoExp":"SÍ"},{"nro":"47","fechaIngreso":"2026-03-10","expLogistica":"3411","expDireccion":"5031","docArea":"NOTA INFORMATIVA N°0297-2026-OSGM-OEA-HNAL","areaEstrategica":"UNIDAD DE LAVANDERIA","areaUsuaria":"UNIDAD DE LAVANDERIA","tipo":"BIEN","denominacion":"SE COMUNICAPRESISTENCIA DE NECESIDAD DE REQUERIMIENTO - ADQUISICION DE ESTANTES DE ACERO INOXIDABLE E INSTALACION PARA LA UNIDAD DE LAVANDERIA HNAL","item":"ADQUISICION DE ESTANTES DE ACERO INOXIDABLE E INSTALACION","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"48","fechaIngreso":"2026-04-06","expLogistica":"3294","expDireccion":"4898","docArea":"NOTA INFORMATIVA N°461-DF-HNAL-2026","areaEstrategica":"SERVICIO DE CIRUGIA PLASTICA Y QUEMADOS","areaUsuaria":"SERVICIO DE CIRUGIA PLASTICA Y QUEMADOS","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABATSECIMIENTO DE LAPIZ ELECTROCAUTERIO MONOPOLAR CON PUNTA DESCARABLE Y POLIHEXANIDA UNDECILEMIDOPROPIL BETANIA, SOLICITADO POR EL SERVICIO DE CIRUGIA PLASTICA Y QUEMADOS PARA EL HNAL","item":"ABATSECIMIENTO DE LAPIZ ELECTROCAUTERIO MONOPOLAR CON PUNTA DESCARABLE Y POLIHEXANIDA UNDECILEMIDOPROPIL BETANIA","especialista":"","fechaPase":"2026-06-03","estado":"ENTREGADO A GRISEL","prioridad":"Media","observaciones":"VALIDADO/  ENTREGADO A GRISEL","tengoExp":"SÍ"},{"nro":"49","fechaIngreso":"2026-02-18","expLogistica":"2174","expDireccion":"3557","docArea":"NOTA INFORMATIVA N°37-2026-SCIyCC-DEyCC-HNAL","areaEstrategica":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","areaUsuaria":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","tipo":"SERVICIO","denominacion":"SOLICITO SERVICIO DE MANTENIMIENTO CORRECTIVO DE VENTILADOR MECANICO MIDRAY DEL SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","item":"SERVICIO DE MANTENIMIENTO CORRECTIVO DE VENTILADOR MECANICO MIDRAY","especialista":"","fechaPase":"2026-06-04","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"NO"},{"nro":"50","fechaIngreso":"2026-06-02","expLogistica":"7712","expDireccion":"10164","docArea":"NOTA INFORMATIVA N°431-2026-OP-OEA-HNAL","areaEstrategica":"OFICINA DE PERSONAL","areaUsuaria":"OFICINA DE PERSONAL","tipo":"SERVICIO","denominacion":"REQUERIMIENTO DE CURSO \"CAPACITACION INTERINSTITUCIONAL EN ARCHIVO Y TRAMITE DOCUMENTARIO\"","item":"REQUERIMIENTO DE CURSO \"CAPACITACION INTERINSTITUCIONAL EN ARCHIVO Y TRAMITE DOCUMENTARIO\"","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"}]/*__FIN__*/;
 
@@ -704,7 +765,7 @@ input:focus, .select:focus, textarea:focus {
   let items = [];
   let config = clone(DEF_CONFIG);
   let configDraft = null;
-  const filtro = { q: "", estado: "", prioridad: "", tipo: "", tengo: "" };
+  const filtro = { q: "", cargo: "", estado: "", prioridad: "", tipo: "", tengo: "" };
   const orden = { key: "nro", dir: "asc" };
 
   // Mapas derivados de la configuración
@@ -727,6 +788,7 @@ input:focus, .select:focus, textarea:focus {
       .replace(/&/g, "&amp;").replace(/</g, "&lt;")
       .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
+  const GUION = '<span class="muted-cell">—</span>';
 
   function hoyISO() {
     const d = new Date();
@@ -755,7 +817,6 @@ input:focus, .select:focus, textarea:focus {
     if (isNaN(n)) return { r: 107, g: 114, b: 128 };
     return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
   }
-
   function badgeStyle(hex) {
     const { r, g, b } = hexToRgb(hex);
     const t = (x) => Math.round(x * 0.58);
@@ -810,10 +871,23 @@ input:focus, .select:focus, textarea:focus {
     return String(max + 1);
   }
 
+  function opcionesDe(field) {
+    if (field === "prioridad") return config.prioridades.map((o) => o.nombre);
+    if (field === "estado") return config.estados.map((o) => o.nombre);
+    if (field === "tipo") return config.tipos.map((o) => o.nombre);
+    if (field === "aCargo" || field === "tengoExp") return SINO.slice();
+    return [];
+  }
+
   // ---------- Filtro + orden ----------
   function visibles() {
     const q = filtro.q.trim().toLowerCase();
     let lista = items.filter((it) => {
+      if (filtro.cargo) {
+        const v = it.aCargo || "";
+        if (filtro.cargo === "__sin") { if (v !== "") return false; }
+        else if (v !== filtro.cargo) return false;
+      }
       if (filtro.estado && it.estado !== filtro.estado) return false;
       if (filtro.prioridad && it.prioridad !== filtro.prioridad) return false;
       if (filtro.tipo && it.tipo !== filtro.tipo) return false;
@@ -851,14 +925,12 @@ input:focus, .select:focus, textarea:focus {
 
   function renderKpis() {
     const top = prioridadTop();
-    const alta = items.filter((it) => it.prioridad === top).length;
-    const sinExp = items.filter((it) => (it.tengoExp || "") === "NO").length;
-    const pend = items.filter((it) => !it.estado || it.estado === defEstado()).length;
     $("#kpi-total").textContent = items.length;
-    $("#kpi-alta").textContent = alta;
+    $("#kpi-cargo").textContent = items.filter((it) => (it.aCargo || "") === "SÍ").length;
+    $("#kpi-alta").textContent = items.filter((it) => it.prioridad === top).length;
     $("#kpi-alta-label").textContent = "Prioridad " + (top || "—").toLowerCase();
-    $("#kpi-sinexp").textContent = sinExp;
-    $("#kpi-pend").textContent = pend;
+    $("#kpi-sinexp").textContent = items.filter((it) => (it.tengoExp || "") === "NO").length;
+    $("#kpi-pend").textContent = items.filter((it) => !it.estado || it.estado === defEstado()).length;
   }
 
   function renderTabla() {
@@ -870,18 +942,13 @@ input:focus, .select:focus, textarea:focus {
       if (items.length === 0) { tbody.innerHTML = ""; vacio.classList.remove("hidden"); }
       else {
         vacio.classList.add("hidden");
-        tbody.innerHTML = `<tr><td colspan="13" class="empty" style="padding:34px">Ningún requerimiento coincide con los filtros.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="18" class="empty" style="padding:34px">Ningún requerimiento coincide con los filtros.</td></tr>`;
       }
       $("#footer-count").textContent = `${items.length} requerimiento${items.length === 1 ? "" : "s"}`;
       return;
     }
     vacio.classList.add("hidden");
     tbody.innerHTML = lista.map(filaHTML).join("");
-
-    $$("#tbody [data-edit]").forEach((b) =>
-      b.addEventListener("click", () => abrirModal(b.getAttribute("data-edit"))));
-    $$("#tbody [data-del]").forEach((b) =>
-      b.addEventListener("click", () => eliminar(b.getAttribute("data-del"))));
 
     const total = items.length, mostrados = lista.length;
     $("#footer-count").textContent = mostrados === total
@@ -893,41 +960,43 @@ input:focus, .select:focus, textarea:focus {
     const dias = diasDesde(it.fechaIngreso);
     const cerrado = it.estado === "PARA SALDO" || it.estado === "ENTREGADO A GRISEL";
     const vieja = dias !== null && dias > 30 && !cerrado;
-    let antig = "";
-    if (dias !== null) antig = `<span class="antig-tag ${vieja ? "alerta" : ""}">${dias} d en UPROG</span>`;
+    const antig = dias !== null ? `<span class="antig-tag ${vieja ? "alerta" : ""}">${dias} d</span>` : "";
+    const cargo = it.aCargo || "";
+    const cargoBadge = cargo
+      ? `<span class="badge ${cargo === "SÍ" ? "cargo-si" : "cargo-no"}">${esc(cargo)}</span>` : GUION;
     const tengo = it.tengoExp || "";
     const tengoBadge = tengo
-      ? `<span class="badge ${tengo === "SÍ" ? "tengo-si" : "tengo-no"}">${esc(tengo)}</span>`
-      : `<span class="muted-cell">—</span>`;
+      ? `<span class="badge ${tengo === "SÍ" ? "tengo-si" : "tengo-no"}">${esc(tengo)}</span>` : GUION;
+    const ed = (f, inner, cls) => `<td class="ed ${cls || ""}" data-id="${it.id}" data-field="${f}">${inner}</td>`;
+    const txt = (f, cls) => ed(f, esc(it[f]) || GUION, cls);
 
     return `
-      <tr class="${vieja ? "row-vieja" : ""}">
-        <td class="num cell-strong">${esc(it.nro)}</td>
-        <td>${badge(it.prioridad, COL.prioridad)}</td>
-        <td>${badge(it.estado, COL.estado)}</td>
-        <td>${fmtFecha(it.fechaIngreso)}${antig}</td>
-        <td class="cell-strong">${esc(it.expLogistica) || "—"}</td>
-        <td>${esc(it.expDireccion) || "—"}</td>
-        <td class="cell-doc">${esc(it.docArea) || "—"}</td>
-        <td class="cell-area">${esc(it.areaUsuaria) || "—"}</td>
-        <td>${badge(it.tipo, COL.tipo)}</td>
-        <td class="cell-item">
-          <span class="item-main">${esc(it.item) || esc(it.denominacion) || "—"}</span>
-          ${it.denominacion ? `<span class="item-sub" title="${esc(it.denominacion)}">${esc(it.denominacion)}</span>` : ""}
-        </td>
-        <td>${esc(it.especialista) || "<span class='muted-cell'>—</span>"}</td>
-        <td>${tengoBadge}</td>
-        <td>
-          <div class="row-actions">
-            <button class="icon-btn" data-edit="${it.id}" title="Editar">✎</button>
-            <button class="icon-btn danger" data-del="${it.id}" title="Eliminar">🗑</button>
-          </div>
-        </td>
+      <tr class="${vieja ? "row-vieja" : ""} ${cargo === "SÍ" ? "row-cargo" : ""}">
+        ${ed("nro", esc(it.nro) || GUION, "num cell-strong")}
+        ${ed("aCargo", cargoBadge)}
+        ${ed("prioridad", badge(it.prioridad, COL.prioridad))}
+        ${ed("estado", badge(it.estado, COL.estado))}
+        ${ed("fechaIngreso", fmtFecha(it.fechaIngreso) + antig)}
+        ${txt("expLogistica", "cell-strong")}
+        ${txt("expDireccion")}
+        ${txt("docArea", "cell-doc")}
+        ${txt("areaEstrategica", "cell-area")}
+        ${txt("areaUsuaria", "cell-area")}
+        ${ed("tipo", badge(it.tipo, COL.tipo))}
+        ${txt("item", "cell-item2")}
+        ${txt("denominacion", "cell-den")}
+        ${txt("especialista")}
+        ${ed("fechaPase", fmtFecha(it.fechaPase))}
+        ${ed("tengoExp", tengoBadge)}
+        ${txt("observaciones", "cell-obs")}
+        <td><div class="row-actions">
+          <button class="icon-btn danger" data-del="${it.id}" title="Eliminar">🗑</button>
+        </div></td>
       </tr>`;
   }
 
   function badge(valor, mapa) {
-    if (!valor) return `<span class="muted-cell">—</span>`;
+    if (!valor) return GUION;
     return `<span class="badge" style="${badgeStyle(mapa[valor])}">${esc(valor)}</span>`;
   }
 
@@ -939,7 +1008,66 @@ input:focus, .select:focus, textarea:focus {
     });
   }
 
-  // ---------- Modal requerimiento ----------
+  // ---------- Edición en línea (tipo Excel) ----------
+  function startEdit(td) {
+    if (td.querySelector(".cell-editor")) return;
+    const id = td.getAttribute("data-id"), field = td.getAttribute("data-field");
+    const it = items.find((x) => x.id === id);
+    if (!it) return;
+    const tipo = FIELD_EDITOR[field] || "text";
+    const actual = it[field] == null ? "" : String(it[field]);
+    let editor;
+
+    if (tipo === "select") {
+      editor = document.createElement("select");
+      let ops = opcionesDe(field);
+      if (actual && ops.indexOf(actual) === -1) ops = [actual].concat(ops);
+      ops.forEach((o) => {
+        const op = document.createElement("option");
+        op.value = o; op.textContent = o || "—";
+        if (actual === o) op.selected = true;
+        editor.appendChild(op);
+      });
+    } else {
+      editor = document.createElement("input");
+      editor.type = tipo === "date" ? "date" : "text";
+      editor.value = actual;
+    }
+    editor.className = "cell-editor";
+    td.classList.add("editing");
+    td.innerHTML = "";
+    td.appendChild(editor);
+    editor.focus();
+    if (editor.tagName === "INPUT" && editor.type === "text") editor.select();
+    if (editor.tagName === "SELECT" && editor.showPicker) { try { editor.showPicker(); } catch (e) {} }
+
+    let done = false;
+    const commit = () => {
+      if (done) return; done = true;
+      let val = editor.value;
+      if (editor.tagName === "INPUT" && editor.type === "text") val = val.trim();
+      if ((it[field] == null ? "" : String(it[field])) !== val) {
+        it[field] = val;
+        it.actualizado = Date.now();
+        guardar();
+      }
+      render();
+    };
+    const cancel = () => { if (done) return; done = true; render(); };
+
+    if (editor.tagName === "SELECT") {
+      editor.addEventListener("change", commit);
+      editor.addEventListener("blur", cancel);
+    } else {
+      editor.addEventListener("blur", commit);
+      editor.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); commit(); }
+        else if (e.key === "Escape") { e.preventDefault(); cancel(); }
+      });
+    }
+  }
+
+  // ---------- Modal requerimiento (crear / editar completo) ----------
   function abrirModal(id) {
     const it = id ? items.find((x) => x.id === id) : null;
     $("#modal-titulo").textContent = it ? "Editar requerimiento" : "Nuevo requerimiento";
@@ -960,6 +1088,7 @@ input:focus, .select:focus, textarea:focus {
     set("#f-especialista", it ? it.especialista : "");
     set("#f-fechaPase", it ? it.fechaPase : "");
     set("#f-tengoExp", it ? it.tengoExp : "");
+    set("#f-aCargo", it ? it.aCargo : "");
     set("#f-observaciones", it ? it.observaciones : "");
     $("#modal").classList.remove("hidden");
     setTimeout(() => $("#f-expLogistica").focus(), 50);
@@ -986,6 +1115,7 @@ input:focus, .select:focus, textarea:focus {
       especialista: $("#f-especialista").value.trim(),
       fechaPase: $("#f-fechaPase").value,
       tengoExp: $("#f-tengoExp").value,
+      aCargo: $("#f-aCargo").value,
       observaciones: $("#f-observaciones").value.trim(),
     };
     const id = $("#f-id").value;
@@ -1041,7 +1171,6 @@ input:focus, .select:focus, textarea:focus {
       });
     });
   }
-
   function filaConfigHTML(o, i, n) {
     return `<div class="cfg-row" data-i="${i}">
       <span class="cfg-swatch" style="${badgeStyle(o.color)}">${esc(o.nombre || "?")}</span>
@@ -1079,9 +1208,7 @@ input:focus, .select:focus, textarea:focus {
     };
     renderConfigEditor();
   }
-
   function guardarConfigDesdeEditor() {
-    // Validación
     for (const { g, titulo } of GRUPOS) {
       const arr = configDraft[g];
       if (!arr.length) { toast(`"${titulo}" debe tener al menos un valor.`); return; }
@@ -1090,7 +1217,6 @@ input:focus, .select:focus, textarea:focus {
       const lower = nombres.map((n) => n.toLowerCase());
       if (new Set(lower).size !== lower.length) { toast(`Hay nombres repetidos en "${titulo}".`); return; }
     }
-    // Aplicar renombrados y eliminaciones a los requerimientos
     GRUPOS.forEach(({ g, field }) => {
       const arr = configDraft[g];
       const renameMap = {}, vivos = new Set();
@@ -1107,7 +1233,6 @@ input:focus, .select:focus, textarea:focus {
         }
       });
     });
-    // Confirmar la configuración
     config = {
       estados: configDraft.estados.map((o) => ({ nombre: o.nombre.trim(), color: o.color })),
       tipos: configDraft.tipos.map((o) => ({ nombre: o.nombre.trim(), color: o.color })),
@@ -1178,6 +1303,10 @@ input:focus, .select:focus, textarea:focus {
     if (m) { let [, d, mo, a] = m; if (a.length === 2) a = "20" + a; return `${a}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`; }
     return "";
   }
+  function siNo(v) {
+    v = (v || "").trim().toUpperCase();
+    return v.startsWith("S") ? "SÍ" : (v.startsWith("N") ? "NO" : "");
+  }
   function importarCSV(texto) {
     const filas = parseCSV(texto);
     if (filas.length < 2) { toast("El archivo no tiene datos para importar."); return; }
@@ -1189,8 +1318,6 @@ input:focus, .select:focus, textarea:focus {
     for (let i = 1; i < filas.length; i++) {
       const f = filas[i];
       const get = (k) => (idx[k] != null ? (f[idx[k]] || "").trim() : "");
-      let tengo = get("tengoExp").toUpperCase();
-      tengo = tengo.startsWith("S") ? "SÍ" : (tengo.startsWith("N") ? "NO" : "");
       const item = get("item"), den = get("denominacion"), exp = get("expLogistica");
       if (!exp && !item && !den) continue;
       items.push({
@@ -1203,7 +1330,9 @@ input:focus, .select:focus, textarea:focus {
         especialista: get("especialista"), fechaPase: normalizarFecha(get("fechaPase")),
         estado: get("estado") || defEstado(),
         prioridad: get("prioridad") || defPrioridad(),
-        observaciones: get("observaciones"), tengoExp: tengo, creado: Date.now(),
+        observaciones: get("observaciones"),
+        tengoExp: siNo(get("tengoExp")), aCargo: siNo(get("aCargo")),
+        creado: Date.now(),
       });
       n++;
     }
@@ -1217,7 +1346,7 @@ input:focus, .select:focus, textarea:focus {
     let n = 0;
     DATOS_JUNIO.forEach((d) => {
       if (existentes.has(String(d.expLogistica))) return;
-      items.push(Object.assign({ id: uid(), creado: Date.now() }, d));
+      items.push(Object.assign({ id: uid(), creado: Date.now(), aCargo: "" }, d));
       n++;
     });
     guardar(); render();
@@ -1249,9 +1378,9 @@ input:focus, .select:focus, textarea:focus {
     $("#filtro-tipo").innerHTML = '<option value="">Todo tipo</option>' + optList(config.tipos);
   }
   function resetFiltros() {
-    filtro.q = ""; filtro.estado = ""; filtro.prioridad = ""; filtro.tipo = ""; filtro.tengo = "";
-    $("#buscar").value = ""; $("#filtro-estado").value = ""; $("#filtro-prioridad").value = "";
-    $("#filtro-tipo").value = ""; $("#filtro-tengo").value = "";
+    filtro.q = ""; filtro.cargo = ""; filtro.estado = ""; filtro.prioridad = ""; filtro.tipo = ""; filtro.tengo = "";
+    $("#buscar").value = ""; $("#filtro-cargo").value = ""; $("#filtro-estado").value = "";
+    $("#filtro-prioridad").value = ""; $("#filtro-tipo").value = ""; $("#filtro-tengo").value = "";
   }
 
   function conectarEventos() {
@@ -1263,6 +1392,14 @@ input:focus, .select:focus, textarea:focus {
     $("#btn-cancelar").addEventListener("click", cerrarModal);
     $("#form").addEventListener("submit", guardarDesdeForm);
     $("#modal").addEventListener("click", (e) => { if (e.target.id === "modal") cerrarModal(); });
+
+    // Edición en línea y eliminación (delegación en el tbody)
+    $("#tbody").addEventListener("click", (e) => {
+      const del = e.target.closest("[data-del]");
+      if (del) { eliminar(del.getAttribute("data-del")); return; }
+      const td = e.target.closest("td.ed");
+      if (td) startEdit(td);
+    });
 
     // Configuración
     $("#btn-config").addEventListener("click", abrirConfig);
@@ -1280,6 +1417,7 @@ input:focus, .select:focus, textarea:focus {
     });
 
     $("#buscar").addEventListener("input", (e) => { filtro.q = e.target.value; renderTabla(); });
+    $("#filtro-cargo").addEventListener("change", (e) => { filtro.cargo = e.target.value; renderTabla(); });
     $("#filtro-estado").addEventListener("change", (e) => { filtro.estado = e.target.value; renderTabla(); });
     $("#filtro-prioridad").addEventListener("change", (e) => { filtro.prioridad = e.target.value; renderTabla(); });
     $("#filtro-tipo").addEventListener("change", (e) => { filtro.tipo = e.target.value; renderTabla(); });

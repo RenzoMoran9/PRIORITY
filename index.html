@@ -30,6 +30,10 @@
       <span class="kpi-label">Total requerimientos</span>
       <span class="kpi-value" id="kpi-total">0</span>
     </div>
+    <div class="kpi kpi-accent">
+      <span class="kpi-label">A mi cargo</span>
+      <span class="kpi-value" id="kpi-cargo">0</span>
+    </div>
     <div class="kpi kpi-danger">
       <span class="kpi-label" id="kpi-alta-label">Prioridad alta</span>
       <span class="kpi-value" id="kpi-alta">0</span>
@@ -38,7 +42,7 @@
       <span class="kpi-label">Sin expediente físico</span>
       <span class="kpi-value" id="kpi-sinexp">0</span>
     </div>
-    <div class="kpi kpi-accent">
+    <div class="kpi">
       <span class="kpi-label">Pendientes / por iniciar</span>
       <span class="kpi-value" id="kpi-pend">0</span>
     </div>
@@ -51,6 +55,12 @@
       <input type="search" id="buscar" placeholder="Buscar por exp., documento, área, denominación, especialista…" />
     </div>
     <div class="filters">
+      <select id="filtro-cargo" class="select">
+        <option value="">A cargo: todos</option>
+        <option value="SÍ">Solo a mi cargo</option>
+        <option value="NO">De otra persona</option>
+        <option value="__sin">Sin marcar</option>
+      </select>
       <select id="filtro-estado" class="select"><option value="">Todo estado</option></select>
       <select id="filtro-prioridad" class="select"><option value="">Toda prioridad</option></select>
       <select id="filtro-tipo" class="select"><option value="">Todo tipo</option></select>
@@ -69,17 +79,22 @@
       <thead>
         <tr>
           <th data-sort="nro" class="num">N°</th>
+          <th data-sort="aCargo">A cargo</th>
           <th data-sort="prioridad">Prioridad</th>
           <th data-sort="estado">Estado</th>
           <th data-sort="fechaIngreso">Ingreso a UPROG</th>
           <th data-sort="expLogistica">Exp. Logística</th>
           <th data-sort="expDireccion">Exp. Dirección</th>
           <th data-sort="docArea">Doc. del área</th>
+          <th data-sort="areaEstrategica">Área estratégica</th>
           <th data-sort="areaUsuaria">Área usuaria</th>
           <th data-sort="tipo">Tipo</th>
-          <th data-sort="item">Ítem / Denominación</th>
+          <th data-sort="item">Ítem</th>
+          <th data-sort="denominacion">Denominación</th>
           <th data-sort="especialista">Especialista</th>
+          <th data-sort="fechaPase">F. pase</th>
           <th data-sort="tengoExp">¿Tengo exp.?</th>
+          <th data-sort="observaciones">Observaciones</th>
           <th class="acciones-col">Acciones</th>
         </tr>
       </thead>
@@ -190,6 +205,14 @@
               <option value="">—</option>
               <option value="SÍ">SÍ</option>
               <option value="NO">NO</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>¿A mi cargo? (lo veo yo)</span>
+            <select id="f-aCargo" class="select">
+              <option value="">—</option>
+              <option value="SÍ">SÍ</option>
+              <option value="NO">NO (de otra persona)</option>
             </select>
           </label>
           <label class="field field-wide">
