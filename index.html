@@ -16,6 +16,7 @@
       </div>
     </div>
     <div class="topbar-actions">
+      <button id="btn-config" class="btn btn-ghost" title="Configurar estados, tipos y prioridades">⚙ Configurar</button>
       <button id="btn-importar" class="btn btn-ghost" title="Importar desde CSV/Excel">⬆ Importar</button>
       <button id="btn-exportar" class="btn btn-ghost" title="Exportar a CSV (Excel)">⬇ Exportar</button>
       <button id="btn-nuevo" class="btn btn-primary">+ Nuevo requerimiento</button>
@@ -30,7 +31,7 @@
       <span class="kpi-value" id="kpi-total">0</span>
     </div>
     <div class="kpi kpi-danger">
-      <span class="kpi-label">Prioridad alta</span>
+      <span class="kpi-label" id="kpi-alta-label">Prioridad alta</span>
       <span class="kpi-value" id="kpi-alta">0</span>
     </div>
     <div class="kpi kpi-warn">
@@ -202,6 +203,54 @@
           <button type="submit" class="btn btn-primary">Guardar requerimiento</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal de configuración -->
+  <div class="modal-backdrop hidden" id="modal-config">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="config-titulo">
+      <div class="modal-head">
+        <h2 id="config-titulo">⚙ Configurar listas</h2>
+        <button class="modal-close" id="config-close" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="config-help">
+          Agrega, renombra, reordena (↑ ↓) o cambia el color de cada opción.
+          <strong>Al renombrar</strong>, los requerimientos que usaban ese valor se actualizan automáticamente.
+          Si <strong>eliminas</strong> una opción, los requerimientos que la usaban quedan con ese campo en blanco.
+        </p>
+
+        <div class="config-group">
+          <div class="config-group-head">
+            <h3>Estados del requerimiento</h3>
+            <button type="button" class="btn btn-ghost btn-sm" data-add="estados">+ Agregar estado</button>
+          </div>
+          <div class="config-list" id="cfg-estados"></div>
+        </div>
+
+        <div class="config-group">
+          <div class="config-group-head">
+            <h3>Tipos</h3>
+            <button type="button" class="btn btn-ghost btn-sm" data-add="tipos">+ Agregar tipo</button>
+          </div>
+          <div class="config-list" id="cfg-tipos"></div>
+        </div>
+
+        <div class="config-group">
+          <div class="config-group-head">
+            <h3>Prioridades <span class="config-hint">(la primera = más urgente)</span></h3>
+            <button type="button" class="btn btn-ghost btn-sm" data-add="prioridades">+ Agregar prioridad</button>
+          </div>
+          <div class="config-list" id="cfg-prioridades"></div>
+        </div>
+
+        <div class="modal-foot">
+          <button type="button" class="link-danger" id="config-restaurar">Restaurar valores por defecto</button>
+          <span class="foot-spacer"></span>
+          <button type="button" class="btn btn-ghost" id="config-cancelar">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="config-guardar">Guardar configuración</button>
+        </div>
+      </div>
     </div>
   </div>
 

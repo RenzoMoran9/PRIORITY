@@ -33,13 +33,28 @@ Basados en tu hoja "JUNIO MEJORADO":
 
 ## Funciones
 
-- **Tablero** arriba: total de requerimientos, prioridad alta, sin expediente físico y pendientes.
+- **Tablero** arriba: total de requerimientos, prioridad más alta, sin expediente físico y pendientes.
 - **Buscar** por expediente, documento, área, denominación o especialista.
 - **Filtrar** por estado, prioridad, tipo y si tienes o no el expediente.
 - **Ordenar** haciendo clic en cualquier encabezado de columna.
 - **Antigüedad en UPROG**: muestra los días desde el ingreso y resalta los que llevan más de 30 días.
 - **Exportar a CSV** (se abre en Excel) e **Importar CSV**.
 - Los datos quedan guardados en tu navegador (no se borran al cerrar).
+
+## Configurar tus listas (⚙ Configurar)
+
+Las listas de **Estados**, **Tipos** y **Prioridades** son totalmente editables desde
+el botón **⚙ Configurar**:
+
+- **Agregar** nuevas opciones (ej. un nuevo estado "En firma").
+- **Renombrar** una opción; por ejemplo si "Entregado a Grisel" pasa a otra persona,
+  la cambias y **todos los requerimientos que la usaban se actualizan solos**.
+- **Reordenar** con ↑ ↓ (en Prioridades, la primera es la más urgente).
+- **Cambiar el color** de cada etiqueta.
+- **Eliminar** opciones (los requerimientos que la usaban quedan con ese campo en blanco).
+- **Restaurar** los valores por defecto cuando quieras.
+
+La configuración también se guarda en tu navegador.
 
 ## Respaldo y traslado de datos
 

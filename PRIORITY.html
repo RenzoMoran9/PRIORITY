@@ -315,6 +315,55 @@ input:focus, .select:focus, textarea:focus {
   margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--border);
 }
 
+/* ---------- Configuración ---------- */
+.config-help {
+  font-size: 12.5px;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 12px;
+  margin: 0 0 18px;
+  line-height: 1.5;
+}
+.config-help strong { color: var(--text); }
+.config-group { margin-bottom: 20px; }
+.config-group-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 10px;
+}
+.config-group-head h3 {
+  margin: 0; font-size: 13px; text-transform: uppercase;
+  letter-spacing: .4px; color: var(--primary);
+}
+.config-hint { text-transform: none; letter-spacing: 0; color: var(--muted); font-weight: 500; font-size: 11.5px; }
+.config-list { display: flex; flex-direction: column; gap: 8px; }
+.cfg-row {
+  display: flex; align-items: center; gap: 8px;
+}
+.cfg-swatch {
+  flex: 0 0 auto;
+  min-width: 96px; max-width: 200px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11.5px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-align: center;
+}
+.cfg-color {
+  flex: 0 0 auto;
+  width: 34px; height: 34px;
+  padding: 2px; border: 1px solid var(--border);
+  border-radius: 8px; cursor: pointer; background: var(--surface);
+}
+.cfg-nombre {
+  flex: 1 1 auto;
+  padding: 8px 10px; border: 1px solid var(--border);
+  border-radius: 8px; font-size: 13px; font-family: inherit;
+}
+.cfg-row .icon-btn[disabled] { opacity: .35; cursor: default; }
+.foot-spacer { flex: 1; }
+
 /* ---------- Toast ---------- */
 .toast {
   position: fixed;
@@ -352,6 +401,7 @@ input:focus, .select:focus, textarea:focus {
       </div>
     </div>
     <div class="topbar-actions">
+      <button id="btn-config" class="btn btn-ghost" title="Configurar estados, tipos y prioridades">⚙ Configurar</button>
       <button id="btn-importar" class="btn btn-ghost" title="Importar desde CSV/Excel">⬆ Importar</button>
       <button id="btn-exportar" class="btn btn-ghost" title="Exportar a CSV (Excel)">⬇ Exportar</button>
       <button id="btn-nuevo" class="btn btn-primary">+ Nuevo requerimiento</button>
@@ -366,7 +416,7 @@ input:focus, .select:focus, textarea:focus {
       <span class="kpi-value" id="kpi-total">0</span>
     </div>
     <div class="kpi kpi-danger">
-      <span class="kpi-label">Prioridad alta</span>
+      <span class="kpi-label" id="kpi-alta-label">Prioridad alta</span>
       <span class="kpi-value" id="kpi-alta">0</span>
     </div>
     <div class="kpi kpi-warn">
@@ -541,48 +591,131 @@ input:focus, .select:focus, textarea:focus {
     </div>
   </div>
 
+  <!-- Modal de configuración -->
+  <div class="modal-backdrop hidden" id="modal-config">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="config-titulo">
+      <div class="modal-head">
+        <h2 id="config-titulo">⚙ Configurar listas</h2>
+        <button class="modal-close" id="config-close" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="config-help">
+          Agrega, renombra, reordena (↑ ↓) o cambia el color de cada opción.
+          <strong>Al renombrar</strong>, los requerimientos que usaban ese valor se actualizan automáticamente.
+          Si <strong>eliminas</strong> una opción, los requerimientos que la usaban quedan con ese campo en blanco.
+        </p>
+
+        <div class="config-group">
+          <div class="config-group-head">
+            <h3>Estados del requerimiento</h3>
+            <button type="button" class="btn btn-ghost btn-sm" data-add="estados">+ Agregar estado</button>
+          </div>
+          <div class="config-list" id="cfg-estados"></div>
+        </div>
+
+        <div class="config-group">
+          <div class="config-group-head">
+            <h3>Tipos</h3>
+            <button type="button" class="btn btn-ghost btn-sm" data-add="tipos">+ Agregar tipo</button>
+          </div>
+          <div class="config-list" id="cfg-tipos"></div>
+        </div>
+
+        <div class="config-group">
+          <div class="config-group-head">
+            <h3>Prioridades <span class="config-hint">(la primera = más urgente)</span></h3>
+            <button type="button" class="btn btn-ghost btn-sm" data-add="prioridades">+ Agregar prioridad</button>
+          </div>
+          <div class="config-list" id="cfg-prioridades"></div>
+        </div>
+
+        <div class="modal-foot">
+          <button type="button" class="link-danger" id="config-restaurar">Restaurar valores por defecto</button>
+          <span class="foot-spacer"></span>
+          <button type="button" class="btn btn-ghost" id="config-cancelar">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="config-guardar">Guardar configuración</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast hidden"></div>
 
   <script>
 /* PRIORITY · Seguimiento de Requerimientos · Logística UPROG
-   App 100% local: los datos se guardan en localStorage del navegador. */
+   App 100% local: los datos y la configuración se guardan en localStorage. */
 
 (function () {
   "use strict";
 
-  // ---------- Configuración ----------
+  // ---------- Claves de almacenamiento ----------
   const STORAGE_KEY = "priority_requerimientos_v1";
-  const PRIORIDADES = ["Alta", "Media", "Baja"];
-  const ORDEN_PRIORIDAD = { Alta: 0, Media: 1, Baja: 2 };
-  const TIPOS = ["BIEN", "INSUMO", "SERVICIO", "ACTIVO NO FINANCIERO", "PACIENTE"];
-  const ESTADOS = [
-    "PENDIENTE",
-    "DISPONIBILIDAD PRESUPUESTAL",
-    "INVITACION",
-    "CUADRO COMPARATIVO",
-    "VALIDADO",
-    "ENTREGADO A GRISEL",
-    "PARA SALDO",
-  ];
+  const CONFIG_KEY = "priority_config_v1";
 
-  // Campos en el orden de exportación / importación CSV
+  // Campos para exportar / importar CSV
   const CAMPOS_CSV = [
     "nro", "fechaIngreso", "expLogistica", "expDireccion", "docArea",
     "areaEstrategica", "areaUsuaria", "tipo", "denominacion", "item",
     "especialista", "fechaPase", "estado", "prioridad", "observaciones", "tengoExp",
   ];
 
+  const ENCABEZADOS_CSV = {
+    nro: "N°", fechaIngreso: "Fecha ingreso a UPROG", expLogistica: "N° Exp. Logística",
+    expDireccion: "N° Exp. Dirección", docArea: "N° de documento del área",
+    areaEstrategica: "Área usuaria estratégica", areaUsuaria: "Área usuaria",
+    tipo: "Tipo", denominacion: "Denominación del requerimiento", item: "Ítem",
+    especialista: "Especialista a cargo", fechaPase: "Fecha de pase a especialista",
+    estado: "Estado del requerimiento", prioridad: "Prioridad",
+    observaciones: "Observaciones", tengoExp: "¿Tengo el expediente?",
+  };
+
+  // Listas configurables por defecto (el usuario puede cambiarlas en ⚙ Configurar)
+  const DEF_CONFIG = {
+    estados: [
+      { nombre: "PENDIENTE", color: "#6b7280" },
+      { nombre: "DISPONIBILIDAD PRESUPUESTAL", color: "#c77700" },
+      { nombre: "INVITACION", color: "#3b56d6" },
+      { nombre: "CUADRO COMPARATIVO", color: "#1f5fd6" },
+      { nombre: "VALIDADO", color: "#1f9d57" },
+      { nombre: "ENTREGADO A GRISEL", color: "#15824a" },
+      { nombre: "PARA SALDO", color: "#7b3fd1" },
+    ],
+    tipos: [
+      { nombre: "BIEN", color: "#4a7a2e" },
+      { nombre: "INSUMO", color: "#b03a78" },
+      { nombre: "SERVICIO", color: "#2f5fd0" },
+      { nombre: "ACTIVO NO FINANCIERO", color: "#8a5a00" },
+      { nombre: "PACIENTE", color: "#c0392b" },
+    ],
+    prioridades: [
+      { nombre: "Alta", color: "#d63b4b" },
+      { nombre: "Media", color: "#c77700" },
+      { nombre: "Baja", color: "#1f9d57" },
+    ],
+  };
+
+  const PALETA = ["#3b56d6", "#1f9d57", "#c77700", "#d63b4b", "#7b3fd1", "#2f5fd0",
+    "#b03a78", "#15824a", "#8a5a00", "#0f8a8a", "#6b7280", "#c0392b"];
+
   // Datos reales de JUNIO (cargables con un botón). Inyectados desde el Excel original.
   const DATOS_JUNIO = /*__DATOS_JUNIO__*/[{"nro":"1","fechaIngreso":"2026-02-26","expLogistica":"2728","expDireccion":"4249","docArea":"NOTA INFORMATIVA N°040-2026-DP-HNAL","areaEstrategica":"UNIDAD FUNCIONAL DE MAMIS - DPTO DE PEDIATRIA","areaUsuaria":"UNIDAD FUNCIONAL DE MAMIS - DPTO DE PEDIATRIA","tipo":"BIEN","denominacion":"SOLICITO ADQUISICION DE UN (01) ESTANTE DE MELAMINA PARA LA U.F MAMIS DE DPTO DE PEDIATRIA","item":"ESTANTE DE MELAMINA","especialista":"","fechaPase":"2026-06-03","estado":"INVITACION","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"2","fechaIngreso":"2026-04-21","expLogistica":"5733","expDireccion":"8151","docArea":"NOTA INFORMATIVA N°072-2026-DP-HNAL","areaEstrategica":"SERVICIO PEDIATRIA","areaUsuaria":"SERVICIO PEDIATRIA","tipo":"BIEN","denominacion":"ADQUISICION DE TRES CHOCHES METALICOS PARA TRANSPORTE DE MEDICAMENTOS","item":"3 COCHES METALICOS PARA TRANSPORTE DE MEDICAMENTOS","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"3","fechaIngreso":"2026-02-17","expLogistica":"2132","expDireccion":"2173","docArea":"NOTA INFORMATIVA N°18-2026/DRX-J-HNAL","areaEstrategica":"DPTO DIAGNOSTICO POR IMÁGENES","areaUsuaria":"DPTO DIAGNOSTICO POR IMÁGENES","tipo":"BIEN","denominacion":"ADQUISICION DE ACCESORIOS DE FLAT PANEL INALAMBRICO PARA (03) EQUIPOS DE RAYOS X ESTACIONARIO DIGITAL DIRECTO","item":"3 ACCESORIOS DE FLAT PANEL INALAMBRICO PARA (03) EQUIPOS DE RAYOS X ESTACIONARIO DIGITAL DIRECTO","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"4","fechaIngreso":"2026-02-23","expLogistica":"2359","expDireccion":"2626","docArea":"NOTA INFORMATIVA N°423-2026-DEyCC-HNAL","areaEstrategica":"DPTO EMERGENCIA Y CUIDADOS CRITICOS","areaUsuaria":"DPTO EMERGENCIA Y CUIDADOS CRITICOS","tipo":"SERVICIO","denominacion":"SE SOLICITA SERVICIO DE MANTENIMIENTO CORRECTIVO DE MONITORES MULTIPARAMETROS DE SIGNOS VITALES / EDAN","item":"SERVICIO DE MANTENIMIENTO CORRECTIVO DE 6 MONITORES MULTIPARAMETROS DE SIGNOS VITALES / EDAN","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"5","fechaIngreso":"2026-02-27","expLogistica":"2821","expDireccion":"4319","docArea":"NOTA INFORMATIVA N°45-2026-SCIyCC-DEyCC-HNAL","areaEstrategica":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","areaUsuaria":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","tipo":"BIEN","denominacion":"SOLICITO ADQUISICION DE ACCESORIOS PARA EQUIPOS MONITOR MULTIPARAMETROS MARCA MINDRAY DEL SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","item":"ACCESORIOS PARA 4 EQUIPOS MONITOR MULTIPARAMETROS MARCA MINDRAY","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"6","fechaIngreso":"2026-05-05","expLogistica":"6387","expDireccion":"9145","docArea":"NOTA INFORMATIVA N°85-2026-SCIyCC-DEyCC-HNAL","areaEstrategica":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","areaUsuaria":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","tipo":"SERVICIO","denominacion":"SOLICITO SERVICIO DE MANTENIMIENTO CORRECTIVO DE VENTILADOR MECANICO DRAGUE DEL SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","item":"2 SERVICIO DE MANTENIMIENTO CORRECTIVO DE VENTILADOR MECANICO DRAGUE","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"7","fechaIngreso":"2026-04-10","expLogistica":"5147","expDireccion":"23147","docArea":"NOTA INFORMATIVA N°32-2026-SC/C.COR-HNAL","areaEstrategica":"SERVICIO DE CARDIOLOGIA Y CUIDADOS CORONARIOS","areaUsuaria":"SERVICIO DE CARDIOLOGIA Y CUIDADOS CORONARIOS","tipo":"BIEN","denominacion":"SOLICITO ADQUISICION DE 02 COCHES DE PARO PARA EL SERVICIO DE CARDIOLOGIA Y CUIDADOS CORONARIOS","item":"ADQUISICION DE 02 COCHES DE PARO","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"8","fechaIngreso":"2026-04-30","expLogistica":"6176","expDireccion":"8811","docArea":"NOTA INFORMATIVA N°905-DF-HNAL-2026","areaEstrategica":"SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR","areaUsuaria":"SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE CANULAS Y PARCHE CARDIOVASCULAR, SOLICITADO POR EL SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR, PARA EL HOSPITAL NACIONAL ARZOBISPO LOAYZA","item":"ABASTECIMIENTO DE CANULAS Y PARCHE CARDIOVASCULAR","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"9","fechaIngreso":"2026-02-27","expLogistica":"2885","expDireccion":"4441","docArea":"NOTA INFORMATIVA N°46-2026-SCIyCC-DEyCC-HNAL","areaEstrategica":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","areaUsuaria":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","tipo":"BIEN","denominacion":"SOLICITO ADQUISICION DE REPUESTOS PARA EQUIPOS MONITOR MULTIPARAMETROS MARCA NIHON KOHDEN DEL SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","item":"REPUESTOS PARA EQUIPOS MONITOR MULTIPARAMETROS MARCA NIHON KOHDEN","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"10","fechaIngreso":"2026-02-16","expLogistica":"2085","expDireccion":"3370","docArea":"NOTA INFORMATIVA N°33-2026/DRX-J-HNAL","areaEstrategica":"DPTO DIAGNOSTICO POR IMÁGENES","areaUsuaria":"DPTO DIAGNOSTICO POR IMÁGENES","tipo":"BIEN","denominacion":"ADQUISICION DE DISPOSITIVOS MEDICOS","item":"ADQUISICION DE DISPOSITIVOS MEDICOS: 1 PERCHERO METALICOS PORTATIL CON RUEDAS Y 1 PECHERO METALICO","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"11","fechaIngreso":"2026-02-19","expLogistica":"2211","expDireccion":"3678","docArea":"NOTA INFORMATIVA N°49-DACQ-HNAL-2026","areaEstrategica":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS","areaUsuaria":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS","tipo":"SERVICIO","denominacion":"SOLICITUD DE SERVICIO DE CALIBRACION Y CERTIFICACION DE EQUIPOS TERMOHIGROMETROS UBICADOS EN LA SALA DE OPERACIONES DEL PAB 6, PERTENECIENTE AL DEPARTAMENTO DE ANESTESIOLOGIA Y CENTROS QUIRURGICOS","item":"SERVICIO DE CALIBRACION Y CERTIFICACION DE EQUIPOS TERMOHIGROMETRO","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"12","fechaIngreso":"2026-02-24","expLogistica":"2446","expDireccion":"25.007285.01","docArea":"NOTA INFORMATIVA N°18-2026-SC/C.COR-HNAL","areaEstrategica":"SERVICIO DE CARDIOLOGIA Y CUIDADOS CORONARIOS","areaUsuaria":"SERVICIO DE CARDIOLOGIA Y CUIDADOS CORONARIOS","tipo":"SERVICIO","denominacion":"REMITO ACTUALIZACION DE TERMINOS DE REFERENCIA PARA EL SERVICIO DE MANTENIMIENTO CORRECTIVO DE VENTILADOR MECANICO MARCA HAMILTON PARA SERVICIO DE CARDIOLOGIA Y CUIDADOS CORONARIOS","item":"SERVICIO DE MANTENIMIENTO CORRECTIVO DE VENTILADOR MECANICO MARCA HAMILTON","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"13","fechaIngreso":"2026-02-18","expLogistica":"2160","expDireccion":"18597","docArea":"NOTA INFORMATIVA N°0007-2026-SC/C.COR-HNAL","areaEstrategica":"SERVICIO DE CARDIOLOGIA Y CUIDADOS CORONARIOS","areaUsuaria":"SERVICIO DE CARDIOLOGIA Y CUIDADOS CORONARIOS","tipo":"BIEN","denominacion":"REMITO ACTUALIZACION DE ESPECIFICACIONES TECNICAS PARA LA ADQUISICION ACCESORIOS PARA ELECTROCARDIOGRAFO PARA EL SERVICIO DE CARDILOGIA Y CUIDADOS CORONARIOS","item":"ADQUISICION ACCESORIOS PARA ELECTROCARDIOGRAFO","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"14","fechaIngreso":"2026-02-27","expLogistica":"2860","expDireccion":"25.007026.02","docArea":"NOTA INFORMATIVA N°054-DN-HNAL-2026","areaEstrategica":"DEPARTAMENTO DE NUTRICION Y DIETETICA","areaUsuaria":"DEPARTAMENTO DE NUTRICION Y DIETETICA","tipo":"BIEN","denominacion":"SOLICITO ADQUISICION DE 02 REFIGERADORAS INDUSTRIALES INCLUIDA LA INSTALACION Y PUESTA EN FUNCIONAMIENTO PARA EL SERVICIO DE ALIMENTACION CENTRAL DEL DPTO NUTRICION Y DIETETICA","item":"ADQUISICION DE 02 REFIGERADORAS INDUSTRIALES INCLUIDA LA INSTALACION Y PUESTA EN FUNCIONAMIENTO","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"15","fechaIngreso":"2026-02-27","expLogistica":"2856","expDireccion":"4016","docArea":"NOTA INFORMATIVA N°39-2026-SCIyCC-DEyCC-HNAL","areaEstrategica":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","areaUsuaria":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","tipo":"BIEN","denominacion":"SOLICITO ADQUISICION DE RESPUESTOS PARA EQUIPOS DESFRIBILADORES DEL SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","item":"ADQUISICION DE RESPUESTOS PARA EQUIPOS DESFRIBILADORES","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"16","fechaIngreso":"2026-02-18","expLogistica":"2168","expDireccion":"2337","docArea":"NOTA INFORMATIVA N°0034-DACQ-HNAL-2026","areaEstrategica":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS","areaUsuaria":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS","tipo":"SERVICIO","denominacion":"REQUERIMIENTO PARA EL SERVICIO DE MANTENIMIENTO PREVENTIVO PARA UNA MAQUINA DE ANESTESIA DRAGER PERTENECIENTE AL DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS","item":"SERVICIO DE MANTENIMIENTO PREVENTIVO PARA UNA MAQUINA DE ANESTESIA DRAGER","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"17","fechaIngreso":"2026-05-08","expLogistica":"6536","expDireccion":"9418","docArea":"NOTA INFORMATIVA N°0143-DACQ-HNAL-2027","areaEstrategica":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS","areaUsuaria":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS","tipo":"BIEN","denominacion":"SOLICITUD DE ADQUISICION DE DOS (02) PISTOLAS PRESURIZADAS PARA LA LIMPIEZA Y ENJUAGUE CON DESTINO A CENTRAL DE ESTERALIAZACION DEL HOSPITAL NACIONAL ARZOBISPO LOAYZA","item":"ADQUISICION DE DOS (02) PISTOLAS PRESURIZADAS PARA LA LIMPIEZA Y ENJUAGUE","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"18","fechaIngreso":"2026-04-29","expLogistica":"3161 (3161)","expDireccion":"4537","docArea":"MEMORANDO N°2116-2026-OSGM-OEA-HNAL","areaEstrategica":"SERVICIO DE PEDIATRIA","areaUsuaria":"SERVICIO DE PEDIATRIA","tipo":"BIEN","denominacion":"SOLICITUD DE REVISION Y EVALUACION DE CUMPLIMIENTO DE LAS ESPECIFICACIONES TECNICAS","item":"ADQUISICION DE ESPIROMETRO","especialista":"","fechaPase":"2026-06-03","estado":"CUADRO COMPARATIVO","prioridad":"Media","observaciones":"CUADRO COMPARATIVO/ FRANK","tengoExp":"NO"},{"nro":"19","fechaIngreso":"2026-02-25","expLogistica":"2590","expDireccion":"19295","docArea":"NOTA INFORMATIVA 024-2026-JSO-HNAL","areaEstrategica":"SERVICIO DE OBSTETRICES","areaUsuaria":"SERVICIO DE OBSTETRICES","tipo":"BIEN","denominacion":"PERSISTENCIA DE LA NECESIDAD DE ADQUISICION CAMILLA METALICA PARA EXAMEN GINECOLOGICO","item":"ADQUISICION DE 4 CAMILLA METALICA PARA EXAMEN GINECOLOGICO","especialista":"","fechaPase":"2026-06-03","estado":"ENTREGADO A GRISEL","prioridad":"Media","observaciones":"VALIDADO/  ENTREGADO A GRISEL","tengoExp":"SÍ"},{"nro":"20","fechaIngreso":"2026-05-29","expLogistica":"2309","expDireccion":"3810","docArea":"MORANDO N°0479-DACQ-HNAL-2026","areaEstrategica":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS (CENTRAL ESTERILIZACION)","areaUsuaria":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS (CENTRAL ESTERILIZACION)","tipo":"BIEN","denominacion":"SE REMITE VALIDACION Y APROBACION DE CUMPLIMIENTO DE LAS ESPECIFICACIONES TECNICAS PARA LA ADQUISICION DE INDICADOR BIOLOGICO DE ESTERELIZIACION A GAS DE OXIDO DE ETILENO PARA EL ABASTECIMIENTO DE DOCE (12) MESES CON DESTINO A CENTRAL DE ESTERALIZACION","item":"INDICADOR BIOLOGICO DE ESTERELIZIACION A GAS DE OXIDO DE ETILENO","especialista":"","fechaPase":"2026-06-03","estado":"DISPONIBILIDAD PRESUPUESTAL","prioridad":"Media","observaciones":"CUADRO COMPARATIVO FRANK/ SE LO LLEVARA LA LIC JUDITH/PARA UNIDAD PRESUPUESTAL","tengoExp":"SÍ"},{"nro":"21","fechaIngreso":"2026-05-14","expLogistica":"6197","expDireccion":"8882","docArea":"MEMORANDUM N°2525-DF-HNAL-2026","areaEstrategica":"SERVICIO DE TORAX Y CARDIOVASCULAR","areaUsuaria":"SERVICIO DE TORAX Y CARDIOVASCULAR","tipo":"BIEN","denominacion":"VALIDACION Y APROBACION DE LAS ESPECIFICACIONES TECNICAS DE VALVULA CARDIACA AORTICA BIOLOGICA #23, SOLICITADO POR EL SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR, PARA EL HNAL","item":"VALVULA CARDIACA AORTICA BIOLOGICA #23","especialista":"","fechaPase":"2026-06-03","estado":"DISPONIBILIDAD PRESUPUESTAL","prioridad":"Media","observaciones":"CUADRO COMPARATIVO/ FRANK/ DISPONIBILIDAD PRESUPUESTAL","tengoExp":"SÍ"},{"nro":"22","fechaIngreso":"2026-04-30","expLogistica":"6200","expDireccion":"8880","docArea":"NOTA INFORMATIVA  N°913-DF-HNAL-2026","areaEstrategica":"SERVICIO DE TORAX Y CARDIOVASCULAR","areaUsuaria":"SERVICIO DE TORAX Y CARDIOVASCULAR","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DEVALVULA CARDIACA MITRAL MECANICA #31, SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR, PARA EL HNAL","item":"ABASTECIMIENTO DEVALVULA CARDIACA MITRAL MECANICA #31","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"23","fechaIngreso":"2026-04-04","expLogistica":"3160","expDireccion":"4516","docArea":"NOTA INFORMATIVA N°043-2026-DP-HNAL","areaEstrategica":"SERVICIO DE PEDIATRIA","areaUsuaria":"SERVICIO DE PEDIATRIA","tipo":"BIEN","denominacion":"ADQUISICION DE DOS TENSIOMETROS ANEORIDES PEDIATRICOS PARA EL SERVICIO DE PEDIATRIA","item":"ADQUISICION DE DOS TENSIOMETROS ANEORIDES PEDIATRICOS","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"24","fechaIngreso":"2026-02-04","expLogistica":"1518","expDireccion":"269","docArea":"NOTA INFORMATIVA N°155-DF-HNAL-2026","areaEstrategica":"DPTO DE ENFERMERIA","areaUsuaria":"DPTO DE ENFERMERIA","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE APLICACIONES DE APOSITOS HIDROCELULARES DE POLIURETANO ADHESIVO ESTERIL Y APOSITO HIDRCOLOIDE PARA EL HNAL","item":"ABASTECIMIENTO DE APLICACIONES DE APOSITOS HIDROCELULARES DE POLIURETANO ADHESIVO ESTERIL Y APOSITO HIDRCOLOIDE","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"25","fechaIngreso":"2026-02-23","expLogistica":"2349","expDireccion":"25120.02","docArea":"NOTA INFORMATIVAS N°29-202-SCIyCC-DEyCC-HNAL","areaEstrategica":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","areaUsuaria":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","tipo":"BIEN","denominacion":"SOLICITO ADQUISICION DE RACK PARA MONIORES MULTIPARAMETROS DEL SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","item":"ADQUISICION DE RACK PARA MONIORES MULTIPARAMETROS","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"26","fechaIngreso":"2026-05-27","expLogistica":"7447 (6434)","expDireccion":"9122","docArea":"MEMORANDO N°2573-2026-OSGM-OEA-HNAL","areaEstrategica":"SERVICIO DE GASTOENTEROLOGIA","areaUsuaria":"SERVICIO DE GASTOENTEROLOGIA","tipo":"SERVICIO","denominacion":"SOLICITUD DE REVISION Y EVALUACION DE CUMPLIMIENTO DE LOS TERMINOS DE REFERENCIA","item":"SERVICIO DE MANTENIMIENTO CORRECTIVO DE EQUIPO BIOMEDICO","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"NO"},{"nro":"27","fechaIngreso":"2026-03-23","expLogistica":"4201","expDireccion":"6183","docArea":"NOTA INFORMATIVA N°623-DF-HNAL-2026","areaEstrategica":"SERVICIO DE CIRUGIA DE CABEZA Y CUELLO Y MAXILOFACIAL","areaUsuaria":"SERVICIO DE CIRUGIA DECABEZA Y CUELLO Y MAXILOFACIAL","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE HOJA DE SIERRA, SOLICITADO POR EL SERVICIO DE CIRUGIA DE CABEZA Y CUELLO Y MAXILOFACIAL PARA EL HNAL","item":"ABASTECIMIENTO DE HOJA DE SIERRA","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"28","fechaIngreso":"2026-03-26","expLogistica":"4535","expDireccion":"6545","docArea":"NOTA INFORMATIVA N°627 -DF-HNAL-2026","areaEstrategica":"SERVICIO DE CIRUGIA DE CABEZA Y CUELLO Y MAXILOFACIAL","areaUsuaria":"SERVICIO DE CIRUGIA DECABEZA Y CUELLO Y MAXILOFACIAL","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE BROCAS, SOLICITADO POR EL SERVICIO DE CIRUGIA DE CABEZA Y CABEZA Y  MAXILOFACIAL PARA EL HNAL","item":"ABASTECIMIENTO DE BROCAS","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"29","fechaIngreso":"2026-03-26","expLogistica":"4538","expDireccion":"6543","docArea":"NOTA INFORMATIVA N°618 -DF-HNAL-2026","areaEstrategica":"SERVICIO DE CIRUGIA DE CABEZA Y CUELLO Y MAXILOFACIAL","areaUsuaria":"SERVICIO DE CIRUGIA DECABEZA Y CUELLO Y MAXILOFACIAL","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE CANULAS PARA TRAQUEOSTOMIA, SOLICITADO POR EL SERVICIO DE CIRUGIA DE CABEZA Y CABEZA Y  MAXILOFACIAL PARA EL HNAL","item":"ABASTECIMIENTO DE CANULAS PARA TRAQUEOSTOMIA","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"30","fechaIngreso":"2026-04-17","expLogistica":"5557","expDireccion":"7948","docArea":"NOTA INFORMATIVA N°824-DF-HNAL-2026","areaEstrategica":"DPTO DE EMERGENCIA Y CUIDADOS CRITICOS DEL HNAL","areaUsuaria":"DPTO DE EMERGENCIA Y CUIDADOS CRITICOS DEL HNAL","tipo":"BIEN","denominacion":"REQUERIMIENTO ANUAL DE JERINGA DESCARTABLE 3 ML PARA GASES ARTERIALES Y ELECTROLITOS CON HEPARINA DE LITIO PARA EL DPTO DE EMERGENCIA Y CUIDADOS CRITICOS DEL HNAL","item":"REQUERIMIENTO ANUAL DE JERINGA DESCARTABLE 3 ML PARA GASES ARTERIALES Y ELECTROLITOS CON HEPARINA DE LITIO","especialista":"","fechaPase":"2026-06-03","estado":"INVITACION","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"31","fechaIngreso":"2026-05-04","expLogistica":"6337","expDireccion":"9002","docArea":"NOTA INFORMATIVA N°926-DF-HNAL-2026","areaEstrategica":"SERVICIO DE PEDIATRIA","areaUsuaria":"SERVICIO DE PEDIATRIA","tipo":"BIEN","denominacion":"REQUERIMIENTO  DE MICROCUBETA DESCARTABLE PARA HEMOGLOBINOMETRO PORTATIL X 50 PARA EL SERVICIO DE PEDIATRIA DEL HNAL","item":"REQUERIMIENTO  DE MICROCUBETA DESCARTABLE PARA HEMOGLOBINOMETRO PORTATIL X 50","especialista":"","fechaPase":"2026-06-03","estado":"VALIDADO","prioridad":"Media","observaciones":"04-06-206: VINO LIC. ZOILA FLORIAN / CAMBIO DE FICHA TECNICA. MICROCUBETAS URGENTE/ INVITACION","tengoExp":"NO"},{"nro":"32","fechaIngreso":"2026-05-27","expLogistica":"6944 (6944)","expDireccion":"9891","docArea":"MEMORANDO N°1483 -OP-OEA-HNAL-2026","areaEstrategica":"OFICINA DE PERSONAL","areaUsuaria":"OFICINA DE PERSONAL","tipo":"SERVICIO","denominacion":"REVISION Y EVALUCION DE CUMPLIMIENTO DE LOS TERMINOS DE REFERENCIA - VALIDACION Y COTIZACION","item":"CAPACITACION  - OFIMATICA INTERMEDIO (EXCEL Y WORD)","especialista":"","fechaPase":"2026-06-03","estado":"PARA SALDO","prioridad":"Media","observaciones":"PARA SALDO","tengoExp":"SÍ"},{"nro":"33","fechaIngreso":"2026-01-06","expLogistica":"525","expDireccion":"4692","docArea":"NOTA INFORMATIVA N°002-DMI-HNAL-2026","areaEstrategica":"SERVICIO MEDICINA INTERNA 2-II","areaUsuaria":"SERVICIO MEDICINA INTERNA 2-II","tipo":"BIEN","denominacion":"PERSISTENCIA DE LA NECESIDAD DE BIENES","item":"4 BIOMBOS DE METAL DE CUERPOS","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"34","fechaIngreso":"2026-04-16","expLogistica":"5449","expDireccion":"7780","docArea":"NOTA INFORMATIVA N°75-2026-DEyCC-HNAL","areaEstrategica":"DPTO EMERGENCIA Y CUIDADOS CRITICOS","areaUsuaria":"DPTO EMERGENCIA Y CUIDADOS CRITICOS","tipo":"SERVICIO","denominacion":"SE SOLICITA EL SERVICIO DE MANTENIMIENTO CORRECTIVO DE VENTILADOR MECANICO MARCA DRAGUER","item":"SERVICIO DE MANTENIMIENTO CORRECTIVO DE VENTILADOR MECANICO MARCA DRAGUER","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"35","fechaIngreso":"2026-05-19","expLogistica":"7029","expDireccion":"10072","docArea":"NOTA INFORMATIVA N°0167-DACQ-HNAL-2026","areaEstrategica":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS (CENTRAL ESTERILIZACION)","areaUsuaria":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS (CENTRAL ESTERILIZACION)","tipo":"SERVICIO","denominacion":"REQUERIMIENTO PARA EL SERVICIO DE MANTENIMIENTO CORRECTIVO MOBILIARIO MEDICO UBICADO EN CENTRAL DE ESTERALIZACION DEL HNAL","item":"SERVICIO DE MANTENIMIENTO CORRECTIVO MOBILIARIO MEDICO","especialista":"","fechaPase":"2026-06-03","estado":"INVITACION","prioridad":"Media","observaciones":"INVITACION","tengoExp":"NO"},{"nro":"36","fechaIngreso":"2026-05-05","expLogistica":"6388","expDireccion":"9130","docArea":"NOTA INFORMATIVA N°948-DF-HNAL-2026","areaEstrategica":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS","areaUsuaria":"DPTO ANESTESIOLOGIA Y CENTROS QUIRURGICOS","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE SENSOR BIS PARA EQUIPO DE ANESTESIA, SOLCITADO POR DPTO DE ANESTESIOLOGIA Y CENTROS QUIRURGICOS PARA EL HNAL","item":"ABASTECIMIENTO DE SENSOR BIS PARA EQUIPO DE ANESTESIA","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"37","fechaIngreso":"2026-04-16","expLogistica":"5450","expDireccion":"7778","docArea":"NOTA INFORMATIVA N°795-DF-HNAL-2027","areaEstrategica":"DEPARTAMENTO DE ANESTESIOLOGIA Y CENTROS QUIRURGICOS","areaUsuaria":"DEPARTAMENTO DE ANESTESIOLOGIA Y CENTROS QUIRURGICOS","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTESIMIENTO DE FIBRA OPTICA DESCARTABLE 3.2/1.2 MM X 60 CM PARA BRONCOSCOPIO CON EQUIPOS DE CESION EN USO, SOLICITADO POR EL DEPARTAMENTO DE ANESTESIOLOGIA Y CENTROS QUIRURGICOS PARA EL HNAL","item":"ABASTESIMIENTO DE FIBRA OPTICA DESCARTABLE 3.2/1.2 MM X 60 CM PARA BRONCOSCOPIO CON EQUIPOS DE CESION EN USO","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"38","fechaIngreso":"2026-04-20","expLogistica":"5626","expDireccion":"7431","docArea":"NOTA INFORMATIVA N°292-HNAL-OP-2026","areaEstrategica":"OFICINA DE PERSONAL","areaUsuaria":"OFICINA DE PERSONAL","tipo":"SERVICIO","denominacion":"REQUERIMIENTO DE CAPACITACION ESPECIFICA \"TALLER DE REANIMACION CARDIO PULMONAR NEONATAL AVANZADA\"","item":"REQUERIMIENTO DE CAPACITACION ESPECIFICA \"TALLER DE REANIMACION CARDIO PULMONAR NEONATAL AVANZADA\"","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"39","fechaIngreso":"2026-04-30","expLogistica":"6173","expDireccion":"8809","docArea":"NOTA INFORMATIVA N°907-DF-HNAL-2026","areaEstrategica":"SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR","areaUsuaria":"SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE HEMOCONCENTRADOR Y SET DE TUBULADURA PARA CIRCULACION EXTRACORPOREA, SOLICITADO POR EL SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR, PARA EL HNAL","item":"ABASTECIMIENTO DE HEMOCONCENTRADOR Y SET DE TUBULADURA PARA CIRCULACION EXTRACORPOREA","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"40","fechaIngreso":"2026-03-30","expLogistica":"6172","expDireccion":"8808","docArea":"NOTA INFORMATIVA N°908-DF-HNAL-2026","areaEstrategica":"SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR","areaUsuaria":"SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE CANULAS, FILTRO ARTERIAL PARA CIRCULACION EXTRACOPOREA Y SET DE TUBULADURA, SOLICITADO POR EL SERVICIO DE TORAX Y CARDIOVASCULAR, PARA EL HNAL","item":"ABASTECIMIENTO DE CANULAS, FILTRO ARTERIAL PARA CIRCULACION EXTRACOPOREA Y SET DE TUBULADURA","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"41","fechaIngreso":"2026-04-23","expLogistica":"4196","expDireccion":"6189","docArea":"NOTA INFORMATIVA N°629-DF-HNAL-2026","areaEstrategica":"SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR","areaUsuaria":"SERVICIO DE CIRUGIA DE TORAX Y CARDIOVASCULAR","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE CANULA PARA TRAQUEOSTOMIA #7 EXTRA LARGA CON ANILLO DE SUJECCION MOVIL CON BALON, SOLICITADO POR EL SERVICIO DE TORAX Y CARDIOVASCULAR, PARA EL HNAL","item":"ABASTECIMIENTO DE CANULA PARA TRAQUEOSTOMIA #7 EXTRA LARGA CON ANILLO DE SUJECCION MOVIL CON BALON","especialista":"","fechaPase":"2026-06-03","estado":"ENTREGADO A GRISEL","prioridad":"Media","observaciones":"PARA VALIDAR/ ENTREGADO A GRISEL","tengoExp":"NO"},{"nro":"42","fechaIngreso":"2026-02-27","expLogistica":"2800","expDireccion":"4350","docArea":"NOTA INFORMATIVA N°371-DF-HNAL-2027","areaEstrategica":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","areaUsuaria":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","tipo":"BIEN","denominacion":"REQUERIMIENTO ANUAL DE DISPOSITIVOS MEDICOS PARA EL SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS DEL HNAL","item":"DISPOSITIVOS MEDICOS (SONDA NASOGASTRICA #14 Y #16)","especialista":"","fechaPase":"2026-06-03","estado":"ENTREGADO A GRISEL","prioridad":"Media","observaciones":"PARA VALIDAR/ ENTREGADO A GRISEL","tengoExp":"NO"},{"nro":"43","fechaIngreso":"2026-04-23","expLogistica":"4203","expDireccion":"6186","docArea":"NOTA INFORMATIVA N°625-DF-HNAL-2028","areaEstrategica":"SERVICIO DE CIRUGIA DE CABEZA Y CABEZA Y  MAXILOFACIAL","areaUsuaria":"SERVICIO DE CIRUGIA DE CABEZA Y CABEZA Y  MAXILOFACIAL","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABASTECIMIENTO DE TORNILLOS DE TITANIO SOLICITADO POR EL SERVICIO DE CIRUGIA DE CABEZA Y CABEZA Y  MAXILOFACIAL PARA EL HNAL","item":"ABASTECIMIENTO DE TORNILLOS DE TITANIO","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"44","fechaIngreso":"2026-02-17","expLogistica":"2133","expDireccion":"2104","docArea":"NOTA INFORMATIVA N°0033-DACQ-HNAL-2026","areaEstrategica":"DEPARTAMENTO DE ANESTESIOLOGIA Y CENTROS QUIRURGICOS","areaUsuaria":"DEPARTAMENTO DE ANESTESIOLOGIA Y CENTROS QUIRURGICOS","tipo":"SERVICIO","denominacion":"REQUERIMIENTO PARA EL SERVICIO DE MANTENIMIENTO CORRECTIVO POR CASA ESPECIALIZADA DE UNA (1) MAQUINA DE ANESTESIA DRAGER PERTENECIENTE AL DPTO DE ANESTESIA Y CENTROS QUIRURGICOS","item":"SERVICIO DE MANTENIMIENTO CORRECTIVO POR CASA ESPECIALIZADA DE UNA (1) MAQUINA DE ANESTESIA DRAGER","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"45","fechaIngreso":"2026-02-06","expLogistica":"1699","expDireccion":"12679","docArea":"NOTA INFORMATIVA N°154-OL-J-HNAL-2026","areaEstrategica":"DEPARTAMENTO DE ESTOMATOLOGIA","areaUsuaria":"DEPARTAMENTO DE ESTOMATOLOGIA","tipo":"BIEN","denominacion":"PERSISTENCIA DE LA NECESIDAD DE EQUIPOS MEDICOS","item":"ADQUISICION DE EQUIPOS BIOMEDICOS  (LAMPARA DE FOTOLIMERIZACION - LASER DIODO DE LUZ - SENSOR DE RX)","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"46","fechaIngreso":"2026-02-25","expLogistica":"2583","expDireccion":"1561","docArea":"NOTA INFORMATIVA N°080-2026-OSGM-OEA-HNAL","areaEstrategica":"UNIDAD DE LIMPIEZA Y JARDINES","areaUsuaria":"UNIDAD DE LIMPIEZA Y JARDINES","tipo":"BIEN","denominacion":"ACTUALIZACION DE ADQUISICION DE LUSTRADORAS ELECTRICAS INDUSTRIALES Y ESCOBILLAS DE REPUESTO","item":"ADQUISICION DE LUSTRADORAS ELECTRICAS INDUSTRIALES Y ESCOBILLAS DE REPUESTO","especialista":"","fechaPase":"2026-06-03","estado":"VALIDADO","prioridad":"Media","observaciones":"VALIDADO/","tengoExp":"SÍ"},{"nro":"47","fechaIngreso":"2026-03-10","expLogistica":"3411","expDireccion":"5031","docArea":"NOTA INFORMATIVA N°0297-2026-OSGM-OEA-HNAL","areaEstrategica":"UNIDAD DE LAVANDERIA","areaUsuaria":"UNIDAD DE LAVANDERIA","tipo":"BIEN","denominacion":"SE COMUNICAPRESISTENCIA DE NECESIDAD DE REQUERIMIENTO - ADQUISICION DE ESTANTES DE ACERO INOXIDABLE E INSTALACION PARA LA UNIDAD DE LAVANDERIA HNAL","item":"ADQUISICION DE ESTANTES DE ACERO INOXIDABLE E INSTALACION","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"},{"nro":"48","fechaIngreso":"2026-04-06","expLogistica":"3294","expDireccion":"4898","docArea":"NOTA INFORMATIVA N°461-DF-HNAL-2026","areaEstrategica":"SERVICIO DE CIRUGIA PLASTICA Y QUEMADOS","areaUsuaria":"SERVICIO DE CIRUGIA PLASTICA Y QUEMADOS","tipo":"BIEN","denominacion":"REQUERIMIENTO DE ABATSECIMIENTO DE LAPIZ ELECTROCAUTERIO MONOPOLAR CON PUNTA DESCARABLE Y POLIHEXANIDA UNDECILEMIDOPROPIL BETANIA, SOLICITADO POR EL SERVICIO DE CIRUGIA PLASTICA Y QUEMADOS PARA EL HNAL","item":"ABATSECIMIENTO DE LAPIZ ELECTROCAUTERIO MONOPOLAR CON PUNTA DESCARABLE Y POLIHEXANIDA UNDECILEMIDOPROPIL BETANIA","especialista":"","fechaPase":"2026-06-03","estado":"ENTREGADO A GRISEL","prioridad":"Media","observaciones":"VALIDADO/  ENTREGADO A GRISEL","tengoExp":"SÍ"},{"nro":"49","fechaIngreso":"2026-02-18","expLogistica":"2174","expDireccion":"3557","docArea":"NOTA INFORMATIVA N°37-2026-SCIyCC-DEyCC-HNAL","areaEstrategica":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","areaUsuaria":"SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","tipo":"SERVICIO","denominacion":"SOLICITO SERVICIO DE MANTENIMIENTO CORRECTIVO DE VENTILADOR MECANICO MIDRAY DEL SERVICIO DE CUIDADOS INTENSIVOS Y CUIDADOS INTERMEDIOS","item":"SERVICIO DE MANTENIMIENTO CORRECTIVO DE VENTILADOR MECANICO MIDRAY","especialista":"","fechaPase":"2026-06-04","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"NO"},{"nro":"50","fechaIngreso":"2026-06-02","expLogistica":"7712","expDireccion":"10164","docArea":"NOTA INFORMATIVA N°431-2026-OP-OEA-HNAL","areaEstrategica":"OFICINA DE PERSONAL","areaUsuaria":"OFICINA DE PERSONAL","tipo":"SERVICIO","denominacion":"REQUERIMIENTO DE CURSO \"CAPACITACION INTERINSTITUCIONAL EN ARCHIVO Y TRAMITE DOCUMENTARIO\"","item":"REQUERIMIENTO DE CURSO \"CAPACITACION INTERINSTITUCIONAL EN ARCHIVO Y TRAMITE DOCUMENTARIO\"","especialista":"","fechaPase":"2026-06-03","estado":"PENDIENTE","prioridad":"Media","observaciones":"","tengoExp":"SÍ"}]/*__FIN__*/;
 
   // ---------- Estado de la app ----------
   let items = [];
+  let config = clone(DEF_CONFIG);
+  let configDraft = null;
   const filtro = { q: "", estado: "", prioridad: "", tipo: "", tengo: "" };
   const orden = { key: "nro", dir: "asc" };
+
+  // Mapas derivados de la configuración
+  const COL = { estado: {}, tipo: {}, prioridad: {} };
+  let ordenPrioridad = {};
 
   // ---------- Utilidades ----------
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
   function uid() {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -591,10 +724,8 @@ input:focus, .select:focus, textarea:focus {
 
   function esc(str) {
     return String(str == null ? "" : str)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
 
   function hoyISO() {
@@ -617,6 +748,20 @@ input:focus, .select:focus, textarea:focus {
     return Math.round((h - a) / 86400000);
   }
 
+  function hexToRgb(hex) {
+    hex = String(hex || "#6b7280").replace("#", "");
+    if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+    const n = parseInt(hex, 16);
+    if (isNaN(n)) return { r: 107, g: 114, b: 128 };
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+
+  function badgeStyle(hex) {
+    const { r, g, b } = hexToRgb(hex);
+    const t = (x) => Math.round(x * 0.58);
+    return `background:rgba(${r},${g},${b},0.15);color:rgb(${t(r)},${t(g)},${t(b)})`;
+  }
+
   // ---------- Persistencia ----------
   function cargar() {
     try {
@@ -625,21 +770,43 @@ input:focus, .select:focus, textarea:focus {
       if (!Array.isArray(items)) items = [];
     } catch (e) { items = []; }
   }
-
   function guardar() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch (e) {
-      toast("No se pudo guardar (almacenamiento lleno o bloqueado).");
-    }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+    catch (e) { toast("No se pudo guardar (almacenamiento lleno o bloqueado)."); }
   }
+
+  function cargarConfig() {
+    try {
+      const raw = localStorage.getItem(CONFIG_KEY);
+      const c = raw ? JSON.parse(raw) : null;
+      config = (c && c.estados && c.tipos && c.prioridades) ? c : clone(DEF_CONFIG);
+    } catch (e) { config = clone(DEF_CONFIG); }
+    derivarConfig();
+  }
+  function guardarConfig() {
+    try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch (e) {}
+    derivarConfig();
+  }
+  function derivarConfig() {
+    COL.estado = {}; COL.tipo = {}; COL.prioridad = {};
+    config.estados.forEach((o) => (COL.estado[o.nombre] = o.color));
+    config.tipos.forEach((o) => (COL.tipo[o.nombre] = o.color));
+    config.prioridades.forEach((o) => (COL.prioridad[o.nombre] = o.color));
+    ordenPrioridad = {};
+    config.prioridades.forEach((o, i) => (ordenPrioridad[o.nombre] = i));
+  }
+
+  function defEstado() { return config.estados[0] ? config.estados[0].nombre : ""; }
+  function defTipo() { return config.tipos[0] ? config.tipos[0].nombre : ""; }
+  function defPrioridad() {
+    const p = config.prioridades;
+    return p.length ? p[Math.min(1, p.length - 1)].nombre : "";
+  }
+  function prioridadTop() { return config.prioridades[0] ? config.prioridades[0].nombre : ""; }
 
   function nextNro() {
     let max = 0;
-    items.forEach((it) => {
-      const n = parseInt(it.nro, 10);
-      if (!isNaN(n) && n > max) max = n;
-    });
+    items.forEach((it) => { const n = parseInt(it.nro, 10); if (!isNaN(n) && n > max) max = n; });
     return String(max + 1);
   }
 
@@ -652,22 +819,19 @@ input:focus, .select:focus, textarea:focus {
       if (filtro.tipo && it.tipo !== filtro.tipo) return false;
       if (filtro.tengo && (it.tengoExp || "") !== filtro.tengo) return false;
       if (q) {
-        const blob = [
-          it.nro, it.expLogistica, it.expDireccion, it.docArea,
+        const blob = [it.nro, it.expLogistica, it.expDireccion, it.docArea,
           it.areaEstrategica, it.areaUsuaria, it.denominacion, it.item,
-          it.especialista, it.observaciones,
-        ].join(" ").toLowerCase();
+          it.especialista, it.observaciones].join(" ").toLowerCase();
         if (!blob.includes(q)) return false;
       }
       return true;
     });
-
     const { key, dir } = orden;
     const signo = dir === "asc" ? 1 : -1;
     lista.sort((a, b) => {
       let va = a[key], vb = b[key];
       if (key === "prioridad") {
-        va = ORDEN_PRIORIDAD[va] ?? 9; vb = ORDEN_PRIORIDAD[vb] ?? 9;
+        va = ordenPrioridad[va] ?? 99; vb = ordenPrioridad[vb] ?? 99;
       } else if (key === "nro" || key === "expLogistica" || key === "expDireccion") {
         const na = parseInt(va, 10), nb = parseInt(vb, 10);
         va = isNaN(na) ? Infinity : na; vb = isNaN(nb) ? Infinity : nb;
@@ -683,18 +847,16 @@ input:focus, .select:focus, textarea:focus {
   }
 
   // ---------- Render ----------
-  function render() {
-    renderKpis();
-    renderTabla();
-    renderCabeceraOrden();
-  }
+  function render() { renderKpis(); renderTabla(); renderCabeceraOrden(); }
 
   function renderKpis() {
-    const alta = items.filter((it) => it.prioridad === "Alta").length;
+    const top = prioridadTop();
+    const alta = items.filter((it) => it.prioridad === top).length;
     const sinExp = items.filter((it) => (it.tengoExp || "") === "NO").length;
-    const pend = items.filter((it) => !it.estado || it.estado === "PENDIENTE").length;
+    const pend = items.filter((it) => !it.estado || it.estado === defEstado()).length;
     $("#kpi-total").textContent = items.length;
     $("#kpi-alta").textContent = alta;
+    $("#kpi-alta-label").textContent = "Prioridad " + (top || "—").toLowerCase();
     $("#kpi-sinexp").textContent = sinExp;
     $("#kpi-pend").textContent = pend;
   }
@@ -705,12 +867,8 @@ input:focus, .select:focus, textarea:focus {
     const vacio = $("#vacio");
 
     if (!lista.length) {
-      if (items.length === 0) {
-        // No hay ningún dato: mostrar pantalla inicial con botones de carga
-        tbody.innerHTML = "";
-        vacio.classList.remove("hidden");
-      } else {
-        // Hay datos pero los filtros no dejan ninguno visible
+      if (items.length === 0) { tbody.innerHTML = ""; vacio.classList.remove("hidden"); }
+      else {
         vacio.classList.add("hidden");
         tbody.innerHTML = `<tr><td colspan="13" class="empty" style="padding:34px">Ningún requerimiento coincide con los filtros.</td></tr>`;
       }
@@ -736,10 +894,7 @@ input:focus, .select:focus, textarea:focus {
     const cerrado = it.estado === "PARA SALDO" || it.estado === "ENTREGADO A GRISEL";
     const vieja = dias !== null && dias > 30 && !cerrado;
     let antig = "";
-    if (dias !== null) {
-      antig = `<span class="antig-tag ${vieja ? "alerta" : ""}">${dias} d en UPROG</span>`;
-    }
-    const prioClase = "prio-" + (it.prioridad || "media").toLowerCase();
+    if (dias !== null) antig = `<span class="antig-tag ${vieja ? "alerta" : ""}">${dias} d en UPROG</span>`;
     const tengo = it.tengoExp || "";
     const tengoBadge = tengo
       ? `<span class="badge ${tengo === "SÍ" ? "tengo-si" : "tengo-no"}">${esc(tengo)}</span>`
@@ -748,14 +903,14 @@ input:focus, .select:focus, textarea:focus {
     return `
       <tr class="${vieja ? "row-vieja" : ""}">
         <td class="num cell-strong">${esc(it.nro)}</td>
-        <td><span class="badge ${prioClase}">${esc(it.prioridad || "—")}</span></td>
-        <td><span class="badge estado" data-e="${esc(it.estado)}">${esc(it.estado || "—")}</span></td>
+        <td>${badge(it.prioridad, COL.prioridad)}</td>
+        <td>${badge(it.estado, COL.estado)}</td>
         <td>${fmtFecha(it.fechaIngreso)}${antig}</td>
         <td class="cell-strong">${esc(it.expLogistica) || "—"}</td>
         <td>${esc(it.expDireccion) || "—"}</td>
         <td class="cell-doc">${esc(it.docArea) || "—"}</td>
         <td class="cell-area">${esc(it.areaUsuaria) || "—"}</td>
-        <td><span class="badge tipo" data-t="${esc(it.tipo)}">${esc(it.tipo || "—")}</span></td>
+        <td>${badge(it.tipo, COL.tipo)}</td>
         <td class="cell-item">
           <span class="item-main">${esc(it.item) || esc(it.denominacion) || "—"}</span>
           ${it.denominacion ? `<span class="item-sub" title="${esc(it.denominacion)}">${esc(it.denominacion)}</span>` : ""}
@@ -771,21 +926,24 @@ input:focus, .select:focus, textarea:focus {
       </tr>`;
   }
 
+  function badge(valor, mapa) {
+    if (!valor) return `<span class="muted-cell">—</span>`;
+    return `<span class="badge" style="${badgeStyle(mapa[valor])}">${esc(valor)}</span>`;
+  }
+
   function renderCabeceraOrden() {
     $$("#tabla thead th").forEach((th) => {
       th.classList.remove("sorted-asc", "sorted-desc");
-      if (th.getAttribute("data-sort") === orden.key) {
+      if (th.getAttribute("data-sort") === orden.key)
         th.classList.add(orden.dir === "asc" ? "sorted-asc" : "sorted-desc");
-      }
     });
   }
 
-  // ---------- Modal / formulario ----------
+  // ---------- Modal requerimiento ----------
   function abrirModal(id) {
     const it = id ? items.find((x) => x.id === id) : null;
     $("#modal-titulo").textContent = it ? "Editar requerimiento" : "Nuevo requerimiento";
     const set = (sel, val) => { $(sel).value = val == null ? "" : val; };
-
     $("#f-id").value = it ? it.id : "";
     set("#f-nro", it ? it.nro : nextNro());
     set("#f-fechaIngreso", it ? it.fechaIngreso : hoyISO());
@@ -794,27 +952,24 @@ input:focus, .select:focus, textarea:focus {
     set("#f-docArea", it ? it.docArea : "");
     set("#f-areaEstrategica", it ? it.areaEstrategica : "");
     set("#f-areaUsuaria", it ? it.areaUsuaria : "");
-    set("#f-tipo", it ? it.tipo : "BIEN");
+    set("#f-tipo", it ? it.tipo : defTipo());
     set("#f-item", it ? it.item : "");
     set("#f-denominacion", it ? it.denominacion : "");
-    set("#f-prioridad", it ? it.prioridad : "Media");
-    set("#f-estado", it ? it.estado : "PENDIENTE");
+    set("#f-prioridad", it ? it.prioridad : defPrioridad());
+    set("#f-estado", it ? it.estado : defEstado());
     set("#f-especialista", it ? it.especialista : "");
     set("#f-fechaPase", it ? it.fechaPase : "");
     set("#f-tengoExp", it ? it.tengoExp : "");
     set("#f-observaciones", it ? it.observaciones : "");
-
     $("#modal").classList.remove("hidden");
     setTimeout(() => $("#f-expLogistica").focus(), 50);
   }
-
   function cerrarModal() { $("#modal").classList.add("hidden"); }
 
   function guardarDesdeForm(ev) {
     ev.preventDefault();
     const expLogistica = $("#f-expLogistica").value.trim();
     if (!expLogistica) { toast("El N° de Exp. Logística es obligatorio."); return; }
-
     const datos = {
       nro: $("#f-nro").value.trim(),
       fechaIngreso: $("#f-fechaIngreso").value,
@@ -833,7 +988,6 @@ input:focus, .select:focus, textarea:focus {
       tengoExp: $("#f-tengoExp").value,
       observaciones: $("#f-observaciones").value.trim(),
     };
-
     const id = $("#f-id").value;
     if (id) {
       const idx = items.findIndex((x) => x.id === id);
@@ -854,23 +1008,123 @@ input:focus, .select:focus, textarea:focus {
     guardar(); render(); toast("Requerimiento eliminado.");
   }
 
+  // ---------- Configuración (estados / tipos / prioridades) ----------
+  const GRUPOS = [
+    { g: "estados", field: "estado", titulo: "Estados" },
+    { g: "tipos", field: "tipo", titulo: "Tipos" },
+    { g: "prioridades", field: "prioridad", titulo: "Prioridades" },
+  ];
+
+  function abrirConfig() {
+    configDraft = {
+      estados: config.estados.map((o) => ({ orig: o.nombre, nombre: o.nombre, color: o.color })),
+      tipos: config.tipos.map((o) => ({ orig: o.nombre, nombre: o.nombre, color: o.color })),
+      prioridades: config.prioridades.map((o) => ({ orig: o.nombre, nombre: o.nombre, color: o.color })),
+    };
+    renderConfigEditor();
+    $("#modal-config").classList.remove("hidden");
+  }
+  function cerrarConfig() { $("#modal-config").classList.add("hidden"); configDraft = null; }
+
+  function renderConfigEditor() {
+    GRUPOS.forEach(({ g }) => {
+      const cont = $("#cfg-" + g);
+      const arr = configDraft[g];
+      cont.innerHTML = arr.map((o, i) => filaConfigHTML(o, i, arr.length)).join("");
+      cont.querySelectorAll(".cfg-row").forEach((row) => {
+        const i = +row.getAttribute("data-i");
+        row.querySelector(".cfg-nombre").addEventListener("input", (e) => { configDraft[g][i].nombre = e.target.value; });
+        row.querySelector(".cfg-color").addEventListener("input", (e) => { configDraft[g][i].color = e.target.value; actualizarSwatch(row, e.target.value); });
+        row.querySelector("[data-up]").addEventListener("click", () => moverConfig(g, i, -1));
+        row.querySelector("[data-down]").addEventListener("click", () => moverConfig(g, i, 1));
+        row.querySelector("[data-del]").addEventListener("click", () => { configDraft[g].splice(i, 1); renderConfigEditor(); });
+      });
+    });
+  }
+
+  function filaConfigHTML(o, i, n) {
+    return `<div class="cfg-row" data-i="${i}">
+      <span class="cfg-swatch" style="${badgeStyle(o.color)}">${esc(o.nombre || "?")}</span>
+      <input type="color" class="cfg-color" value="${o.color || "#6b7280"}" title="Color" />
+      <input type="text" class="cfg-nombre" value="${esc(o.nombre)}" placeholder="Nombre" />
+      <button type="button" class="icon-btn" data-up ${i === 0 ? "disabled" : ""} title="Subir">↑</button>
+      <button type="button" class="icon-btn" data-down ${i === n - 1 ? "disabled" : ""} title="Bajar">↓</button>
+      <button type="button" class="icon-btn danger" data-del title="Eliminar">🗑</button>
+    </div>`;
+  }
+  function actualizarSwatch(row, color) {
+    const sw = row.querySelector(".cfg-swatch");
+    if (sw) sw.setAttribute("style", badgeStyle(color));
+  }
+  function moverConfig(g, i, d) {
+    const a = configDraft[g], j = i + d;
+    if (j < 0 || j >= a.length) return;
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+    renderConfigEditor();
+  }
+  function agregarConfig(g) {
+    const color = PALETA[configDraft[g].length % PALETA.length];
+    configDraft[g].push({ orig: null, nombre: "", color });
+    renderConfigEditor();
+    const inputs = $("#cfg-" + g).querySelectorAll(".cfg-nombre");
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }
+  function restaurarConfig() {
+    if (!confirm("¿Restaurar las listas a los valores por defecto?\nLos requerimientos que usen valores personalizados quedarán con ese campo en blanco.")) return;
+    const d = clone(DEF_CONFIG);
+    configDraft = {
+      estados: d.estados.map((o) => ({ orig: null, nombre: o.nombre, color: o.color })),
+      tipos: d.tipos.map((o) => ({ orig: null, nombre: o.nombre, color: o.color })),
+      prioridades: d.prioridades.map((o) => ({ orig: null, nombre: o.nombre, color: o.color })),
+    };
+    renderConfigEditor();
+  }
+
+  function guardarConfigDesdeEditor() {
+    // Validación
+    for (const { g, titulo } of GRUPOS) {
+      const arr = configDraft[g];
+      if (!arr.length) { toast(`"${titulo}" debe tener al menos un valor.`); return; }
+      const nombres = arr.map((o) => o.nombre.trim());
+      if (nombres.some((n) => !n)) { toast(`Hay nombres vacíos en "${titulo}".`); return; }
+      const lower = nombres.map((n) => n.toLowerCase());
+      if (new Set(lower).size !== lower.length) { toast(`Hay nombres repetidos en "${titulo}".`); return; }
+    }
+    // Aplicar renombrados y eliminaciones a los requerimientos
+    GRUPOS.forEach(({ g, field }) => {
+      const arr = configDraft[g];
+      const renameMap = {}, vivos = new Set();
+      arr.forEach((o) => {
+        const nuevo = o.nombre.trim();
+        vivos.add(nuevo);
+        if (o.orig && o.orig !== nuevo) renameMap[o.orig] = nuevo;
+      });
+      items.forEach((it) => { if (it[field] && renameMap[it[field]]) it[field] = renameMap[it[field]]; });
+      items.forEach((it) => {
+        const v = it[field];
+        if (v && !vivos.has(v)) {
+          it[field] = g === "prioridades" ? (arr[Math.min(1, arr.length - 1)].nombre.trim()) : "";
+        }
+      });
+    });
+    // Confirmar la configuración
+    config = {
+      estados: configDraft.estados.map((o) => ({ nombre: o.nombre.trim(), color: o.color })),
+      tipos: configDraft.tipos.map((o) => ({ nombre: o.nombre.trim(), color: o.color })),
+      prioridades: configDraft.prioridades.map((o) => ({ nombre: o.nombre.trim(), color: o.color })),
+    };
+    guardarConfig(); guardar();
+    poblarSelects(); resetFiltros();
+    cerrarConfig(); render();
+    toast("Configuración guardada.");
+  }
+
   // ---------- CSV ----------
   function csvCampo(v) {
     const s = String(v == null ? "" : v);
     if (/[",\n;]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
     return s;
   }
-
-  const ENCABEZADOS_CSV = {
-    nro: "N°", fechaIngreso: "Fecha ingreso a UPROG", expLogistica: "N° Exp. Logística",
-    expDireccion: "N° Exp. Dirección", docArea: "N° de documento del área",
-    areaEstrategica: "Área usuaria estratégica", areaUsuaria: "Área usuaria",
-    tipo: "Tipo", denominacion: "Denominación del requerimiento", item: "Ítem",
-    especialista: "Especialista a cargo", fechaPase: "Fecha de pase a especialista",
-    estado: "Estado del requerimiento", prioridad: "Prioridad",
-    observaciones: "Observaciones", tengoExp: "¿Tengo el expediente?",
-  };
-
   function exportarCSV() {
     if (!items.length) { toast("No hay requerimientos para exportar."); return; }
     const cabecera = CAMPOS_CSV.map((c) => csvCampo(ENCABEZADOS_CSV[c])).join(",");
@@ -884,7 +1138,6 @@ input:focus, .select:focus, textarea:focus {
     URL.revokeObjectURL(url);
     toast(`Exportados ${items.length} requerimientos.`);
   }
-
   function parseCSV(texto) {
     texto = texto.replace(/^﻿/, "");
     const filas = []; let campo = "", fila = [], dentro = false;
@@ -897,7 +1150,7 @@ input:focus, .select:focus, textarea:focus {
       } else {
         if (c === '"') { dentro = true; }
         else if (c === ",") { fila.push(campo); campo = ""; }
-        else if (c === "\r") { /* ignore */ }
+        else if (c === "\r") {}
         else if (c === "\n") { fila.push(campo); filas.push(fila); fila = []; campo = ""; }
         else { campo += c; }
       }
@@ -905,11 +1158,8 @@ input:focus, .select:focus, textarea:focus {
     if (campo !== "" || fila.length) { fila.push(campo); filas.push(fila); }
     return filas.filter((f) => f.some((x) => String(x).trim() !== ""));
   }
-
-  // Mapea encabezados (los nuestros legibles o las claves internas) a las claves del modelo
   function indiceColumnas(cabecera) {
-    const norm = (s) => String(s).trim().toLowerCase()
-      .normalize("NFD").replace(/[̀-ͯ]/g, "");
+    const norm = (s) => String(s).trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
     const legible = {};
     Object.entries(ENCABEZADOS_CSV).forEach(([k, v]) => { legible[norm(v)] = k; });
     const idx = {};
@@ -920,17 +1170,14 @@ input:focus, .select:focus, textarea:focus {
     });
     return idx;
   }
-
   function normalizarFecha(s) {
     if (!s) return "";
     s = s.trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
     const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
-    if (m) { let [, d, mo, a] = m; if (a.length === 2) a = "20" + a;
-      return `${a}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`; }
+    if (m) { let [, d, mo, a] = m; if (a.length === 2) a = "20" + a; return `${a}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`; }
     return "";
   }
-
   function importarCSV(texto) {
     const filas = parseCSV(texto);
     if (filas.length < 2) { toast("El archivo no tiene datos para importar."); return; }
@@ -942,9 +1189,6 @@ input:focus, .select:focus, textarea:focus {
     for (let i = 1; i < filas.length; i++) {
       const f = filas[i];
       const get = (k) => (idx[k] != null ? (f[idx[k]] || "").trim() : "");
-      let tipo = get("tipo").toUpperCase(); if (!TIPOS.includes(tipo)) tipo = tipo || "BIEN";
-      let prioridad = get("prioridad"); if (!PRIORIDADES.includes(prioridad)) prioridad = "Media";
-      let estado = get("estado").toUpperCase(); if (!estado) estado = "PENDIENTE";
       let tengo = get("tengoExp").toUpperCase();
       tengo = tengo.startsWith("S") ? "SÍ" : (tengo.startsWith("N") ? "NO" : "");
       const item = get("item"), den = get("denominacion"), exp = get("expLogistica");
@@ -955,10 +1199,11 @@ input:focus, .select:focus, textarea:focus {
         fechaIngreso: normalizarFecha(get("fechaIngreso")),
         expLogistica: exp, expDireccion: get("expDireccion"), docArea: get("docArea"),
         areaEstrategica: get("areaEstrategica"), areaUsuaria: get("areaUsuaria"),
-        tipo, denominacion: den, item,
+        tipo: get("tipo") || defTipo(), denominacion: den, item,
         especialista: get("especialista"), fechaPase: normalizarFecha(get("fechaPase")),
-        estado, prioridad, observaciones: get("observaciones"), tengoExp: tengo,
-        creado: Date.now(),
+        estado: get("estado") || defEstado(),
+        prioridad: get("prioridad") || defPrioridad(),
+        observaciones: get("observaciones"), tengoExp: tengo, creado: Date.now(),
       });
       n++;
     }
@@ -971,14 +1216,13 @@ input:focus, .select:focus, textarea:focus {
     const existentes = new Set(items.map((it) => String(it.expLogistica)));
     let n = 0;
     DATOS_JUNIO.forEach((d) => {
-      if (existentes.has(String(d.expLogistica))) return; // evita duplicados
+      if (existentes.has(String(d.expLogistica))) return;
       items.push(Object.assign({ id: uid(), creado: Date.now() }, d));
       n++;
     });
     guardar(); render();
     toast(n ? `Cargados ${n} requerimientos de junio.` : "Tus datos de junio ya estaban cargados.");
   }
-
   function borrarTodo() {
     if (!items.length) { toast("No hay datos para borrar."); return; }
     if (!confirm(`¿Borrar TODOS los ${items.length} requerimientos?\nEsta acción no se puede deshacer.`)) return;
@@ -996,13 +1240,18 @@ input:focus, .select:focus, textarea:focus {
 
   // ---------- Init ----------
   function poblarSelects() {
-    const opt = (v) => `<option value="${v}">${v}</option>`;
-    $("#f-tipo").innerHTML = TIPOS.map(opt).join("");
-    $("#f-estado").innerHTML = ESTADOS.map(opt).join("");
-    $("#f-prioridad").innerHTML = PRIORIDADES.map(opt).join("");
-    $("#filtro-estado").innerHTML = '<option value="">Todo estado</option>' + ESTADOS.map(opt).join("");
-    $("#filtro-prioridad").innerHTML = '<option value="">Toda prioridad</option>' + PRIORIDADES.map(opt).join("");
-    $("#filtro-tipo").innerHTML = '<option value="">Todo tipo</option>' + TIPOS.map(opt).join("");
+    const optList = (arr) => arr.map((o) => `<option value="${esc(o.nombre)}">${esc(o.nombre)}</option>`).join("");
+    $("#f-tipo").innerHTML = optList(config.tipos);
+    $("#f-estado").innerHTML = optList(config.estados);
+    $("#f-prioridad").innerHTML = optList(config.prioridades);
+    $("#filtro-estado").innerHTML = '<option value="">Todo estado</option>' + optList(config.estados);
+    $("#filtro-prioridad").innerHTML = '<option value="">Toda prioridad</option>' + optList(config.prioridades);
+    $("#filtro-tipo").innerHTML = '<option value="">Todo tipo</option>' + optList(config.tipos);
+  }
+  function resetFiltros() {
+    filtro.q = ""; filtro.estado = ""; filtro.prioridad = ""; filtro.tipo = ""; filtro.tengo = "";
+    $("#buscar").value = ""; $("#filtro-estado").value = ""; $("#filtro-prioridad").value = "";
+    $("#filtro-tipo").value = ""; $("#filtro-tengo").value = "";
   }
 
   function conectarEventos() {
@@ -1014,8 +1263,20 @@ input:focus, .select:focus, textarea:focus {
     $("#btn-cancelar").addEventListener("click", cerrarModal);
     $("#form").addEventListener("submit", guardarDesdeForm);
     $("#modal").addEventListener("click", (e) => { if (e.target.id === "modal") cerrarModal(); });
+
+    // Configuración
+    $("#btn-config").addEventListener("click", abrirConfig);
+    $("#config-close").addEventListener("click", cerrarConfig);
+    $("#config-cancelar").addEventListener("click", cerrarConfig);
+    $("#config-guardar").addEventListener("click", guardarConfigDesdeEditor);
+    $("#config-restaurar").addEventListener("click", restaurarConfig);
+    $("#modal-config").addEventListener("click", (e) => { if (e.target.id === "modal-config") cerrarConfig(); });
+    $$("[data-add]").forEach((b) => b.addEventListener("click", () => agregarConfig(b.getAttribute("data-add"))));
+
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !$("#modal").classList.contains("hidden")) cerrarModal();
+      if (e.key !== "Escape") return;
+      if (!$("#modal").classList.contains("hidden")) cerrarModal();
+      else if (!$("#modal-config").classList.contains("hidden")) cerrarConfig();
     });
 
     $("#buscar").addEventListener("input", (e) => { filtro.q = e.target.value; renderTabla(); });
@@ -1023,11 +1284,7 @@ input:focus, .select:focus, textarea:focus {
     $("#filtro-prioridad").addEventListener("change", (e) => { filtro.prioridad = e.target.value; renderTabla(); });
     $("#filtro-tipo").addEventListener("change", (e) => { filtro.tipo = e.target.value; renderTabla(); });
     $("#filtro-tengo").addEventListener("change", (e) => { filtro.tengo = e.target.value; renderTabla(); });
-    $("#btn-limpiar").addEventListener("click", () => {
-      filtro.q = ""; filtro.estado = ""; filtro.prioridad = ""; filtro.tipo = ""; filtro.tengo = "";
-      $("#buscar").value = ""; $("#filtro-estado").value = ""; $("#filtro-prioridad").value = "";
-      $("#filtro-tipo").value = ""; $("#filtro-tengo").value = ""; renderTabla();
-    });
+    $("#btn-limpiar").addEventListener("click", () => { resetFiltros(); renderTabla(); });
 
     $$("#tabla thead th[data-sort]").forEach((th) => {
       th.addEventListener("click", () => {
@@ -1051,6 +1308,7 @@ input:focus, .select:focus, textarea:focus {
   }
 
   document.addEventListener("DOMContentLoaded", () => {
+    cargarConfig();
     poblarSelects();
     conectarEventos();
     cargar();
