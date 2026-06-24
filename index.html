@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PRIORITY · Seguimiento de Contrataciones Directas</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo">P</div>
+      <div class="brand-text">
+        <h1>PRIORITY</h1>
+        <span>Seguimiento de Contrataciones Directas · Logística</span>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button id="btn-importar" class="btn btn-ghost" title="Importar desde CSV/Excel">⬆ Importar</button>
+      <button id="btn-exportar" class="btn btn-ghost" title="Exportar a CSV (Excel)">⬇ Exportar</button>
+      <button id="btn-nuevo" class="btn btn-primary">+ Nuevo expediente</button>
+      <input type="file" id="file-import" accept=".csv,text/csv" hidden />
+    </div>
+  </header>
+
+  <!-- Tablero de indicadores -->
+  <section class="kpis" id="kpis">
+    <div class="kpi">
+      <span class="kpi-label">Total expedientes</span>
+      <span class="kpi-value" id="kpi-total">0</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Activos</span>
+      <span class="kpi-value" id="kpi-activos">0</span>
+    </div>
+    <div class="kpi kpi-warn">
+      <span class="kpi-label">Vencidos / por vencer</span>
+      <span class="kpi-value" id="kpi-vencidos">0</span>
+    </div>
+    <div class="kpi kpi-accent">
+      <span class="kpi-label">Monto total (activos)</span>
+      <span class="kpi-value" id="kpi-monto">—</span>
+    </div>
+  </section>
+
+  <!-- Filtros -->
+  <section class="toolbar">
+    <div class="search">
+      <span class="search-icon">🔎</span>
+      <input type="search" id="buscar" placeholder="Buscar por código, objeto, proveedor, responsable…" />
+    </div>
+    <div class="filters">
+      <select id="filtro-prioridad" class="select">
+        <option value="">Toda prioridad</option>
+      </select>
+      <select id="filtro-estado" class="select">
+        <option value="">Todo estado</option>
+      </select>
+      <button id="btn-limpiar" class="btn btn-ghost btn-sm" title="Limpiar filtros">Limpiar</button>
+    </div>
+  </section>
+
+  <!-- Tabla -->
+  <main class="table-wrap">
+    <table class="grid" id="tabla">
+      <thead>
+        <tr>
+          <th data-sort="codigo">Código</th>
+          <th data-sort="objeto">Objeto de la contratación</th>
+          <th data-sort="proveedor">Proveedor</th>
+          <th data-sort="area">Área</th>
+          <th data-sort="responsable">Responsable</th>
+          <th data-sort="monto" class="num">Monto</th>
+          <th data-sort="prioridad">Prioridad</th>
+          <th data-sort="estado">Estado</th>
+          <th data-sort="fechaLimite">Fecha límite</th>
+          <th class="acciones-col">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="vacio" class="empty hidden">
+      <p>No hay expedientes que mostrar.</p>
+      <div class="empty-actions">
+        <button id="btn-nuevo-2" class="btn btn-primary">+ Cargar el primero</button>
+        <button id="btn-ejemplos" class="btn btn-ghost">Cargar datos de ejemplo</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <span id="footer-count">0 expedientes</span>
+    <span class="footer-sep">·</span>
+    <button id="btn-borrar-todo" class="link-danger">Borrar todos los datos</button>
+    <span class="footer-sep">·</span>
+    <span class="muted">Los datos se guardan en este navegador.</span>
+  </footer>
+
+  <!-- Modal de formulario -->
+  <div class="modal-backdrop hidden" id="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+      <div class="modal-head">
+        <h2 id="modal-titulo">Nuevo expediente</h2>
+        <button class="modal-close" id="modal-close" aria-label="Cerrar">✕</button>
+      </div>
+      <form id="form" class="modal-body" novalidate>
+        <input type="hidden" id="f-id" />
+        <div class="grid-form">
+          <label class="field">
+            <span>Código de expediente *</span>
+            <input type="text" id="f-codigo" required placeholder="Ej. CD-2026-0148" />
+          </label>
+          <label class="field field-wide">
+            <span>Objeto de la contratación *</span>
+            <input type="text" id="f-objeto" required placeholder="Ej. Servicio de transporte de carga refrigerada" />
+          </label>
+          <label class="field">
+            <span>Proveedor</span>
+            <input type="text" id="f-proveedor" placeholder="Razón social del proveedor" />
+          </label>
+          <label class="field">
+            <span>Área solicitante</span>
+            <input type="text" id="f-area" placeholder="Ej. Distribución, Almacenes…" />
+          </label>
+          <label class="field">
+            <span>Responsable</span>
+            <input type="text" id="f-responsable" placeholder="Quién lleva el expediente" />
+          </label>
+          <div class="field-row">
+            <label class="field">
+              <span>Monto</span>
+              <input type="number" id="f-monto" min="0" step="0.01" placeholder="0.00" />
+            </label>
+            <label class="field field-narrow">
+              <span>Moneda</span>
+              <select id="f-moneda" class="select"></select>
+            </label>
+          </div>
+          <label class="field">
+            <span>Prioridad *</span>
+            <select id="f-prioridad" class="select" required></select>
+          </label>
+          <label class="field">
+            <span>Estado *</span>
+            <select id="f-estado" class="select" required></select>
+          </label>
+          <label class="field">
+            <span>Fecha de ingreso</span>
+            <input type="date" id="f-fechaIngreso" />
+          </label>
+          <label class="field">
+            <span>Fecha límite</span>
+            <input type="date" id="f-fechaLimite" />
+          </label>
+          <label class="field field-wide">
+            <span>Observaciones</span>
+            <textarea id="f-observaciones" rows="3" placeholder="Notas, requisitos, seguimiento…"></textarea>
+          </label>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn btn-ghost" id="btn-cancelar">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar expediente</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
