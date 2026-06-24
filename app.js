@@ -9,6 +9,7 @@
   const CONFIG_KEY = "priority_config_v1";
   const TABS_KEY = "priority_tabs_v1";
   const ACTIVA_KEY = "priority_tab_activa";
+  const ZOOM_KEY = "priority_zoom";
 
   // Campos para exportar / importar CSV
   const CAMPOS_CSV = [
@@ -79,6 +80,7 @@
   let configDraft = null;
   let tabs = clone(DEF_TABS);
   let pestanaActiva = "t1";
+  let zoom = 1;
   const filtro = { q: "", cargo: "", estado: "", prioridad: "", tipo: "", tengo: "" };
   const orden = { key: "nro", dir: "asc" };
 
@@ -764,6 +766,21 @@
     toastTimer = setTimeout(() => t.classList.add("hidden"), 2600);
   }
 
+  // ---------- Zoom de la tabla ----------
+  function cargarZoom() {
+    try { const z = parseFloat(localStorage.getItem(ZOOM_KEY)); if (!isNaN(z)) zoom = z; } catch (e) {}
+    aplicarZoom();
+  }
+  function aplicarZoom() {
+    zoom = Math.min(1.3, Math.max(0.5, Math.round(zoom * 100) / 100));
+    const tabla = $("#tabla");
+    if (tabla) tabla.style.zoom = String(zoom);
+    const lbl = $("#zoom-nivel");
+    if (lbl) lbl.textContent = Math.round(zoom * 100) + "%";
+    try { localStorage.setItem(ZOOM_KEY, String(zoom)); } catch (e) {}
+  }
+  function cambiarZoom(delta) { zoom += delta; aplicarZoom(); }
+
   // ---------- Init ----------
   function poblarSelects() {
     const optList = (arr) => arr.map((o) => `<option value="${esc(o.nombre)}">${esc(o.nombre)}</option>`).join("");
@@ -787,6 +804,9 @@
     $("#btn-junio").addEventListener("click", cargarJunio);
     $("#btn-junio-2").addEventListener("click", cargarJunio);
     $("#btn-jalar").addEventListener("click", jalarACargo);
+    $("#zoom-menos").addEventListener("click", () => cambiarZoom(-0.1));
+    $("#zoom-mas").addEventListener("click", () => cambiarZoom(0.1));
+    $("#zoom-nivel").addEventListener("click", () => { zoom = 1; aplicarZoom(); });
     $("#modal-close").addEventListener("click", cerrarModal);
     $("#btn-cancelar").addEventListener("click", cerrarModal);
     $("#form").addEventListener("submit", guardarDesdeForm);
@@ -859,5 +879,6 @@
     conectarEventos();
     cargar();
     render();
+    cargarZoom();
   });
 })();

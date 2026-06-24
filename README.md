@@ -65,6 +65,15 @@ Cada pestaña muestra su propio conteo y su propio tablero de indicadores.
 > Para agregar un requerimiento nuevo usa **+ Nuevo requerimiento**; para modificar uno existente,
 > edita directamente sus celdas en la tabla.
 
+## Pantallas pequeñas: zoom y barra fija
+
+- **Zoom**: arriba a la derecha hay botones **−** y **+** para alejar o acercar la tabla
+  (del 50 % al 130 %). El **%** central restablece al 100 %. El nivel queda recordado.
+- **Zona superior anclada**: la cabecera, los indicadores, las pestañas y los filtros quedan
+  fijos; al bajar con la rueda del mouse **no desaparecen**. Solo la tabla se desplaza por dentro,
+  y su **barra de desplazamiento horizontal** (la que mueve de lado a lado) queda **siempre visible**
+  en la parte inferior. Los **títulos de columna** también se quedan fijos al subir/bajar.
+
 ## Configurar tus listas (⚙ Configurar)
 
 Las listas de **Estados**, **Tipos** y **Prioridades** son totalmente editables desde

@@ -19,6 +19,8 @@
 
 * { box-sizing: border-box; }
 
+html, body { height: 100%; }
+
 body {
   margin: 0;
   font-family: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
@@ -26,7 +28,15 @@ body {
   color: var(--text);
   font-size: 14px;
   line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
 }
+
+/* La cabecera, indicadores, pestañas, filtros y pie quedan anclados;
+   solo la tabla se desplaza por dentro. */
+.topbar, .kpis, .tabs-bar, .toolbar, .footer { flex: 0 0 auto; }
 
 /* ---------- Topbar ---------- */
 .topbar {
@@ -78,25 +88,31 @@ body {
 .btn-ghost:hover { background: var(--surface-2); }
 .btn-sm { padding: 7px 11px; font-size: 12px; }
 
+/* Control de zoom */
+.zoom-ctl { display: inline-flex; align-items: center; gap: 2px; margin-right: 4px; }
+.zoom-ctl .btn { padding: 6px 9px; }
+.btn-icon { font-size: 16px; line-height: 1; min-width: 32px; font-weight: 800; }
+.btn-zoom { min-width: 52px; font-variant-numeric: tabular-nums; }
+
 /* ---------- KPIs ---------- */
 .kpis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 14px;
-  padding: 20px 24px 6px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  padding: 12px 24px 2px;
 }
 .kpi {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px 18px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 3px;
   box-shadow: var(--shadow);
 }
-.kpi-label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
-.kpi-value { font-size: 26px; font-weight: 800; }
+.kpi-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+.kpi-value { font-size: 22px; font-weight: 800; }
 .kpi-danger .kpi-value { color: var(--danger); }
 .kpi-warn .kpi-value { color: var(--warn); }
 .kpi-accent .kpi-value { color: var(--primary); }
@@ -107,7 +123,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 24px;
+  padding: 10px 24px;
   flex-wrap: wrap;
 }
 .search {
@@ -172,12 +188,14 @@ input:focus, .select:focus, textarea:focus {
 
 /* ---------- Table ---------- */
 .table-wrap {
-  margin: 0 24px 24px;
+  margin: 10px 24px 12px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  overflow-x: auto;
+  overflow: auto;          /* desplazamiento vertical y horizontal dentro de la tabla */
+  flex: 1 1 auto;
+  min-height: 0;           /* permite que el área de tabla se encoja y haga scroll */
 }
 .grid { width: 100%; border-collapse: collapse; min-width: 2100px; }
 
@@ -301,7 +319,9 @@ select.cell-editor { cursor: pointer; }
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 24px 30px;
+  padding: 9px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
   color: var(--muted);
   font-size: 12.5px;
   flex-wrap: wrap;
