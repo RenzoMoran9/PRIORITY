@@ -93,6 +93,7 @@ body {
 .zoom-ctl .btn { padding: 6px 9px; }
 .btn-icon { font-size: 16px; line-height: 1; min-width: 32px; font-weight: 800; }
 .btn-zoom { min-width: 52px; font-variant-numeric: tabular-nums; }
+.btn.vinculado { background: #e7f6ee; color: var(--ok); border-color: #bfe6cf; }
 
 /* ---------- KPIs ---------- */
 .kpis {

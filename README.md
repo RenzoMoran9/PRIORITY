@@ -89,6 +89,14 @@ el botón **⚙ Configurar**:
 
 La configuración también se guarda en tu navegador.
 
+## Conectar con Excel o con la nube (Supabase)
+
+- **🔗 Vincular Excel**: en Chrome/Edge, vincula un archivo CSV que la app **actualiza
+  solo** cada vez que editas; en Excel lo abres con *Datos → Obtener datos* y pulsas
+  *Actualizar*. (Con doble clic `file://` puede estar bloqueado; ver detalles abajo.)
+- **Supabase / nube / Excel en vivo / multi-dispositivo**: ver la guía completa en
+  **[CONEXIONES.md](CONEXIONES.md)**.
+
 ## Respaldo y traslado de datos
 
 Los datos se guardan en el navegador de **esa** computadora. Para respaldarlos o

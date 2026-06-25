@@ -81,6 +81,7 @@
   let tabs = clone(DEF_TABS);
   let pestanaActiva = "t1";
   let zoom = 1;
+  let fileHandle = null;  // archivo CSV vinculado (File System Access API)
   const filtro = { q: "", cargo: "", estado: "", prioridad: "", tipo: "", tengo: "" };
   const orden = { key: "nro", dir: "asc" };
 
@@ -206,6 +207,7 @@
   function guardar() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
     catch (e) { toast("No se pudo guardar (almacenamiento lleno o bloqueado)."); }
+    if (fileHandle) escribirVinculado(false);
   }
 
   function cargarConfig() {
@@ -648,18 +650,60 @@
     return s;
   }
   function valorCSV(it, c) { return c === "pestana" ? tabNombre(it.pestana) : it[c]; }
-  function exportarCSV() {
-    if (!items.length) { toast("No hay requerimientos para exportar."); return; }
+  function csvTexto() {
     const cabecera = CAMPOS_CSV.map((c) => csvCampo(ENCABEZADOS_CSV[c])).join(",");
     const filas = items.map((it) => CAMPOS_CSV.map((c) => csvCampo(valorCSV(it, c))).join(","));
-    const contenido = "﻿" + [cabecera].concat(filas).join("\r\n");
-    const blob = new Blob([contenido], { type: "text/csv;charset=utf-8;" });
+    return "﻿" + [cabecera].concat(filas).join("\r\n");
+  }
+  function exportarCSV() {
+    if (!items.length) { toast("No hay requerimientos para exportar."); return; }
+    const blob = new Blob([csvTexto()], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = `requerimientos_${hoyISO()}.csv`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast(`Exportados ${items.length} requerimientos.`);
+  }
+
+  // ---------- Vincular a un archivo (Excel/CSV) que se actualiza solo ----------
+  async function vincularArchivo() {
+    if (!window.showSaveFilePicker) {
+      toast("Para vincular un archivo usa Chrome o Edge. Mientras tanto usa «Exportar».");
+      return;
+    }
+    if (fileHandle) { await escribirVinculado(true); return; }
+    try {
+      fileHandle = await window.showSaveFilePicker({
+        suggestedName: "requerimientos.csv",
+        types: [{ description: "CSV (Excel)", accept: { "text/csv": [".csv"] } }],
+      });
+      await escribirVinculado(true);
+      actualizarBotonVinculo();
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+      fileHandle = null;
+      toast("No se pudo vincular aquí. Suele requerir abrir la app desde un servidor; usa «Exportar» mientras tanto.");
+    }
+  }
+  async function escribirVinculado(avisar) {
+    if (!fileHandle) return;
+    try {
+      const w = await fileHandle.createWritable();
+      await w.write(csvTexto());
+      await w.close();
+      if (avisar) toast(`Archivo vinculado y actualizado (${items.length}). Pulsa «Actualizar» en Excel para verlo.`);
+    } catch (e) {
+      fileHandle = null;
+      actualizarBotonVinculo();
+      toast("Se perdió el vínculo con el archivo. Vincúlalo de nuevo.");
+    }
+  }
+  function actualizarBotonVinculo() {
+    const b = $("#btn-vincular");
+    if (!b) return;
+    if (fileHandle) { b.textContent = "🔗 Vinculado ✓"; b.classList.add("vinculado"); b.title = "Archivo vinculado: se actualiza al editar. Clic para reescribir ahora."; }
+    else { b.textContent = "🔗 Vincular Excel"; b.classList.remove("vinculado"); b.title = "Vincular a un archivo CSV que se actualiza solo (Chrome/Edge)"; }
   }
   function parseCSV(texto) {
     texto = texto.replace(/^﻿/, "");
@@ -861,6 +905,7 @@
     });
 
     $("#btn-exportar").addEventListener("click", exportarCSV);
+    $("#btn-vincular").addEventListener("click", vincularArchivo);
     $("#btn-importar").addEventListener("click", () => $("#file-import").click());
     $("#file-import").addEventListener("change", (e) => {
       const file = e.target.files[0]; if (!file) return;
