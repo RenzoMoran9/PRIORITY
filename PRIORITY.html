@@ -1533,21 +1533,35 @@ select.cell-editor { cursor: pointer; }
     const colsXML = COLS_EXPORT.map((c) => `<Column ss:Width="${Math.round(c.w * 0.75)}"/>`).join("");
     const headerRow = `<Row ss:Height="22">${COLS_EXPORT.map((c) => `<Cell ss:StyleID="sHead"><Data ss:Type="String">${esc(c.h)}</Data></Cell>`).join("")}</Row>`;
 
+    const NOMBRE_LISTA = { pestana: "LST_PESTANA", aCargo: "LST_SINO", prioridad: "LST_PRIORIDAD", estado: "LST_ESTADO", tipo: "LST_TIPO", tengoExp: "LST_SINO" };
     function validacionesXML(nFilas) {
       const ultima = nFilas + 1 + 300;
       return LISTAS_EXPORT.map((f) => {
         const col = COLS_EXPORT.findIndex((c) => c.f === f) + 1;
         if (col < 1) return "";
-        let vals = [];
-        if (f === "pestana") vals = tabs.map((t) => t.nombre);
-        else if (f === "aCargo" || f === "tengoExp") vals = ["SÍ", "NO"];
-        else if (f === "prioridad") vals = config.prioridades.map((o) => o.nombre);
-        else if (f === "estado") vals = config.estados.map((o) => o.nombre);
-        else if (f === "tipo") vals = config.tipos.map((o) => o.nombre);
-        if (!vals.length || vals.some((v) => v.indexOf(",") >= 0)) return "";
-        return `<DataValidation xmlns="urn:schemas-microsoft-com:office:excel"><Range>R2C${col}:R${ultima}C${col}</Range><Type>List</Type><Value>&quot;${esc(vals.join(","))}&quot;</Value></DataValidation>`;
+        return `<DataValidation xmlns="urn:schemas-microsoft-com:office:excel"><Range>R2C${col}:R${ultima}C${col}</Range><Type>List</Type><Value>${NOMBRE_LISTA[f]}</Value></DataValidation>`;
       }).join("");
     }
+
+    // Listas para los desplegables (rango con nombre en hoja oculta -> independiente del idioma)
+    const SINO = ["SÍ", "NO"];
+    const colLista = { 1: tabs.map((t) => t.nombre), 2: SINO, 3: config.prioridades.map((o) => o.nombre), 4: config.estados.map((o) => o.nombre), 5: config.tipos.map((o) => o.nombre) };
+    const maxL = Math.max(1, colLista[1].length, colLista[2].length, colLista[3].length, colLista[4].length, colLista[5].length);
+    let listasRows = "";
+    for (let r = 0; r < maxL; r++) {
+      let celdas = "";
+      for (let c = 1; c <= 5; c++) { const v = colLista[c][r]; celdas += (v != null) ? `<Cell><Data ss:Type="String">${esc(v)}</Data></Cell>` : "<Cell/>"; }
+      listasRows += `<Row>${celdas}</Row>`;
+    }
+    const listasSheet = `<Worksheet ss:Name="Listas"><Table>${listasRows}</Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><Visible>SheetHidden</Visible></WorksheetOptions></Worksheet>`;
+    const L = (n) => Math.max(1, n);
+    const namesXML = "<Names>" +
+      `<NamedRange ss:Name="LST_PESTANA" ss:RefersTo="=Listas!R1C1:R${L(colLista[1].length)}C1"/>` +
+      `<NamedRange ss:Name="LST_SINO" ss:RefersTo="=Listas!R1C2:R2C2"/>` +
+      `<NamedRange ss:Name="LST_PRIORIDAD" ss:RefersTo="=Listas!R1C3:R${L(colLista[3].length)}C3"/>` +
+      `<NamedRange ss:Name="LST_ESTADO" ss:RefersTo="=Listas!R1C4:R${L(colLista[4].length)}C4"/>` +
+      `<NamedRange ss:Name="LST_TIPO" ss:RefersTo="=Listas!R1C5:R${L(colLista[5].length)}C5"/>` +
+      "</Names>";
 
     const wsXML = hojas.map((tab) => {
       const lista = items.filter((it) => it.pestana === tab.id).sort(comparador);
@@ -1567,7 +1581,7 @@ select.cell-editor { cursor: pointer; }
     const xml =
       '<?xml version="1.0" encoding="UTF-8"?>\r\n<?mso-application progid="Excel.Sheet"?>\r\n' +
       '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40">' +
-      stylesXML + wsXML + '</Workbook>';
+      stylesXML + namesXML + wsXML + listasSheet + '</Workbook>';
 
     const blob = new Blob([xml], { type: "application/vnd.ms-excel;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
