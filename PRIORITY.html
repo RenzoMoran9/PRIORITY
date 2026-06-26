@@ -493,9 +493,9 @@ select.cell-editor { cursor: pointer; }
       <button id="btn-config" class="btn btn-ghost" title="Configurar estados, tipos y prioridades">⚙ Configurar</button>
       <button id="btn-vincular" class="btn btn-ghost" title="Vincular a un archivo CSV que se actualiza solo (Chrome/Edge)">🔗 Vincular Excel</button>
       <button id="btn-importar" class="btn btn-ghost" title="Importar desde CSV/Excel">⬆ Importar</button>
-      <button id="btn-exportar" class="btn btn-ghost" title="Exportar a CSV (Excel)">⬇ Exportar</button>
+      <button id="btn-exportar" class="btn btn-ghost" title="Exportar a Excel con formato (mismas columnas, colores y orden que la app)">⬇ Exportar Excel</button>
       <button id="btn-nuevo" class="btn btn-primary">+ Nuevo requerimiento</button>
-      <input type="file" id="file-import" accept=".csv,text/csv" hidden />
+      <input type="file" id="file-import" accept=".csv,.xls,.xlsx,.html,text/csv,application/vnd.ms-excel" hidden />
     </div>
   </header>
 
@@ -1045,23 +1045,7 @@ select.cell-editor { cursor: pointer; }
       }
       return true;
     });
-    const { key, dir } = orden;
-    const signo = dir === "asc" ? 1 : -1;
-    lista.sort((a, b) => {
-      let va = a[key], vb = b[key];
-      if (key === "prioridad") {
-        va = ordenPrioridad[va] ?? 99; vb = ordenPrioridad[vb] ?? 99;
-      } else if (key === "nro" || key === "expLogistica" || key === "expDireccion") {
-        const na = parseInt(va, 10), nb = parseInt(vb, 10);
-        va = isNaN(na) ? Infinity : na; vb = isNaN(nb) ? Infinity : nb;
-      } else {
-        va = String(va == null ? "" : va).toLowerCase();
-        vb = String(vb == null ? "" : vb).toLowerCase();
-      }
-      if (va < vb) return -1 * signo;
-      if (va > vb) return 1 * signo;
-      return 0;
-    });
+    lista.sort(comparador);
     return lista;
   }
 
@@ -1436,6 +1420,149 @@ select.cell-editor { cursor: pointer; }
     toast(`Exportados ${items.length} requerimientos.`);
   }
 
+  // ---------- Comparador (orden actual de la tabla) ----------
+  function comparador(a, b) {
+    const { key, dir } = orden;
+    const signo = dir === "asc" ? 1 : -1;
+    let va = a[key], vb = b[key];
+    if (key === "prioridad") {
+      va = ordenPrioridad[va] ?? 99; vb = ordenPrioridad[vb] ?? 99;
+    } else if (key === "nro" || key === "expLogistica" || key === "expDireccion") {
+      const na = parseInt(va, 10), nb = parseInt(vb, 10);
+      va = isNaN(na) ? Infinity : na; vb = isNaN(nb) ? Infinity : nb;
+    } else {
+      va = String(va == null ? "" : va).toLowerCase();
+      vb = String(vb == null ? "" : vb).toLowerCase();
+    }
+    if (va < vb) return -1 * signo;
+    if (va > vb) return 1 * signo;
+    return 0;
+  }
+
+  // ---------- Exportar a Excel con formato (coherente con la app) ----------
+  const COLS_EXPORT = [
+    { f: "nro", h: "N°", w: 44 },
+    { f: "pestana", h: "Pestaña", w: 90 },
+    { f: "aCargo", h: "A cargo", w: 70 },
+    { f: "prioridad", h: "Prioridad", w: 84 },
+    { f: "estado", h: "Estado", w: 160 },
+    { f: "fechaIngreso", h: "Ingreso a UPROG", w: 110 },
+    { f: "expLogistica", h: "Exp. Logística", w: 96 },
+    { f: "expDireccion", h: "Exp. Dirección", w: 96 },
+    { f: "docArea", h: "Doc. del área", w: 200 },
+    { f: "areaEstrategica", h: "Área estratégica", w: 220 },
+    { f: "areaUsuaria", h: "Área usuaria", w: 220 },
+    { f: "tipo", h: "Tipo", w: 96 },
+    { f: "item", h: "Ítem", w: 220 },
+    { f: "denominacion", h: "Denominación", w: 320 },
+    { f: "especialista", h: "Especialista", w: 130 },
+    { f: "fechaPase", h: "F. pase", w: 96 },
+    { f: "tengoExp", h: "¿Tengo exp.?", w: 84 },
+    { f: "observaciones", h: "Observaciones", w: 260 },
+  ];
+
+  function rgbToHex(r, g, b) {
+    const h = (x) => ("0" + Math.max(0, Math.min(255, x)).toString(16)).slice(-2);
+    return "#" + h(r) + h(g) + h(b);
+  }
+  function mezclar(hex, conHex, t) {
+    const a = hexToRgb(hex), b = hexToRgb(conHex);
+    const m = (x, y) => Math.round(x * (1 - t) + y * t);
+    return rgbToHex(m(a.r, b.r), m(a.g, b.g), m(a.b, b.b));
+  }
+  function parColor(hex) {
+    if (!hex) return null;
+    return [mezclar(hex, "#ffffff", 0.84), mezclar(hex, "#000000", 0.40)];
+  }
+  function colorCelda(field, v) {
+    if (!v) return null;
+    if (field === "prioridad") return parColor(COL.prioridad[v]);
+    if (field === "estado") return parColor(COL.estado[v]);
+    if (field === "tipo") return parColor(COL.tipo[v]);
+    if (field === "aCargo") return v === "SÍ" ? ["#e8ecfb", "#2c43b8"] : ["#eef1f6", "#5a6678"];
+    if (field === "tengoExp") return v === "SÍ" ? ["#e7f6ee", "#15824a"] : ["#fdecee", "#b3303f"];
+    if (field === "pestana") return ["#eef1f6", "#5a6678"];
+    return null;
+  }
+  function valorExport(it, f) {
+    if (f === "pestana") return tabNombre(it.pestana);
+    if (f === "fechaIngreso" || f === "fechaPase") return fmtFecha(it[f]);
+    return it[f] == null ? "" : String(it[f]);
+  }
+  function exportarExcel() {
+    if (!items.length) { toast("No hay requerimientos para exportar."); return; }
+    const tabIndex = (id) => { const i = tabs.findIndex((t) => t.id === id); return i < 0 ? 99 : i; };
+    const lista = items.slice().sort((a, b) => {
+      const d = tabIndex(a.pestana) - tabIndex(b.pestana);
+      return d !== 0 ? d : comparador(a, b);
+    });
+    const ths = COLS_EXPORT.map((c) => `<th style="width:${c.w}px">${esc(c.h)}</th>`).join("");
+    const filas = lista.map((it) => {
+      const tds = COLS_EXPORT.map((c) => {
+        const v = valorExport(it, c.f);
+        const col = colorCelda(c.f, v);
+        if (col) return `<td style="background:${col[0]};color:${col[1]};font-weight:bold;text-align:center">${esc(v) || "&nbsp;"}</td>`;
+        const align = (c.f === "nro" || c.f === "expLogistica" || c.f === "expDireccion") ? " style=\"text-align:right\"" : "";
+        return `<td${align}>${esc(v) || "&nbsp;"}</td>`;
+      }).join("");
+      return `<tr>${tds}</tr>`;
+    }).join("");
+    const freeze = '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Requerimientos</x:Name><x:WorksheetOptions><x:FreezePanes/><x:FrozenNoSplit/><x:SplitHorizontal>1</x:SplitHorizontal><x:TopRowBottomPane>1</x:TopRowBottomPane><x:ActivePane>2</x:ActivePane><x:Panes><x:Pane><x:Number>3</x:Number></x:Pane><x:Pane><x:Number>2</x:Number></x:Pane></x:Panes></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
+    const estilo = "<style>table{border-collapse:collapse;font-family:Calibri,'Segoe UI',Arial,sans-serif;font-size:10pt;}th{background:#3b56d6;color:#ffffff;font-weight:bold;border:1px solid #2c43b8;padding:7px 8px;text-align:left;}td{border:1px solid #d8deea;padding:4px 8px;vertical-align:top;color:#232a38;}</style>";
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8">${freeze}${estilo}</head><body><table><thead><tr>${ths}</tr></thead><tbody>${filas}</tbody></table></body></html>`;
+    const blob = new Blob(["﻿" + html], { type: "application/vnd.ms-excel;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `PRIORITY_${hoyISO()}.xls`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast(`Exportados ${items.length} requerimientos a Excel.`);
+  }
+
+  // ---------- Importar (acepta el CSV o el Excel .xls exportado) ----------
+  function importarArchivo(texto) {
+    const t = texto.replace(/^﻿/, "").replace(/^\s+/, "");
+    if (/^</.test(t) && /<tr[\s>]/i.test(t)) procesarFilas(htmlToRows(texto));
+    else procesarFilas(parseCSV(texto));
+  }
+  function htmlToRows(texto) {
+    const d = new DOMParser().parseFromString(texto, "text/html");
+    return [...d.querySelectorAll("tr")]
+      .map((tr) => [...tr.querySelectorAll("th,td")].map((c) => c.textContent.replace(/ /g, " ").trim()))
+      .filter((r) => r.some((x) => x !== ""));
+  }
+  function procesarFilas(filas) {
+    if (filas.length < 2) { toast("El archivo no tiene datos para importar."); return; }
+    const idx = indiceColumnas(filas[0]);
+    if (idx.expLogistica == null && idx.item == null && idx.denominacion == null) {
+      toast("No reconocí las columnas. Usa el formato de Exportar."); return;
+    }
+    let n = 0;
+    for (let i = 1; i < filas.length; i++) {
+      const f = filas[i];
+      const get = (k) => (idx[k] != null ? (f[idx[k]] || "").trim() : "");
+      const item = get("item"), den = get("denominacion"), exp = get("expLogistica");
+      if (!exp && !item && !den) continue;
+      items.push({
+        id: uid(),
+        pestana: idTabPorNombre(get("pestana")),
+        nro: get("nro") || nextNro(),
+        fechaIngreso: normalizarFecha(get("fechaIngreso")),
+        expLogistica: exp, expDireccion: get("expDireccion"), docArea: get("docArea"),
+        areaEstrategica: get("areaEstrategica"), areaUsuaria: get("areaUsuaria"),
+        tipo: get("tipo") || defTipo(), denominacion: den, item,
+        especialista: get("especialista"), fechaPase: normalizarFecha(get("fechaPase")),
+        estado: get("estado") || defEstado(),
+        prioridad: get("prioridad") || defPrioridad(),
+        observaciones: get("observaciones"),
+        tengoExp: siNo(get("tengoExp")), aCargo: siNo(get("aCargo")),
+        creado: Date.now(),
+      });
+      n++;
+    }
+    guardar(); render(); toast(`Importados ${n} requerimientos.`);
+  }
+
   // ---------- Vincular a un archivo (Excel/CSV) que se actualiza solo ----------
   async function vincularArchivo() {
     if (!window.showSaveFilePicker) {
@@ -1499,6 +1626,7 @@ select.cell-editor { cursor: pointer; }
     const norm = (s) => String(s).trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
     const legible = {};
     Object.entries(ENCABEZADOS_CSV).forEach(([k, v]) => { legible[norm(v)] = k; });
+    COLS_EXPORT.forEach((c) => { legible[norm(c.h)] = c.f; });
     const idx = {};
     cabecera.forEach((h, i) => {
       const n = norm(h);
@@ -1674,13 +1802,13 @@ select.cell-editor { cursor: pointer; }
       });
     });
 
-    $("#btn-exportar").addEventListener("click", exportarCSV);
+    $("#btn-exportar").addEventListener("click", exportarExcel);
     $("#btn-vincular").addEventListener("click", vincularArchivo);
     $("#btn-importar").addEventListener("click", () => $("#file-import").click());
     $("#file-import").addEventListener("change", (e) => {
       const file = e.target.files[0]; if (!file) return;
       const reader = new FileReader();
-      reader.onload = (ev) => importarCSV(ev.target.result);
+      reader.onload = (ev) => importarArchivo(ev.target.result);
       reader.readAsText(file, "UTF-8");
       e.target.value = "";
     });

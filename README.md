@@ -59,7 +59,10 @@ Cada pestaña muestra su propio conteo y su propio tablero de indicadores.
 - **Filtrar** por a cargo, estado, prioridad, tipo y si tienes o no el expediente.
 - **Ordenar** haciendo clic en cualquier encabezado de columna.
 - **Antigüedad en UPROG**: muestra los días desde el ingreso y resalta los que llevan más de 30 días.
-- **Exportar a CSV** (se abre en Excel) e **Importar CSV**.
+- **Exportar a Excel con formato**: el archivo sale con las **mismas columnas, orden y
+  colores** que la app (encabezado azul, prioridad/estado/tipo/«a cargo» como celdas de
+  color, bordes y fila de título fija). **Importar** acepta de vuelta ese mismo Excel
+  (`.xls`) o un CSV.
 - Los datos quedan guardados en tu navegador (no se borran al cerrar).
 
 > Para agregar un requerimiento nuevo usa **+ Nuevo requerimiento**; para modificar uno existente,
