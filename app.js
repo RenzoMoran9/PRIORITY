@@ -669,7 +669,7 @@
     return 0;
   }
 
-  // ---------- Exportar a Excel con formato (coherente con la app) ----------
+  // ---------- Exportar a Excel (una hoja por pestaña, con formato) ----------
   const COLS_EXPORT = [
     { f: "nro", h: "N°", w: 44 },
     { f: "pestana", h: "Pestaña", w: 90 },
@@ -719,54 +719,65 @@
     if (f === "fechaIngreso" || f === "fechaPase") return fmtFecha(it[f]);
     return it[f] == null ? "" : String(it[f]);
   }
+  function celdaExcel(it, c) {
+    const v = valorExport(it, c.f);
+    const col = colorCelda(c.f, v);
+    if (col) return `<td style="background:${col[0]};color:${col[1]};font-weight:bold;text-align:center">${esc(v) || "&nbsp;"}</td>`;
+    const align = (c.f === "nro" || c.f === "expLogistica" || c.f === "expDireccion") ? " style=\"text-align:right\"" : "";
+    return `<td${align}>${esc(v) || "&nbsp;"}</td>`;
+  }
+
+  const NS_XLS = 'xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"';
+  const ESTILO_XLS = "<style>table{border-collapse:collapse;font-family:Calibri,'Segoe UI',Arial,sans-serif;font-size:10pt;}th{background:#3b56d6;color:#ffffff;font-weight:bold;border:1px solid #2c43b8;padding:7px 8px;text-align:left;}td{border:1px solid #d8deea;padding:4px 8px;vertical-align:top;color:#232a38;}</style>";
+
+  function hojaHTML(tab) {
+    const lista = items.filter((it) => it.pestana === tab.id).sort(comparador);
+    const ths = COLS_EXPORT.map((c) => `<th style="width:${c.w}px">${esc(c.h)}</th>`).join("");
+    const filas = lista.map((it) => `<tr>${COLS_EXPORT.map((c) => celdaExcel(it, c)).join("")}</tr>`).join("");
+    return `<html ${NS_XLS}><head><meta charset="utf-8">${ESTILO_XLS}</head><body><table><thead><tr>${ths}</tr></thead><tbody>${filas}</tbody></table></body></html>`;
+  }
+  function sheetName(n) {
+    return String(n || "Hoja").replace(/[\[\]:*?\/\\]/g, "-").slice(0, 31) || "Hoja";
+  }
+  function b64utf8(str) { return btoa(unescape(encodeURIComponent(str))); }
+  function b64chunk(str) { return (b64utf8(str).match(/.{1,76}/g) || []).join("\r\n"); }
+
   function exportarExcel() {
     if (!items.length) { toast("No hay requerimientos para exportar."); return; }
-    const tabIndex = (id) => { const i = tabs.findIndex((t) => t.id === id); return i < 0 ? 99 : i; };
-    const lista = items.slice().sort((a, b) => {
-      const d = tabIndex(a.pestana) - tabIndex(b.pestana);
-      return d !== 0 ? d : comparador(a, b);
-    });
-    const ths = COLS_EXPORT.map((c) => `<th style="width:${c.w}px">${esc(c.h)}</th>`).join("");
-    const filas = lista.map((it) => {
-      const tds = COLS_EXPORT.map((c) => {
-        const v = valorExport(it, c.f);
-        const col = colorCelda(c.f, v);
-        if (col) return `<td style="background:${col[0]};color:${col[1]};font-weight:bold;text-align:center">${esc(v) || "&nbsp;"}</td>`;
-        const align = (c.f === "nro" || c.f === "expLogistica" || c.f === "expDireccion") ? " style=\"text-align:right\"" : "";
-        return `<td${align}>${esc(v) || "&nbsp;"}</td>`;
-      }).join("");
-      return `<tr>${tds}</tr>`;
-    }).join("");
-    const freeze = '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Requerimientos</x:Name><x:WorksheetOptions><x:FreezePanes/><x:FrozenNoSplit/><x:SplitHorizontal>1</x:SplitHorizontal><x:TopRowBottomPane>1</x:TopRowBottomPane><x:ActivePane>2</x:ActivePane><x:Panes><x:Pane><x:Number>3</x:Number></x:Pane><x:Pane><x:Number>2</x:Number></x:Pane></x:Panes></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
-    const estilo = "<style>table{border-collapse:collapse;font-family:Calibri,'Segoe UI',Arial,sans-serif;font-size:10pt;}th{background:#3b56d6;color:#ffffff;font-weight:bold;border:1px solid #2c43b8;padding:7px 8px;text-align:left;}td{border:1px solid #d8deea;padding:4px 8px;vertical-align:top;color:#232a38;}</style>";
-    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8">${freeze}${estilo}</head><body><table><thead><tr>${ths}</tr></thead><tbody>${filas}</tbody></table></body></html>`;
-    const blob = new Blob(["﻿" + html], { type: "application/vnd.ms-excel;charset=utf-8;" });
+    let hojas = tabs.filter((t) => items.some((it) => it.pestana === t.id));
+    if (!hojas.length) hojas = [tabs[0]];
+    const boundary = "----=_NextPart_PRIORITY_01";
+    const base = "file:///C:/PRIORITY/";
+    const wbXml = `<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>${hojas.map((t, i) => `<x:ExcelWorksheet><x:Name>${esc(sheetName(t.nombre))}</x:Name><x:WorksheetSource HRef="sheet${i + 1}.htm"/></x:ExcelWorksheet>`).join("")}</x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->`;
+    const workbook = `<html ${NS_XLS}><head><meta charset="utf-8">${wbXml}</head><body></body></html>`;
+    const parte = (loc, html) => `--${boundary}\r\nContent-Location: ${loc}\r\nContent-Transfer-Encoding: base64\r\nContent-Type: text/html; charset="utf-8"\r\n\r\n${b64chunk(html)}\r\n`;
+    let mht = `MIME-Version: 1.0\r\nX-Document-Type: Workbook\r\nContent-Type: multipart/related; boundary="${boundary}"\r\n\r\n`;
+    mht += parte(base + "workbook.htm", workbook);
+    hojas.forEach((t, i) => { mht += parte(base + `sheet${i + 1}.htm`, hojaHTML(t)); });
+    mht += `--${boundary}--\r\n`;
+    const blob = new Blob([mht], { type: "application/vnd.ms-excel;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = `PRIORITY_${hoyISO()}.xls`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast(`Exportados ${items.length} requerimientos a Excel.`);
+    toast(`Exportados ${items.length} requerimientos en ${hojas.length} hoja${hojas.length === 1 ? "" : "s"}.`);
   }
 
-  // ---------- Importar (acepta el CSV o el Excel .xls exportado) ----------
-  function importarArchivo(texto) {
-    const t = texto.replace(/^﻿/, "").replace(/^\s+/, "");
-    if (/^</.test(t) && /<tr[\s>]/i.test(t)) procesarFilas(htmlToRows(texto));
-    else procesarFilas(parseCSV(texto));
-  }
-  function htmlToRows(texto) {
-    const d = new DOMParser().parseFromString(texto, "text/html");
-    return [...d.querySelectorAll("tr")]
+  // ---------- Importar (CSV, Excel .xls de una hoja, o .xls multi-hoja) ----------
+  function filasDeTabla(tableEl) {
+    return [...tableEl.querySelectorAll("tr")]
       .map((tr) => [...tr.querySelectorAll("th,td")].map((c) => c.textContent.replace(/ /g, " ").trim()))
       .filter((r) => r.some((x) => x !== ""));
   }
-  function procesarFilas(filas) {
-    if (filas.length < 2) { toast("El archivo no tiene datos para importar."); return; }
+  function tablasDeHTML(html) {
+    const d = new DOMParser().parseFromString(html, "text/html");
+    return [...d.querySelectorAll("table")];
+  }
+  function agregarDesdeFilas(filas) {
+    if (filas.length < 2) return 0;
     const idx = indiceColumnas(filas[0]);
-    if (idx.expLogistica == null && idx.item == null && idx.denominacion == null) {
-      toast("No reconocí las columnas. Usa el formato de Exportar."); return;
-    }
+    if (idx.expLogistica == null && idx.item == null && idx.denominacion == null) return 0;
     let n = 0;
     for (let i = 1; i < filas.length; i++) {
       const f = filas[i];
@@ -790,7 +801,45 @@
       });
       n++;
     }
-    guardar(); render(); toast(`Importados ${n} requerimientos.`);
+    return n;
+  }
+  function finalizarImport(n) {
+    if (n > 0) { guardar(); render(); }
+    toast(n > 0 ? `Importados ${n} requerimientos.` : "No reconocí datos para importar. Usa el formato de Exportar.");
+  }
+  function partesMHTML(t) {
+    const m = t.match(/boundary="?([^"\r\n]+)"?/i);
+    if (!m) return [];
+    const sep = "--" + m[1];
+    const out = [];
+    t.split(sep).forEach((p) => {
+      let i = p.indexOf("\r\n\r\n"), off = 4;
+      if (i < 0) { i = p.indexOf("\n\n"); off = 2; }
+      if (i < 0) return;
+      const headers = p.slice(0, i).toLowerCase();
+      let body = p.slice(i + off);
+      if (/content-transfer-encoding:\s*base64/.test(headers)) {
+        const b64 = body.replace(/\s+/g, "");
+        try { body = decodeURIComponent(escape(atob(b64))); }
+        catch (e) { try { body = atob(b64); } catch (e2) { body = ""; } }
+      }
+      if (/<table/i.test(body)) out.push(body);
+    });
+    return out;
+  }
+  function importarArchivo(texto) {
+    const t = texto.replace(/^﻿/, "");
+    let n = 0;
+    if (/multipart\/related/i.test(t) || /^MIME-Version/i.test(t)) {
+      partesMHTML(t).forEach((h) => tablasDeHTML(h).forEach((tb) => { n += agregarDesdeFilas(filasDeTabla(tb)); }));
+      finalizarImport(n); return;
+    }
+    if (/<table/i.test(t)) {
+      tablasDeHTML(t).forEach((tb) => { n += agregarDesdeFilas(filasDeTabla(tb)); });
+      finalizarImport(n); return;
+    }
+    n = agregarDesdeFilas(parseCSV(texto));
+    finalizarImport(n);
   }
 
   // ---------- Vincular a un archivo (Excel/CSV) que se actualiza solo ----------
