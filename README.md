@@ -60,10 +60,12 @@ Cada pestaña muestra su propio conteo y su propio tablero de indicadores.
 - **Ordenar** haciendo clic en cualquier encabezado de columna.
 - **Antigüedad en UPROG**: muestra los días desde el ingreso y resalta los que llevan más de 30 días.
 - **Exportar a Excel con formato**: el archivo sale con las **mismas columnas, orden y
-  colores** que la app (encabezado azul, prioridad/estado/tipo/«a cargo» como celdas de
-  color y bordes), y con **una hoja por pestaña** (p. ej. «Heredados» y «Mi trabajo»).
-  **Importar** acepta de vuelta ese mismo Excel (`.xls`, incluso multi-hoja) o un CSV,
-  sin perder a qué pestaña pertenece cada requerimiento.
+  colores** que la app (encabezado azul; prioridad/estado/tipo/«a cargo»/«¿tengo exp?» como
+  celdas de color y bordes), con **una hoja por pestaña** (p. ej. «Heredados» y «Mi trabajo»),
+  **fila de título fija** y **listas desplegables** en las columnas Pestaña, A cargo,
+  Prioridad, Estado, Tipo y ¿Tengo exp.? (para elegir el valor dentro de Excel, igual que
+  en la app). **Importar** acepta de vuelta ese mismo Excel sin perder a qué pestaña
+  pertenece cada requerimiento (también lee CSV y exportaciones anteriores).
 - Los datos quedan guardados en tu navegador (no se borran al cerrar).
 
 > Para agregar un requerimiento nuevo usa **+ Nuevo requerimiento**; para modificar uno existente,

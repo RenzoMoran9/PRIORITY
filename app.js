@@ -669,20 +669,20 @@
     return 0;
   }
 
-  // ---------- Exportar a Excel (una hoja por pestaña, con formato) ----------
+  // ---------- Exportar a Excel (SpreadsheetML 2003: multi-hoja, colores y desplegables) ----------
   const COLS_EXPORT = [
     { f: "nro", h: "N°", w: 44 },
-    { f: "pestana", h: "Pestaña", w: 90 },
+    { f: "pestana", h: "Pestaña", w: 96 },
     { f: "aCargo", h: "A cargo", w: 70 },
     { f: "prioridad", h: "Prioridad", w: 84 },
-    { f: "estado", h: "Estado", w: 160 },
+    { f: "estado", h: "Estado", w: 170 },
     { f: "fechaIngreso", h: "Ingreso a UPROG", w: 110 },
     { f: "expLogistica", h: "Exp. Logística", w: 96 },
     { f: "expDireccion", h: "Exp. Dirección", w: 96 },
     { f: "docArea", h: "Doc. del área", w: 200 },
     { f: "areaEstrategica", h: "Área estratégica", w: 220 },
     { f: "areaUsuaria", h: "Área usuaria", w: 220 },
-    { f: "tipo", h: "Tipo", w: 96 },
+    { f: "tipo", h: "Tipo", w: 110 },
     { f: "item", h: "Ítem", w: 220 },
     { f: "denominacion", h: "Denominación", w: 320 },
     { f: "especialista", h: "Especialista", w: 130 },
@@ -690,6 +690,8 @@
     { f: "tengoExp", h: "¿Tengo exp.?", w: 84 },
     { f: "observaciones", h: "Observaciones", w: 260 },
   ];
+  const LONG_COLS = new Set(["docArea", "areaEstrategica", "areaUsuaria", "item", "denominacion", "observaciones"]);
+  const LISTAS_EXPORT = ["pestana", "aCargo", "prioridad", "estado", "tipo", "tengoExp"];
 
   function rgbToHex(r, g, b) {
     const h = (x) => ("0" + Math.max(0, Math.min(255, x)).toString(16)).slice(-2);
@@ -719,61 +721,94 @@
     if (f === "fechaIngreso" || f === "fechaPase") return fmtFecha(it[f]);
     return it[f] == null ? "" : String(it[f]);
   }
-  function celdaExcel(it, c) {
-    const v = valorExport(it, c.f);
-    const col = colorCelda(c.f, v);
-    if (col) return `<td style="background:${col[0]};color:${col[1]};font-weight:bold;text-align:center">${esc(v) || "&nbsp;"}</td>`;
-    const align = (c.f === "nro" || c.f === "expLogistica" || c.f === "expDireccion") ? " style=\"text-align:right\"" : "";
-    return `<td${align}>${esc(v) || "&nbsp;"}</td>`;
-  }
-
-  const NS_XLS = 'xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"';
-  const ESTILO_XLS = "<style>table{border-collapse:collapse;font-family:Calibri,'Segoe UI',Arial,sans-serif;font-size:10pt;}th{background:#3b56d6;color:#ffffff;font-weight:bold;border:1px solid #2c43b8;padding:7px 8px;text-align:left;}td{border:1px solid #d8deea;padding:4px 8px;vertical-align:top;color:#232a38;}</style>";
-
-  function hojaHTML(tab) {
-    const lista = items.filter((it) => it.pestana === tab.id).sort(comparador);
-    const ths = COLS_EXPORT.map((c) => `<th style="width:${c.w}px">${esc(c.h)}</th>`).join("");
-    const filas = lista.map((it) => `<tr>${COLS_EXPORT.map((c) => celdaExcel(it, c)).join("")}</tr>`).join("");
-    return `<html ${NS_XLS}><head><meta charset="utf-8">${ESTILO_XLS}</head><body><table><thead><tr>${ths}</tr></thead><tbody>${filas}</tbody></table></body></html>`;
-  }
   function sheetName(n) {
     return String(n || "Hoja").replace(/[\[\]:*?\/\\]/g, "-").slice(0, 31) || "Hoja";
   }
-  function b64utf8(str) { return btoa(unescape(encodeURIComponent(str))); }
-  function b64chunk(str) { return (b64utf8(str).match(/.{1,76}/g) || []).join("\r\n"); }
+  function bordesXML() {
+    return "<Borders>" + ["Top", "Bottom", "Left", "Right"].map((s) =>
+      `<Border ss:Position="${s}" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#d8deea"/>`).join("") + "</Borders>";
+  }
+  function styleXML(id, o) {
+    o = o || {};
+    const font = `<Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="10" ss:Color="${o.fg || "#232a38"}"${o.bold ? ' ss:Bold="1"' : ""}/>`;
+    const interior = o.bg ? `<Interior ss:Color="${o.bg}" ss:Pattern="Solid"/>` : "";
+    const align = `<Alignment ss:Vertical="Top"${o.align ? ` ss:Horizontal="${o.align}"` : ""}${o.wrap ? ' ss:WrapText="1"' : ""}/>`;
+    return `<Style ss:ID="${id}">${align}${bordesXML()}${font}${interior}</Style>`;
+  }
 
   function exportarExcel() {
     if (!items.length) { toast("No hay requerimientos para exportar."); return; }
     let hojas = tabs.filter((t) => items.some((it) => it.pestana === t.id));
     if (!hojas.length) hojas = [tabs[0]];
-    const boundary = "----=_NextPart_PRIORITY_01";
-    const base = "file:///C:/PRIORITY/";
-    const wbXml = `<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>${hojas.map((t, i) => `<x:ExcelWorksheet><x:Name>${esc(sheetName(t.nombre))}</x:Name><x:WorksheetSource HRef="sheet${i + 1}.htm"/></x:ExcelWorksheet>`).join("")}</x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->`;
-    const workbook = `<html ${NS_XLS}><head><meta charset="utf-8">${wbXml}</head><body></body></html>`;
-    const parte = (loc, html) => `--${boundary}\r\nContent-Location: ${loc}\r\nContent-Transfer-Encoding: base64\r\nContent-Type: text/html; charset="utf-8"\r\n\r\n${b64chunk(html)}\r\n`;
-    let mht = `MIME-Version: 1.0\r\nX-Document-Type: Workbook\r\nContent-Type: multipart/related; boundary="${boundary}"\r\n\r\n`;
-    mht += parte(base + "workbook.htm", workbook);
-    hojas.forEach((t, i) => { mht += parte(base + `sheet${i + 1}.htm`, hojaHTML(t)); });
-    mht += `--${boundary}--\r\n`;
-    const blob = new Blob([mht], { type: "application/vnd.ms-excel;charset=utf-8;" });
+
+    const styleMap = {}, stylesArr = [];
+    function styleParaColor(bg, fg) {
+      const key = bg + "|" + fg;
+      if (styleMap[key]) return styleMap[key];
+      const id = "c" + stylesArr.length;
+      styleMap[key] = id;
+      stylesArr.push(styleXML(id, { bg, fg, bold: true, align: "Center" }));
+      return id;
+    }
+    function celdaXML(it, c) {
+      const v = valorExport(it, c.f);
+      const col = colorCelda(c.f, v);
+      let sid = "";
+      if (col) sid = styleParaColor(col[0], col[1]);
+      else if (c.f === "nro" || c.f === "expLogistica" || c.f === "expDireccion") sid = "sNum";
+      else if (LONG_COLS.has(c.f)) sid = "sWrap";
+      const styleAttr = sid ? ` ss:StyleID="${sid}"` : "";
+      return `<Cell${styleAttr}><Data ss:Type="String">${esc(v)}</Data></Cell>`;
+    }
+    const colsXML = COLS_EXPORT.map((c) => `<Column ss:Width="${Math.round(c.w * 0.75)}"/>`).join("");
+    const headerRow = `<Row ss:Height="22">${COLS_EXPORT.map((c) => `<Cell ss:StyleID="sHead"><Data ss:Type="String">${esc(c.h)}</Data></Cell>`).join("")}</Row>`;
+
+    function validacionesXML(nFilas) {
+      const ultima = nFilas + 1 + 300;
+      return LISTAS_EXPORT.map((f) => {
+        const col = COLS_EXPORT.findIndex((c) => c.f === f) + 1;
+        if (col < 1) return "";
+        let vals = [];
+        if (f === "pestana") vals = tabs.map((t) => t.nombre);
+        else if (f === "aCargo" || f === "tengoExp") vals = ["SÍ", "NO"];
+        else if (f === "prioridad") vals = config.prioridades.map((o) => o.nombre);
+        else if (f === "estado") vals = config.estados.map((o) => o.nombre);
+        else if (f === "tipo") vals = config.tipos.map((o) => o.nombre);
+        if (!vals.length || vals.some((v) => v.indexOf(",") >= 0)) return "";
+        return `<DataValidation xmlns="urn:schemas-microsoft-com:office:excel"><Range>R2C${col}:R${ultima}C${col}</Range><Type>List</Type><Value>&quot;${esc(vals.join(","))}&quot;</Value></DataValidation>`;
+      }).join("");
+    }
+
+    const wsXML = hojas.map((tab) => {
+      const lista = items.filter((it) => it.pestana === tab.id).sort(comparador);
+      const filas = lista.map((it) => `<Row>${COLS_EXPORT.map((c) => celdaXML(it, c)).join("")}</Row>`).join("");
+      const table = `<Table ss:DefaultColumnWidth="80">${colsXML}${headerRow}${filas}</Table>`;
+      const opts = '<WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><FreezePanes/><FrozenNoSplit/><SplitHorizontal>1</SplitHorizontal><TopRowBottomPane>1</TopRowBottomPane><ActivePane>2</ActivePane><Panes><Pane><Number>3</Number></Pane><Pane><Number>2</Number></Pane></Panes></WorksheetOptions>';
+      return `<Worksheet ss:Name="${esc(sheetName(tab.nombre))}">${table}${opts}${validacionesXML(lista.length)}</Worksheet>`;
+    }).join("");
+
+    const baseStyles =
+      '<Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Top"/>' + bordesXML() + '<Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="10" ss:Color="#232a38"/></Style>' +
+      `<Style ss:ID="sHead"><Alignment ss:Vertical="Center" ss:Horizontal="Left"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#2c43b8"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#2c43b8"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#2c43b8"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#2c43b8"/></Borders><Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="10" ss:Color="#FFFFFF" ss:Bold="1"/><Interior ss:Color="#3b56d6" ss:Pattern="Solid"/></Style>` +
+      styleXML("sNum", { align: "Right" }) +
+      styleXML("sWrap", { wrap: true });
+    const stylesXML = `<Styles>${baseStyles}${stylesArr.join("")}</Styles>`;
+
+    const xml =
+      '<?xml version="1.0" encoding="UTF-8"?>\r\n<?mso-application progid="Excel.Sheet"?>\r\n' +
+      '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40">' +
+      stylesXML + wsXML + '</Workbook>';
+
+    const blob = new Blob([xml], { type: "application/vnd.ms-excel;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = `PRIORITY_${hoyISO()}.xls`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast(`Exportados ${items.length} requerimientos en ${hojas.length} hoja${hojas.length === 1 ? "" : "s"}.`);
+    toast(`Exportados ${items.length} requerimientos en ${hojas.length} hoja${hojas.length === 1 ? "" : "s"} (con desplegables).`);
   }
 
-  // ---------- Importar (CSV, Excel .xls de una hoja, o .xls multi-hoja) ----------
-  function filasDeTabla(tableEl) {
-    return [...tableEl.querySelectorAll("tr")]
-      .map((tr) => [...tr.querySelectorAll("th,td")].map((c) => c.textContent.replace(/ /g, " ").trim()))
-      .filter((r) => r.some((x) => x !== ""));
-  }
-  function tablasDeHTML(html) {
-    const d = new DOMParser().parseFromString(html, "text/html");
-    return [...d.querySelectorAll("table")];
-  }
+  // ---------- Importar (CSV, Excel SpreadsheetML, Excel HTML/MHTML) ----------
   function agregarDesdeFilas(filas) {
     if (filas.length < 2) return 0;
     const idx = indiceColumnas(filas[0]);
@@ -807,6 +842,15 @@
     if (n > 0) { guardar(); render(); }
     toast(n > 0 ? `Importados ${n} requerimientos.` : "No reconocí datos para importar. Usa el formato de Exportar.");
   }
+  function filasDeTabla(tableEl) {
+    return [...tableEl.querySelectorAll("tr")]
+      .map((tr) => [...tr.querySelectorAll("th,td")].map((c) => c.textContent.replace(/ /g, " ").trim()))
+      .filter((r) => r.some((x) => x !== ""));
+  }
+  function tablasDeHTML(html) {
+    const d = new DOMParser().parseFromString(html, "text/html");
+    return [...d.querySelectorAll("table")];
+  }
   function partesMHTML(t) {
     const m = t.match(/boundary="?([^"\r\n]+)"?/i);
     if (!m) return [];
@@ -827,9 +871,40 @@
     });
     return out;
   }
+  function filasDeSpreadsheetML(xmlText) {
+    const doc = new DOMParser().parseFromString(xmlText, "application/xml");
+    const tablas = [];
+    const worksheets = doc.getElementsByTagName("Worksheet");
+    for (let w = 0; w < worksheets.length; w++) {
+      const rows = worksheets[w].getElementsByTagName("Row");
+      const filas = [];
+      for (let r = 0; r < rows.length; r++) {
+        const hijos = rows[r].children;
+        const arr = []; let ci = 0;
+        for (let k = 0; k < hijos.length; k++) {
+          const c = hijos[k];
+          if ((c.localName || c.tagName) !== "Cell") continue;
+          const idxAttr = c.getAttribute("ss:Index") || c.getAttribute("Index");
+          if (idxAttr) ci = parseInt(idxAttr, 10) - 1;
+          const datas = c.getElementsByTagName("Data");
+          arr[ci] = datas.length ? (datas[0].textContent || "").trim() : "";
+          ci++;
+        }
+        for (let z = 0; z < arr.length; z++) if (arr[z] == null) arr[z] = "";
+        filas.push(arr);
+      }
+      const limpio = filas.filter((f) => f.some((x) => String(x).trim() !== ""));
+      if (limpio.length) tablas.push(limpio);
+    }
+    return tablas;
+  }
   function importarArchivo(texto) {
     const t = texto.replace(/^﻿/, "");
     let n = 0;
+    if (/<\?mso-application/i.test(t) || /<Workbook[\s>]/i.test(t)) {
+      filasDeSpreadsheetML(texto).forEach((filas) => { n += agregarDesdeFilas(filas); });
+      finalizarImport(n); return;
+    }
     if (/multipart\/related/i.test(t) || /^MIME-Version/i.test(t)) {
       partesMHTML(t).forEach((h) => tablasDeHTML(h).forEach((tb) => { n += agregarDesdeFilas(filasDeTabla(tb)); }));
       finalizarImport(n); return;
