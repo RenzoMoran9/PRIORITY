@@ -219,6 +219,7 @@ input:focus, .select:focus, textarea:focus {
   box-shadow: 0 1px 3px rgba(18,28,53,.10);
 }
 select.cell-editor { cursor: pointer; }
+textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; overflow: hidden; }
 .grid thead th {
   text-align: left;
   font-size: 10.5px;
@@ -247,7 +248,7 @@ select.cell-editor { cursor: pointer; }
   padding: 10px 14px;
   border-bottom: 1px solid #eef1f6;
   border-right: 1px solid #f3f5f9;
-  vertical-align: middle;
+  vertical-align: top;
   color: #2a3342;
 }
 .grid thead th { border-right: 1px solid #eef1f6; }
@@ -306,7 +307,7 @@ select.cell-editor { cursor: pointer; }
 /* Anchos de celdas de la tabla editable */
 .cell-den { min-width: 240px; max-width: 360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cell-item2 { min-width: 150px; max-width: 240px; font-weight: 600; }
-.cell-obs { min-width: 160px; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cell-obs { min-width: 200px; max-width: 320px; white-space: normal; word-break: break-word; line-height: 1.42; }
 
 .antig-tag { display: block; font-size: 10.5px; color: #99a2b3; margin-top: 1px; }
 .antig-tag.alerta { color: var(--warn); font-weight: 700; }
@@ -804,6 +805,7 @@ select.cell-editor { cursor: pointer; }
     fechaIngreso: "date", fechaPase: "date",
     prioridad: "select", estado: "select", tipo: "select",
     aCargo: "select", tengoExp: "select", pestana: "select",
+    observaciones: "textarea",
   };
 
   // Listas configurables por defecto (el usuario puede cambiarlas en ⚙ Configurar)
@@ -816,6 +818,7 @@ select.cell-editor { cursor: pointer; }
       { nombre: "VALIDADO", color: "#1f9d57" },
       { nombre: "ENTREGADO A GRISEL", color: "#15824a" },
       { nombre: "PARA SALDO", color: "#7b3fd1" },
+      { nombre: "TERMINADO", color: "#0e8a6a" },
     ],
     tipos: [
       { nombre: "BIEN", color: "#4a7a2e" },
@@ -986,6 +989,16 @@ select.cell-editor { cursor: pointer; }
       const c = raw ? JSON.parse(raw) : null;
       config = (c && c.estados && c.tipos && c.prioridades) ? c : clone(DEF_CONFIG);
     } catch (e) { config = clone(DEF_CONFIG); }
+    // Migración única: asegurar el estado "TERMINADO"
+    try {
+      if (!localStorage.getItem("priority_migr_terminado")) {
+        if (config.estados && !config.estados.some((e) => String(e.nombre).toUpperCase() === "TERMINADO")) {
+          config.estados.push({ nombre: "TERMINADO", color: "#0e8a6a" });
+          try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch (e2) {}
+        }
+        try { localStorage.setItem("priority_migr_terminado", "1"); } catch (e3) {}
+      }
+    } catch (e) {}
     derivarConfig();
   }
   function guardarConfig() {
@@ -1103,7 +1116,7 @@ select.cell-editor { cursor: pointer; }
 
   function filaHTML(it) {
     const dias = diasDesde(it.fechaIngreso);
-    const cerrado = it.estado === "PARA SALDO" || it.estado === "ENTREGADO A GRISEL";
+    const cerrado = it.estado === "PARA SALDO" || it.estado === "ENTREGADO A GRISEL" || it.estado === "TERMINADO";
     const vieja = dias !== null && dias > 30 && !cerrado;
     const antig = dias !== null ? `<span class="antig-tag ${vieja ? "alerta" : ""}">${dias} d</span>` : "";
     const cargo = it.aCargo || "";
@@ -1179,6 +1192,10 @@ select.cell-editor { cursor: pointer; }
         if (actual === val) op.selected = true;
         editor.appendChild(op);
       });
+    } else if (tipo === "textarea") {
+      editor = document.createElement("textarea");
+      editor.value = actual;
+      editor.rows = 3;
     } else {
       editor = document.createElement("input");
       editor.type = tipo === "date" ? "date" : "text";
@@ -1196,7 +1213,7 @@ select.cell-editor { cursor: pointer; }
     const commit = () => {
       if (done) return; done = true;
       let val = editor.value;
-      if (editor.tagName === "INPUT" && editor.type === "text") val = val.trim();
+      if ((editor.tagName === "INPUT" && editor.type === "text") || editor.tagName === "TEXTAREA") val = val.trim();
       if ((it[field] == null ? "" : String(it[field])) !== val) {
         it[field] = val;
         it.actualizado = Date.now();
@@ -1209,6 +1226,15 @@ select.cell-editor { cursor: pointer; }
     if (editor.tagName === "SELECT") {
       editor.addEventListener("change", commit);
       editor.addEventListener("blur", cancel);
+    } else if (editor.tagName === "TEXTAREA") {
+      const autosize = () => { editor.style.height = "auto"; editor.style.height = Math.min(240, editor.scrollHeight + 2) + "px"; };
+      editor.addEventListener("input", autosize);
+      autosize();
+      editor.addEventListener("blur", commit);
+      editor.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") { e.preventDefault(); cancel(); }
+        else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commit(); }
+      });
     } else {
       editor.addEventListener("blur", commit);
       editor.addEventListener("keydown", (e) => {

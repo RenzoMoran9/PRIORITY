@@ -34,6 +34,7 @@
     fechaIngreso: "date", fechaPase: "date",
     prioridad: "select", estado: "select", tipo: "select",
     aCargo: "select", tengoExp: "select", pestana: "select",
+    observaciones: "textarea",
   };
 
   // Listas configurables por defecto (el usuario puede cambiarlas en ⚙ Configurar)
@@ -46,6 +47,7 @@
       { nombre: "VALIDADO", color: "#1f9d57" },
       { nombre: "ENTREGADO A GRISEL", color: "#15824a" },
       { nombre: "PARA SALDO", color: "#7b3fd1" },
+      { nombre: "TERMINADO", color: "#0e8a6a" },
     ],
     tipos: [
       { nombre: "BIEN", color: "#4a7a2e" },
@@ -216,6 +218,16 @@
       const c = raw ? JSON.parse(raw) : null;
       config = (c && c.estados && c.tipos && c.prioridades) ? c : clone(DEF_CONFIG);
     } catch (e) { config = clone(DEF_CONFIG); }
+    // Migración única: asegurar el estado "TERMINADO"
+    try {
+      if (!localStorage.getItem("priority_migr_terminado")) {
+        if (config.estados && !config.estados.some((e) => String(e.nombre).toUpperCase() === "TERMINADO")) {
+          config.estados.push({ nombre: "TERMINADO", color: "#0e8a6a" });
+          try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch (e2) {}
+        }
+        try { localStorage.setItem("priority_migr_terminado", "1"); } catch (e3) {}
+      }
+    } catch (e) {}
     derivarConfig();
   }
   function guardarConfig() {
@@ -333,7 +345,7 @@
 
   function filaHTML(it) {
     const dias = diasDesde(it.fechaIngreso);
-    const cerrado = it.estado === "PARA SALDO" || it.estado === "ENTREGADO A GRISEL";
+    const cerrado = it.estado === "PARA SALDO" || it.estado === "ENTREGADO A GRISEL" || it.estado === "TERMINADO";
     const vieja = dias !== null && dias > 30 && !cerrado;
     const antig = dias !== null ? `<span class="antig-tag ${vieja ? "alerta" : ""}">${dias} d</span>` : "";
     const cargo = it.aCargo || "";
@@ -409,6 +421,10 @@
         if (actual === val) op.selected = true;
         editor.appendChild(op);
       });
+    } else if (tipo === "textarea") {
+      editor = document.createElement("textarea");
+      editor.value = actual;
+      editor.rows = 3;
     } else {
       editor = document.createElement("input");
       editor.type = tipo === "date" ? "date" : "text";
@@ -426,7 +442,7 @@
     const commit = () => {
       if (done) return; done = true;
       let val = editor.value;
-      if (editor.tagName === "INPUT" && editor.type === "text") val = val.trim();
+      if ((editor.tagName === "INPUT" && editor.type === "text") || editor.tagName === "TEXTAREA") val = val.trim();
       if ((it[field] == null ? "" : String(it[field])) !== val) {
         it[field] = val;
         it.actualizado = Date.now();
@@ -439,6 +455,15 @@
     if (editor.tagName === "SELECT") {
       editor.addEventListener("change", commit);
       editor.addEventListener("blur", cancel);
+    } else if (editor.tagName === "TEXTAREA") {
+      const autosize = () => { editor.style.height = "auto"; editor.style.height = Math.min(240, editor.scrollHeight + 2) + "px"; };
+      editor.addEventListener("input", autosize);
+      autosize();
+      editor.addEventListener("blur", commit);
+      editor.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") { e.preventDefault(); cancel(); }
+        else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commit(); }
+      });
     } else {
       editor.addEventListener("blur", commit);
       editor.addEventListener("keydown", (e) => {

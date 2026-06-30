@@ -26,7 +26,10 @@ Basados en tu hoja "JUNIO MEJORADO":
 - **Denominación del requerimiento** (completo) e **Ítem** (resumen corto)
 - **Especialista a cargo** y **Fecha de pase a especialista**
 - **Estado del requerimiento**: Pendiente, Disponibilidad presupuestal, Invitación,
-  Cuadro comparativo, Validado, Entregado a Grisel, Para saldo
+  Cuadro comparativo, Validado, Entregado a Grisel, Para saldo, **Terminado**
+  (puedes editar esta lista en ⚙ Configurar)
+- **Observaciones**: el texto se **ajusta y se ve completo** dentro de la celda; al
+  editarla se abre un cuadro multilínea (Esc cancela, clic fuera guarda)
 - **Prioridad**: Alta / Media / Baja
 - **¿Tengo el expediente físico?** (Sí / No)
 - **Observaciones**
