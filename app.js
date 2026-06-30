@@ -36,6 +36,8 @@
     aCargo: "select", tengoExp: "select", pestana: "select",
     observaciones: "textarea",
   };
+  // Campos de texto que se editan en el cuadro amplio multilínea
+  const MULTILINEA = new Set(["observaciones", "denominacion", "docArea", "areaEstrategica", "areaUsuaria", "item"]);
 
   // Listas configurables por defecto (el usuario puede cambiarlas en ⚙ Configurar)
   const DEF_CONFIG = {
@@ -398,6 +400,8 @@
 
   // ---------- Edición en línea (tipo Excel) ----------
   function editarTextareaPopover(td, it, field) {
+    const multilinea = MULTILINEA.has(field);
+    const etiqueta = ENCABEZADOS_CSV[field] || "Editar";
     const rect = td.getBoundingClientRect();
     const back = document.createElement("div");
     back.className = "popover-backdrop";
@@ -405,23 +409,23 @@
     pop.className = "cell-popover";
     const lab = document.createElement("div");
     lab.className = "cp-label";
-    lab.textContent = "Observaciones · Esc cancela · clic fuera o Ctrl+Enter guarda";
+    lab.textContent = etiqueta + " · Esc cancela · " + (multilinea ? "clic fuera o Ctrl+Enter guarda" : "Enter o clic fuera guarda");
     const ta = document.createElement("textarea");
-    ta.className = "cp-textarea";
+    ta.className = "cp-textarea" + (multilinea ? "" : " cp-corta");
     ta.value = it[field] == null ? "" : String(it[field]);
     pop.appendChild(lab);
     pop.appendChild(ta);
     document.body.appendChild(back);
     document.body.appendChild(pop);
 
-    const w = Math.max(rect.width, 420);
-    const left = Math.max(8, Math.min(rect.left, window.innerWidth - w - 8));
+    const minH = multilinea ? 150 : 46;
+    const w = Math.max(rect.width, multilinea ? 440 : 300);
     pop.style.width = w + "px";
-    pop.style.left = left + "px";
+    pop.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - w - 8)) + "px";
     const ajustar = () => {
       const tope = window.innerHeight - 24;
       ta.style.height = "auto";
-      const h = Math.max(150, Math.min(320, ta.scrollHeight + 4));
+      const h = Math.max(minH, Math.min(320, ta.scrollHeight + 4));
       ta.style.height = h + "px";
       let top = rect.bottom + 4;
       const total = pop.offsetHeight || (h + 44);
@@ -447,6 +451,7 @@
     ta.addEventListener("keydown", (e) => {
       if (e.key === "Escape") { e.preventDefault(); cancel(); }
       else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commit(); }
+      else if (e.key === "Enter" && !multilinea && !e.shiftKey) { e.preventDefault(); commit(); }
     });
     back.addEventListener("mousedown", commit);
   }
@@ -457,7 +462,7 @@
     const it = items.find((x) => x.id === id);
     if (!it) return;
     const tipo = FIELD_EDITOR[field] || "text";
-    if (tipo === "textarea") { editarTextareaPopover(td, it, field); return; }
+    if (tipo === "textarea" || tipo === "text") { editarTextareaPopover(td, it, field); return; }
     const actual = it[field] == null ? "" : String(it[field]);
     let editor;
 
