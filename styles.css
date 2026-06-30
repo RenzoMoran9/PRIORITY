@@ -213,6 +213,23 @@ input:focus, .select:focus, textarea:focus {
 }
 select.cell-editor { cursor: pointer; }
 textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; overflow: hidden; }
+
+/* Editor amplio (popover) para Observaciones */
+.popover-backdrop { position: fixed; inset: 0; z-index: 60; background: rgba(18,28,53,.06); }
+.cell-popover {
+  position: fixed; z-index: 61;
+  background: #fff; border: 1px solid var(--primary);
+  border-radius: 11px; box-shadow: 0 14px 36px rgba(18,28,53,.24);
+  padding: 10px;
+}
+.cp-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+.cp-textarea {
+  width: 100%; box-sizing: border-box;
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 9px 11px; font-family: inherit; font-size: 13.5px; line-height: 1.5;
+  resize: vertical; min-height: 150px; color: var(--text);
+}
+.cp-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
 .grid thead th {
   text-align: left;
   font-size: 10.5px;

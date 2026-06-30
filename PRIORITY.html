@@ -220,6 +220,23 @@ input:focus, .select:focus, textarea:focus {
 }
 select.cell-editor { cursor: pointer; }
 textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; overflow: hidden; }
+
+/* Editor amplio (popover) para Observaciones */
+.popover-backdrop { position: fixed; inset: 0; z-index: 60; background: rgba(18,28,53,.06); }
+.cell-popover {
+  position: fixed; z-index: 61;
+  background: #fff; border: 1px solid var(--primary);
+  border-radius: 11px; box-shadow: 0 14px 36px rgba(18,28,53,.24);
+  padding: 10px;
+}
+.cp-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+.cp-textarea {
+  width: 100%; box-sizing: border-box;
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 9px 11px; font-family: inherit; font-size: 13.5px; line-height: 1.5;
+  resize: vertical; min-height: 150px; color: var(--text);
+}
+.cp-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
 .grid thead th {
   text-align: left;
   font-size: 10.5px;
@@ -1168,12 +1185,67 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
   }
 
   // ---------- Edición en línea (tipo Excel) ----------
+  function editarTextareaPopover(td, it, field) {
+    const rect = td.getBoundingClientRect();
+    const back = document.createElement("div");
+    back.className = "popover-backdrop";
+    const pop = document.createElement("div");
+    pop.className = "cell-popover";
+    const lab = document.createElement("div");
+    lab.className = "cp-label";
+    lab.textContent = "Observaciones · Esc cancela · clic fuera o Ctrl+Enter guarda";
+    const ta = document.createElement("textarea");
+    ta.className = "cp-textarea";
+    ta.value = it[field] == null ? "" : String(it[field]);
+    pop.appendChild(lab);
+    pop.appendChild(ta);
+    document.body.appendChild(back);
+    document.body.appendChild(pop);
+
+    const w = Math.max(rect.width, 420);
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - w - 8));
+    pop.style.width = w + "px";
+    pop.style.left = left + "px";
+    const ajustar = () => {
+      const tope = window.innerHeight - 24;
+      ta.style.height = "auto";
+      const h = Math.max(150, Math.min(320, ta.scrollHeight + 4));
+      ta.style.height = h + "px";
+      let top = rect.bottom + 4;
+      const total = pop.offsetHeight || (h + 44);
+      if (top + total + 12 > tope) top = Math.max(8, tope - total - 4);
+      pop.style.top = top + "px";
+    };
+    ajustar();
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+
+    let done = false;
+    const cerrar = () => { back.remove(); pop.remove(); };
+    const commit = () => {
+      if (done) return; done = true;
+      const val = ta.value.trim();
+      if ((it[field] == null ? "" : String(it[field])) !== val) {
+        it[field] = val; it.actualizado = Date.now(); guardar();
+      }
+      cerrar(); render();
+    };
+    const cancel = () => { if (done) return; done = true; cerrar(); };
+    ta.addEventListener("input", ajustar);
+    ta.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.preventDefault(); cancel(); }
+      else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commit(); }
+    });
+    back.addEventListener("mousedown", commit);
+  }
+
   function startEdit(td) {
     if (td.querySelector(".cell-editor")) return;
     const id = td.getAttribute("data-id"), field = td.getAttribute("data-field");
     const it = items.find((x) => x.id === id);
     if (!it) return;
     const tipo = FIELD_EDITOR[field] || "text";
+    if (tipo === "textarea") { editarTextareaPopover(td, it, field); return; }
     const actual = it[field] == null ? "" : String(it[field]);
     let editor;
 

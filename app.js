@@ -397,12 +397,67 @@
   }
 
   // ---------- Edición en línea (tipo Excel) ----------
+  function editarTextareaPopover(td, it, field) {
+    const rect = td.getBoundingClientRect();
+    const back = document.createElement("div");
+    back.className = "popover-backdrop";
+    const pop = document.createElement("div");
+    pop.className = "cell-popover";
+    const lab = document.createElement("div");
+    lab.className = "cp-label";
+    lab.textContent = "Observaciones · Esc cancela · clic fuera o Ctrl+Enter guarda";
+    const ta = document.createElement("textarea");
+    ta.className = "cp-textarea";
+    ta.value = it[field] == null ? "" : String(it[field]);
+    pop.appendChild(lab);
+    pop.appendChild(ta);
+    document.body.appendChild(back);
+    document.body.appendChild(pop);
+
+    const w = Math.max(rect.width, 420);
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - w - 8));
+    pop.style.width = w + "px";
+    pop.style.left = left + "px";
+    const ajustar = () => {
+      const tope = window.innerHeight - 24;
+      ta.style.height = "auto";
+      const h = Math.max(150, Math.min(320, ta.scrollHeight + 4));
+      ta.style.height = h + "px";
+      let top = rect.bottom + 4;
+      const total = pop.offsetHeight || (h + 44);
+      if (top + total + 12 > tope) top = Math.max(8, tope - total - 4);
+      pop.style.top = top + "px";
+    };
+    ajustar();
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+
+    let done = false;
+    const cerrar = () => { back.remove(); pop.remove(); };
+    const commit = () => {
+      if (done) return; done = true;
+      const val = ta.value.trim();
+      if ((it[field] == null ? "" : String(it[field])) !== val) {
+        it[field] = val; it.actualizado = Date.now(); guardar();
+      }
+      cerrar(); render();
+    };
+    const cancel = () => { if (done) return; done = true; cerrar(); };
+    ta.addEventListener("input", ajustar);
+    ta.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.preventDefault(); cancel(); }
+      else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commit(); }
+    });
+    back.addEventListener("mousedown", commit);
+  }
+
   function startEdit(td) {
     if (td.querySelector(".cell-editor")) return;
     const id = td.getAttribute("data-id"), field = td.getAttribute("data-field");
     const it = items.find((x) => x.id === id);
     if (!it) return;
     const tipo = FIELD_EDITOR[field] || "text";
+    if (tipo === "textarea") { editarTextareaPopover(td, it, field); return; }
     const actual = it[field] == null ? "" : String(it[field]);
     let editor;
 
