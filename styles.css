@@ -401,7 +401,36 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
 .form-section:first-of-type { margin-top: 4px; }
 .grid-form { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-top: 10px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
-.field span { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.field > span { font-size: 12.5px; font-weight: 600; color: var(--muted); position: relative; display: inline-flex; align-items: center; gap: 6px; }
+
+/* Ícono de ayuda con tooltip (ej. explicación de Tipos) */
+.help-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--surface-2);
+  color: var(--primary); font-size: 10.5px; font-weight: 800; font-style: normal;
+  line-height: 1; cursor: help; padding: 0;
+}
+.help-icon:hover, .help-icon:focus { background: var(--primary-soft); border-color: var(--primary); outline: none; }
+.help-tooltip {
+  display: block;
+  position: absolute; z-index: 40; top: 100%; left: 0; margin-top: 6px;
+  width: 300px; max-width: 80vw;
+  background: #1d2433; color: #f1f3f8;
+  border-radius: 10px; padding: 12px 14px 10px;
+  box-shadow: 0 12px 28px rgba(18,28,53,.28);
+  font-weight: normal; font-size: 12px; line-height: 1.5;
+  cursor: default; white-space: normal; text-align: left;
+}
+.cp-block { display: block; margin: 0 0 8px; }
+.cp-block:last-child { margin-bottom: 0; }
+.help-tooltip strong { color: #fff; }
+.help-tooltip-close {
+  position: absolute; top: 6px; right: 8px;
+  background: none; border: none; color: #aab2c2;
+  font-size: 12px; cursor: pointer; padding: 2px;
+}
+.help-tooltip-close:hover { color: #fff; }
 .field input, .field textarea, .field .select { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 9px; font-size: 13px; font-family: inherit; }
 .field textarea { resize: vertical; }
 .field-wide { grid-column: 1 / -1; }

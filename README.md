@@ -22,7 +22,16 @@ Basados en tu hoja "JUNIO MEJORADO":
 - **N° Exp. Logística** y **N° Exp. Dirección**
 - **N° de documento del área que solicita** (ej. NOTA INFORMATIVA N°…)
 - **Área usuaria estratégica** y **Área usuaria**
-- **Tipo** (Bien / Insumo / Servicio / Activo no financiero / Paciente)
+- **Tipo** (Bien / Insumo / Servicio / Activo no financiero / Paciente). Junto al
+  campo hay un ícono **ℹ** que explica el significado de cada uno al pasar el mouse
+  o tocarlo:
+  - **Bien**: objeto físico que se adquiere y se conserva (equipos, muebles, accesorios).
+  - **Insumo**: material consumible que se gasta con el uso (descartables, reactivos).
+  - **Servicio**: trabajo o mano de obra contratada, no es un objeto (mantenimiento, calibración).
+  - **Activo no financiero**: bien de capital/patrimonial (SIGA/SIAF), equipo de valor
+    significativo que se registra como activo fijo de la institución.
+  - **Paciente**: requerimiento ligado a un paciente específico (compra puntual por
+    indicación médica o urgencia).
 - **Denominación del requerimiento** (completo) e **Ítem** (resumen corto)
 - **Especialista a cargo** y **Fecha de pase a especialista**
 - **Estado del requerimiento**: Pendiente, Disponibilidad presupuestal, Invitación,
@@ -32,7 +41,6 @@ Basados en tu hoja "JUNIO MEJORADO":
   editarla se abre un cuadro multilínea (Esc cancela, clic fuera guarda)
 - **Prioridad**: Alta / Media / Baja
 - **¿Tengo el expediente físico?** (Sí / No)
-- **Observaciones**
 
 ## Pestañas (dos hojas de trabajo)
 

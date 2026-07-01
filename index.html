@@ -187,7 +187,17 @@
         <h3 class="form-section">Requerimiento</h3>
         <div class="grid-form">
           <label class="field">
-            <span>Tipo</span>
+            <span class="field-label-help">Tipo
+              <button type="button" class="help-icon" id="ayuda-tipo" title="¿Qué significa cada tipo?" aria-label="Ayuda sobre los tipos">ℹ</button>
+              <span class="help-tooltip hidden" id="tooltip-tipo">
+                <button type="button" class="help-tooltip-close" id="tooltip-tipo-close" aria-label="Cerrar">✕</button>
+                <span class="cp-block"><strong>BIEN</strong> — objeto físico que se adquiere y se conserva (equipos, muebles, accesorios). Ej.: estante de melamina, coches de paro.</span>
+                <span class="cp-block"><strong>INSUMO</strong> — material consumible que se gasta con el uso (descartables, reactivos, materiales).</span>
+                <span class="cp-block"><strong>SERVICIO</strong> — trabajo o mano de obra contratada, no es un objeto (mantenimiento, calibración, agenciamiento).</span>
+                <span class="cp-block"><strong>ACTIVO NO FINANCIERO</strong> — bien de capital/patrimonial (SIGA/SIAF): equipo de valor significativo que se registra como activo fijo de la institución.</span>
+                <span class="cp-block"><strong>PACIENTE</strong> — requerimiento ligado a un paciente específico (compra puntual por indicación médica o urgencia).</span>
+              </span>
+            </span>
             <select id="f-tipo" class="select"></select>
           </label>
           <label class="field">

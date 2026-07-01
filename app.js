@@ -1193,6 +1193,36 @@
     $("#filtro-prioridad").value = ""; $("#filtro-tipo").value = ""; $("#filtro-tengo").value = "";
   }
 
+  // ---------- Íconos de ayuda (ℹ) con tooltip ----------
+  function conectarAyudas() {
+    $$(".help-icon").forEach((btn) => {
+      const id = btn.id.replace(/^ayuda-/, "");
+      const tip = $("#tooltip-" + id);
+      if (!tip) return;
+      const mostrar = () => { $$(".help-tooltip").forEach((t) => { if (t !== tip) t.classList.add("hidden"); }); tip.classList.remove("hidden"); };
+      const ocultar = () => tip.classList.add("hidden");
+      btn.addEventListener("mouseenter", mostrar);
+      btn.addEventListener("mouseleave", () => { if (!tip.matches(":hover")) ocultar(); });
+      tip.addEventListener("mouseleave", ocultar);
+      btn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); mostrar(); });
+      btn.addEventListener("focus", mostrar);
+      btn.addEventListener("blur", () => setTimeout(ocultar, 120));
+      const cerrar = $("#tooltip-" + id + "-close");
+      if (cerrar) cerrar.addEventListener("click", (e) => { e.stopPropagation(); ocultar(); });
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      const abiertos = $$(".help-tooltip").filter((t) => !t.classList.contains("hidden"));
+      if (!abiertos.length) return;
+      abiertos.forEach((t) => t.classList.add("hidden"));
+      e.stopImmediatePropagation();
+    });
+    document.addEventListener("click", (e) => {
+      if (e.target.closest(".help-icon") || e.target.closest(".help-tooltip")) return;
+      $$(".help-tooltip").forEach((t) => t.classList.add("hidden"));
+    });
+  }
+
   function conectarEventos() {
     $("#btn-nuevo").addEventListener("click", () => abrirModal(null));
     $("#btn-nuevo-2").addEventListener("click", () => abrirModal(null));
@@ -1206,6 +1236,8 @@
     $("#btn-cancelar").addEventListener("click", cerrarModal);
     $("#form").addEventListener("submit", guardarDesdeForm);
     $("#modal").addEventListener("click", (e) => { if (e.target.id === "modal") cerrarModal(); });
+
+    conectarAyudas();
 
     // Pestañas
     $("#tabs").addEventListener("click", (e) => {
