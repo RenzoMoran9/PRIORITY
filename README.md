@@ -13,6 +13,9 @@ se guardan en tu propio navegador.
 2. Pulsa **"Cargar mis datos de JUNIO (50)"** para tener tus requerimientos de junio cargados de una vez.
 3. Empieza a actualizar prioridades, estados y a registrar nuevos.
 
+> ¿No recuerdas qué significa cada Tipo, Estado u otro término (como "UPROG")?
+> Pulsa **📖 Glosario** en la barra superior.
+
 ## Campos de cada requerimiento
 
 Basados en tu hoja "JUNIO MEJORADO":

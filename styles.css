@@ -489,6 +489,25 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
 .cfg-row .icon-btn[disabled] { opacity: .35; cursor: default; }
 .foot-spacer { flex: 1; }
 
+/* ---------- Glosario ---------- */
+.glosario-group { margin-bottom: 22px; }
+.glosario-group:last-child { margin-bottom: 4px; }
+.glosario-group h3 {
+  margin: 0 0 10px; font-size: 13px; text-transform: uppercase;
+  letter-spacing: .4px; color: var(--primary);
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+}
+.glosario-list { margin: 0; }
+.glosario-list dt {
+  margin: 12px 0 4px;
+  font-weight: 700; color: var(--text); font-size: 13px;
+}
+.glosario-list dt:first-child { margin-top: 0; }
+.glosario-list dt .badge { font-size: 11.5px; }
+.glosario-list dd {
+  margin: 0 0 2px; color: var(--muted); font-size: 13px; line-height: 1.5;
+}
+
 /* ---------- Toast ---------- */
 .toast {
   position: fixed;

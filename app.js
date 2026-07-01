@@ -607,6 +607,10 @@
   }
 
   // ---------- Configuración (estados / tipos / prioridades) ----------
+  // ---------- Glosario ----------
+  function abrirGlosario() { $("#modal-glosario").classList.remove("hidden"); }
+  function cerrarGlosario() { $("#modal-glosario").classList.add("hidden"); }
+
   const GRUPOS = [
     { g: "estados", field: "estado", titulo: "Estados" },
     { g: "tipos", field: "tipo", titulo: "Tipos" },
@@ -1255,6 +1259,12 @@
       if (td) startEdit(td);
     });
 
+    // Glosario
+    $("#btn-glosario").addEventListener("click", abrirGlosario);
+    $("#glosario-close").addEventListener("click", cerrarGlosario);
+    $("#glosario-cerrar").addEventListener("click", cerrarGlosario);
+    $("#modal-glosario").addEventListener("click", (e) => { if (e.target.id === "modal-glosario") cerrarGlosario(); });
+
     // Configuración
     $("#btn-config").addEventListener("click", abrirConfig);
     $("#config-close").addEventListener("click", cerrarConfig);
@@ -1266,7 +1276,10 @@
 
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
-      if (!$("#modal").classList.contains("hidden")) cerrarModal();
+      // El glosario puede abrirse sobre otro modal (ej. mientras se llena "Nuevo
+      // requerimiento"); Escape debe cerrar primero el glosario sin perder el formulario.
+      if (!$("#modal-glosario").classList.contains("hidden")) cerrarGlosario();
+      else if (!$("#modal").classList.contains("hidden")) cerrarModal();
       else if (!$("#modal-config").classList.contains("hidden")) cerrarConfig();
     });
 

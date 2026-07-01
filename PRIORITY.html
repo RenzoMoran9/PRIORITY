@@ -496,6 +496,25 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
 .cfg-row .icon-btn[disabled] { opacity: .35; cursor: default; }
 .foot-spacer { flex: 1; }
 
+/* ---------- Glosario ---------- */
+.glosario-group { margin-bottom: 22px; }
+.glosario-group:last-child { margin-bottom: 4px; }
+.glosario-group h3 {
+  margin: 0 0 10px; font-size: 13px; text-transform: uppercase;
+  letter-spacing: .4px; color: var(--primary);
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+}
+.glosario-list { margin: 0; }
+.glosario-list dt {
+  margin: 12px 0 4px;
+  font-weight: 700; color: var(--text); font-size: 13px;
+}
+.glosario-list dt:first-child { margin-top: 0; }
+.glosario-list dt .badge { font-size: 11.5px; }
+.glosario-list dd {
+  margin: 0 0 2px; color: var(--muted); font-size: 13px; line-height: 1.5;
+}
+
 /* ---------- Toast ---------- */
 .toast {
   position: fixed;
@@ -538,6 +557,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
         <button id="zoom-nivel" class="btn btn-ghost btn-zoom" title="Clic para restablecer al 100%">100%</button>
         <button id="zoom-mas" class="btn btn-ghost btn-icon" title="Acercar (ver más grande)">+</button>
       </div>
+      <button id="btn-glosario" class="btn btn-ghost" title="Glosario: qué significa cada término">📖 Glosario</button>
       <button id="btn-config" class="btn btn-ghost" title="Configurar estados, tipos y prioridades">⚙ Configurar</button>
       <button id="btn-vincular" class="btn btn-ghost" title="Vincular a un archivo CSV que se actualiza solo (Chrome/Edge)">🔗 Vincular Excel</button>
       <button id="btn-importar" class="btn btn-ghost" title="Importar desde CSV/Excel">⬆ Importar</button>
@@ -818,6 +838,97 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
           <span class="foot-spacer"></span>
           <button type="button" class="btn btn-ghost" id="config-cancelar">Cancelar</button>
           <button type="button" class="btn btn-primary" id="config-guardar">Guardar configuración</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de glosario -->
+  <div class="modal-backdrop hidden" id="modal-glosario">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="glosario-titulo">
+      <div class="modal-head">
+        <h2 id="glosario-titulo">📖 Glosario</h2>
+        <button class="modal-close" id="glosario-close" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="config-help">
+          Significado de los términos que usa la app. Los nombres de <strong>Tipo</strong> y
+          <strong>Estado</strong> se pueden personalizar en ⚙ Configurar; aquí se explican los
+          valores con los que arranca la app (los de tu hoja de junio).
+        </p>
+
+        <div class="glosario-group">
+          <h3>Tipo <span class="config-hint">qué se está pidiendo</span></h3>
+          <dl class="glosario-list">
+            <dt><span class="badge tipo" data-t="BIEN">BIEN</span></dt>
+            <dd>Objeto físico que se adquiere y se conserva (equipos, muebles, accesorios). Ej.: estante de melamina, coches de paro.</dd>
+            <dt><span class="badge tipo" data-t="INSUMO">INSUMO</span></dt>
+            <dd>Material consumible que se gasta con el uso (descartables, reactivos, materiales).</dd>
+            <dt><span class="badge tipo" data-t="SERVICIO">SERVICIO</span></dt>
+            <dd>Trabajo o mano de obra contratada, no es un objeto (mantenimiento, calibración, agenciamiento).</dd>
+            <dt><span class="badge tipo">ACTIVO NO FINANCIERO</span></dt>
+            <dd>Bien de capital/patrimonial (SIGA/SIAF): equipo de valor significativo que se registra como activo fijo de la institución.</dd>
+            <dt><span class="badge tipo">PACIENTE</span></dt>
+            <dd>Requerimiento ligado a un paciente específico (compra puntual por indicación médica o urgencia).</dd>
+          </dl>
+        </div>
+
+        <div class="glosario-group">
+          <h3>Prioridad</h3>
+          <dl class="glosario-list">
+            <dt><span class="badge prio-alta">Alta</span></dt>
+            <dd>Urgente: se debe atender primero.</dd>
+            <dt><span class="badge prio-media">Media</span></dt>
+            <dd>Seguimiento normal, sin urgencia inmediata.</dd>
+            <dt><span class="badge prio-baja">Baja</span></dt>
+            <dd>Puede esperar; no es prioritario en este momento.</dd>
+          </dl>
+        </div>
+
+        <div class="glosario-group">
+          <h3>Estado del requerimiento <span class="config-hint">flujo típico, de inicio a fin</span></h3>
+          <dl class="glosario-list">
+            <dt><span class="badge estado" data-e="PENDIENTE">PENDIENTE</span></dt>
+            <dd>Recién ingresó a UPROG; aún no se ha iniciado la gestión.</dd>
+            <dt><span class="badge estado" data-e="DISPONIBILIDAD PRESUPUESTAL">DISPONIBILIDAD PRESUPUESTAL</span></dt>
+            <dd>Se está verificando que exista presupuesto para atenderlo.</dd>
+            <dt><span class="badge estado" data-e="INVITACION">INVITACION</span></dt>
+            <dd>Se cursó la invitación a proveedores para cotizar.</dd>
+            <dt><span class="badge estado" data-e="CUADRO COMPARATIVO">CUADRO COMPARATIVO</span></dt>
+            <dd>Se están comparando las cotizaciones/ofertas recibidas.</dd>
+            <dt><span class="badge estado" data-e="VALIDADO">VALIDADO</span></dt>
+            <dd>La documentación o el proceso ya fue validado.</dd>
+            <dt><span class="badge estado" data-e="ENTREGADO A GRISEL">ENTREGADO A [PERSONA]</span></dt>
+            <dd>Pasó a la siguiente persona o área responsable (renombra este estado con el nombre de quien corresponda desde ⚙ Configurar).</dd>
+            <dt><span class="badge estado" data-e="PARA SALDO">PARA SALDO</span></dt>
+            <dd>Queda pendiente un saldo o complemento posterior.</dd>
+            <dt><span class="badge estado" data-e="TERMINADO">TERMINADO</span></dt>
+            <dd>El requerimiento concluyó.</dd>
+          </dl>
+        </div>
+
+        <div class="glosario-group">
+          <h3>Otros términos</h3>
+          <dl class="glosario-list">
+            <dt>UPROG</dt>
+            <dd>La unidad de Logística que recibe y programa los requerimientos antes de pasarlos
+              al especialista (así aparecía en tu Excel original; si tu unidad usa otro nombre,
+              se puede cambiar en toda la app).</dd>
+            <dt>N° Exp. Logística / N° Exp. Dirección</dt>
+            <dd>Números de expediente que asignan Logística y Dirección respectivamente al mismo requerimiento.</dd>
+            <dt>A cargo</dt>
+            <dd>Marca si el requerimiento es de los que gestionas tú ahora (Sí) o es de otra persona (No / sin marcar).</dd>
+            <dt>¿Tengo el expediente físico?</dt>
+            <dd>Indica si el expediente en papel está contigo (Sí) o no (No).</dd>
+            <dt>Pestañas: Heredados / Mi trabajo</dt>
+            <dd>«Heredados» son los expedientes de la gestión anterior; «Mi trabajo» son los tuyos.
+              Se mueven con el botón «⇄ Traer a mi trabajo» o editando la celda «Pestaña» de cada fila.</dd>
+          </dl>
+        </div>
+
+        <div class="modal-foot">
+          <span class="foot-spacer"></span>
+          <button type="button" class="btn btn-primary" id="glosario-cerrar">Cerrar</button>
         </div>
       </div>
     </div>
@@ -1435,6 +1546,10 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
   }
 
   // ---------- Configuración (estados / tipos / prioridades) ----------
+  // ---------- Glosario ----------
+  function abrirGlosario() { $("#modal-glosario").classList.remove("hidden"); }
+  function cerrarGlosario() { $("#modal-glosario").classList.add("hidden"); }
+
   const GRUPOS = [
     { g: "estados", field: "estado", titulo: "Estados" },
     { g: "tipos", field: "tipo", titulo: "Tipos" },
@@ -2083,6 +2198,12 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
       if (td) startEdit(td);
     });
 
+    // Glosario
+    $("#btn-glosario").addEventListener("click", abrirGlosario);
+    $("#glosario-close").addEventListener("click", cerrarGlosario);
+    $("#glosario-cerrar").addEventListener("click", cerrarGlosario);
+    $("#modal-glosario").addEventListener("click", (e) => { if (e.target.id === "modal-glosario") cerrarGlosario(); });
+
     // Configuración
     $("#btn-config").addEventListener("click", abrirConfig);
     $("#config-close").addEventListener("click", cerrarConfig);
@@ -2094,7 +2215,10 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
 
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
-      if (!$("#modal").classList.contains("hidden")) cerrarModal();
+      // El glosario puede abrirse sobre otro modal (ej. mientras se llena "Nuevo
+      // requerimiento"); Escape debe cerrar primero el glosario sin perder el formulario.
+      if (!$("#modal-glosario").classList.contains("hidden")) cerrarGlosario();
+      else if (!$("#modal").classList.contains("hidden")) cerrarModal();
       else if (!$("#modal-config").classList.contains("hidden")) cerrarConfig();
     });
 
