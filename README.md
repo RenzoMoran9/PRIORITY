@@ -85,6 +85,30 @@ Cada pestaña muestra su propio conteo y su propio tablero de indicadores.
 > Para agregar un requerimiento nuevo usa **+ Nuevo requerimiento**; para modificar uno existente,
 > edita directamente sus celdas en la tabla.
 
+## Trabajo en lote, deshacer y papelera
+
+- **Selección múltiple**: marca las casillas de la primera columna (o la casilla del
+  encabezado para seleccionar todo lo visible). Aparece una barra para aplicar a todos
+  los seleccionados de una vez: **cambiar estado, prioridad, pestaña, a cargo, asignar
+  especialista o eliminar**.
+- **↶ Deshacer (Ctrl+Z)**: revierte el último cambio (ediciones, lotes, eliminaciones,
+  importaciones…), con varios niveles hacia atrás.
+- **🗑 Papelera** (en el pie): los eliminados ya no se pierden; puedes **restaurarlos**
+  cuando quieras. Por eso eliminar ya no pide confirmación fila por fila.
+- **Aviso de duplicados**: si escribes un N° Exp. Logística que ya existe, la app te lo
+  advierte al momento (y al registrar uno nuevo te pide confirmación).
+
+## Ayudas de escritura
+
+- **Sugerencias de valores ya usados**: al editar Área, Especialista, Doc. o Ítem, la app
+  te muestra los valores que ya usaste para elegirlos con un clic (evita escribir distinto
+  la misma área). El formulario de «Nuevo requerimiento» también sugiere mientras escribes.
+- **Predicción de palabras**: en los campos de texto, la app aprende de tus propios datos
+  y te sugiere la palabra que estás escribiendo (ej. escribes "ADQUIS" → sugiere
+  "ADQUISICION"); púlsala con **Tab** para completarla.
+- **Corrector ortográfico**: los cuadros de texto tienen activado el corrector del
+  navegador en español (subraya errores y sugiere correcciones con clic derecho).
+
 ## Pantallas pequeñas: zoom y barra fija
 
 - **Zoom**: arriba a la derecha hay botones **−** y **+** para alejar o acercar la tabla

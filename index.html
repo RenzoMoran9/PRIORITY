@@ -21,6 +21,7 @@
         <button id="zoom-nivel" class="btn btn-ghost btn-zoom" title="Clic para restablecer al 100%">100%</button>
         <button id="zoom-mas" class="btn btn-ghost btn-icon" title="Acercar (ver más grande)">+</button>
       </div>
+      <button id="btn-deshacer" class="btn btn-ghost btn-icon" title="Deshacer último cambio (Ctrl+Z)" disabled>↶</button>
       <button id="btn-glosario" class="btn btn-ghost" title="Glosario: qué significa cada término">📖 Glosario</button>
       <button id="btn-config" class="btn btn-ghost" title="Configurar estados, tipos y prioridades">⚙ Configurar</button>
       <button id="btn-vincular" class="btn btn-ghost" title="Vincular a un archivo CSV que se actualiza solo (Chrome/Edge)">🔗 Vincular Excel</button>
@@ -88,11 +89,28 @@
     </div>
   </section>
 
+  <!-- Barra de acciones en lote (aparece al seleccionar filas) -->
+  <section class="batch-bar hidden" id="batch-bar">
+    <span class="batch-count" id="batch-count">0 seleccionados</span>
+    <select id="batch-estado" class="select"><option value="">Cambiar estado…</option></select>
+    <select id="batch-prioridad" class="select"><option value="">Cambiar prioridad…</option></select>
+    <select id="batch-pestana" class="select"><option value="">Mover a pestaña…</option></select>
+    <select id="batch-cargo" class="select">
+      <option value="">A cargo…</option>
+      <option value="SÍ">SÍ (a mi cargo)</option>
+      <option value="NO">NO (de otra persona)</option>
+    </select>
+    <button id="batch-especialista" class="btn btn-ghost btn-sm">👤 Asignar especialista</button>
+    <button id="batch-eliminar" class="btn btn-ghost btn-sm">🗑 Eliminar</button>
+    <button id="batch-cancelar" class="btn btn-ghost btn-sm">✕ Quitar selección</button>
+  </section>
+
   <!-- Tabla -->
   <main class="table-wrap">
     <table class="grid" id="tabla">
       <thead>
         <tr>
+          <th class="sel-col"><input type="checkbox" id="sel-all" title="Seleccionar todo lo visible" /></th>
           <th data-sort="nro" class="num">N°</th>
           <th data-sort="pestana">Pestaña</th>
           <th data-sort="aCargo">A cargo</th>
@@ -129,6 +147,8 @@
     <span id="footer-count">0 requerimientos</span>
     <span class="footer-sep">·</span>
     <button id="btn-junio-2" class="link-accent">Cargar datos de JUNIO</button>
+    <span class="footer-sep">·</span>
+    <button id="btn-papelera" class="link-accent">🗑 Papelera (<span id="papelera-count">0</span>)</button>
     <span class="footer-sep">·</span>
     <button id="btn-borrar-todo" class="link-danger">Borrar todos los datos</button>
     <span class="footer-sep">·</span>
@@ -177,11 +197,13 @@
         <div class="grid-form">
           <label class="field field-wide">
             <span>Área usuaria estratégica</span>
-            <input type="text" id="f-areaEstrategica" placeholder="Departamento / unidad estratégica" />
+            <input type="text" id="f-areaEstrategica" placeholder="Departamento / unidad estratégica" list="dl-areaEstrategica" autocomplete="off" />
+            <datalist id="dl-areaEstrategica"></datalist>
           </label>
           <label class="field field-wide">
             <span>Área usuaria</span>
-            <input type="text" id="f-areaUsuaria" placeholder="Servicio / área que solicita" />
+            <input type="text" id="f-areaUsuaria" placeholder="Servicio / área que solicita" list="dl-areaUsuaria" autocomplete="off" />
+            <datalist id="dl-areaUsuaria"></datalist>
           </label>
         </div>
 
@@ -207,7 +229,7 @@
           </label>
           <label class="field field-wide">
             <span>Denominación del requerimiento (completo)</span>
-            <textarea id="f-denominacion" rows="2" placeholder="Descripción completa del requerimiento"></textarea>
+            <textarea id="f-denominacion" rows="2" placeholder="Descripción completa del requerimiento" spellcheck="true" lang="es"></textarea>
           </label>
         </div>
 
@@ -223,7 +245,8 @@
           </label>
           <label class="field">
             <span>Especialista a cargo</span>
-            <input type="text" id="f-especialista" placeholder="Nombre del especialista" />
+            <input type="text" id="f-especialista" placeholder="Nombre del especialista" list="dl-especialista" autocomplete="off" />
+            <datalist id="dl-especialista"></datalist>
           </label>
           <label class="field">
             <span>Fecha de pase a especialista</span>
@@ -247,7 +270,7 @@
           </label>
           <label class="field field-wide">
             <span>Observaciones</span>
-            <textarea id="f-observaciones" rows="2" placeholder="Notas y seguimiento"></textarea>
+            <textarea id="f-observaciones" rows="2" placeholder="Notas y seguimiento" spellcheck="true" lang="es"></textarea>
           </label>
         </div>
 
@@ -393,6 +416,28 @@
         <div class="modal-foot">
           <span class="foot-spacer"></span>
           <button type="button" class="btn btn-primary" id="glosario-cerrar">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de papelera -->
+  <div class="modal-backdrop hidden" id="modal-papelera">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="papelera-titulo">
+      <div class="modal-head">
+        <h2 id="papelera-titulo">🗑 Papelera</h2>
+        <button class="modal-close" id="papelera-close" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="config-help">
+          Los requerimientos eliminados quedan aquí y puedes <strong>restaurarlos</strong> cuando
+          quieras. También puedes deshacer el último cambio con <strong>Ctrl+Z</strong> o el botón <strong>↶</strong>.
+        </p>
+        <div id="papelera-lista"></div>
+        <div class="modal-foot">
+          <button type="button" class="link-danger" id="papelera-vaciar">Vaciar papelera</button>
+          <span class="foot-spacer"></span>
+          <button type="button" class="btn btn-primary" id="papelera-cerrar">Cerrar</button>
         </div>
       </div>
     </div>

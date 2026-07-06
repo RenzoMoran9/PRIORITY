@@ -39,6 +39,53 @@
   // Campos de texto que se editan en el cuadro amplio multilínea
   const MULTILINEA = new Set(["observaciones", "denominacion", "docArea", "areaEstrategica", "areaUsuaria", "item"]);
 
+  // Campos con sugerencias de valores ya usados (autocompletado)
+  const AUTOCOMP = new Set(["areaEstrategica", "areaUsuaria", "especialista", "docArea", "item"]);
+  // Campos cuyo texto alimenta el diccionario de predicción de palabras
+  const CAMPOS_TEXTO_VOCAB = ["docArea", "areaEstrategica", "areaUsuaria", "item", "denominacion", "observaciones", "especialista"];
+
+  function normalizarTxt(str) {
+    return String(str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+  function valoresFrecuentes(field) {
+    const freq = {};
+    items.forEach((it) => {
+      const v = String(it[field] || "").trim();
+      if (v) freq[v] = (freq[v] || 0) + 1;
+    });
+    return Object.keys(freq).sort((a, b) => freq[b] - freq[a]);
+  }
+  function construirVocabulario() {
+    const freq = {};
+    items.forEach((it) => {
+      CAMPOS_TEXTO_VOCAB.forEach((f) => {
+        String(it[f] || "").split(/[^0-9A-Za-z\u00c1\u00c9\u00cd\u00d3\u00da\u00d1\u00dc\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1\u00fc\u00b0\.\-\/]+/).forEach((w) => {
+          if (w.length >= 3) freq[w] = (freq[w] || 0) + 1;
+        });
+      });
+    });
+    return freq;
+  }
+  function predecirPalabra(vocab, palabra) {
+    if (!palabra || palabra.length < 2) return null;
+    const p = normalizarTxt(palabra);
+    let mejor = null, mejorF = 0;
+    for (const w in vocab) {
+      if (w.length <= palabra.length) continue;
+      if (normalizarTxt(w).indexOf(p) === 0 && vocab[w] > mejorF) { mejor = w; mejorF = vocab[w]; }
+    }
+    return mejor;
+  }
+  function buscarDuplicado(val, exceptoId) {
+    val = String(val == null ? "" : val).trim();
+    if (!val) return null;
+    return items.find((x) => x.id !== exceptoId && String(x.expLogistica || "").trim() === val) || null;
+  }
+  function poblarDatalist(idDl, field) {
+    const dl = $("#" + idDl);
+    if (dl) dl.innerHTML = valoresFrecuentes(field).slice(0, 20).map((v) => `<option value="${esc(v)}"></option>`).join("");
+  }
+
   // Listas configurables por defecto (el usuario puede cambiarlas en ⚙ Configurar)
   const DEF_CONFIG = {
     estados: [
@@ -86,6 +133,11 @@
   let pestanaActiva = "t1";
   let zoom = 1;
   let fileHandle = null;  // archivo CSV vinculado (File System Access API)
+  let seleccion = new Set();      // ids seleccionados para acciones en lote
+  let papelera = [];              // requerimientos eliminados (restaurables)
+  const PAPELERA_KEY = "priority_papelera_v1";
+  let undoStack = [];             // instantáneas para Deshacer (Ctrl+Z)
+  const UNDO_MAX = 50;
   const filtro = { q: "", cargo: "", estado: "", prioridad: "", tipo: "", tengo: "" };
   const orden = { key: "nro", dir: "asc" };
 
@@ -185,11 +237,12 @@
   }
   function jalarACargo() {
     const destino = tabs[1] ? tabs[1].id : "t2";
+    snapshot();
     let n = 0;
     items.forEach((it) => {
       if ((it.aCargo || "") === "SÍ" && it.pestana !== destino) { it.pestana = destino; n++; }
     });
-    if (n) guardar();
+    if (n) guardar(); else descartarSnapshot();
     setPestana(destino);
     toast(n
       ? `Se trajeron ${n} requerimientos a «${tabNombre(destino)}».`
@@ -294,7 +347,7 @@
   }
 
   // ---------- Render ----------
-  function render() { renderTabs(); renderKpis(); renderTabla(); renderCabeceraOrden(); }
+  function render() { renderTabs(); renderKpis(); renderTabla(); renderCabeceraOrden(); sincronizarSeleccion(); }
 
   function renderTabs() {
     const cont = $("#tabs");
@@ -331,7 +384,7 @@
         const msg = tabTotal === 0
           ? `La pestaña «${esc(tabNombre(pestanaActiva))}» aún no tiene requerimientos. Usa «⇄ Traer a mi trabajo» o «+ Nuevo requerimiento».`
           : "Ningún requerimiento coincide con los filtros.";
-        tbody.innerHTML = `<tr><td colspan="19" class="empty" style="padding:34px">${msg}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="20" class="empty" style="padding:34px">${msg}</td></tr>`;
       }
       $("#footer-count").textContent = `${tabTotal} en «${tabNombre(pestanaActiva)}»`;
       return;
@@ -361,6 +414,7 @@
 
     return `
       <tr class="${vieja ? "row-vieja" : ""} ${cargo === "SÍ" ? "row-cargo" : ""}">
+        <td class="sel-col"><input type="checkbox" class="sel-check" data-sel="${it.id}"${seleccion.has(it.id) ? " checked" : ""} /></td>
         ${ed("nro", esc(it.nro) || GUION, "num cell-strong")}
         ${ed("pestana", `<span class="badge pest-badge">${esc(tabNombre(it.pestana))}</span>`)}
         ${ed("aCargo", cargoBadge)}
@@ -401,6 +455,8 @@
   // ---------- Edición en línea (tipo Excel) ----------
   function editarTextareaPopover(td, it, field) {
     const multilinea = MULTILINEA.has(field);
+    const conSugerencias = AUTOCOMP.has(field);
+    const conPrediccion = CAMPOS_TEXTO_VOCAB.indexOf(field) >= 0;
     const etiqueta = ENCABEZADOS_CSV[field] || "Editar";
     const rect = td.getBoundingClientRect();
     const back = document.createElement("div");
@@ -413,8 +469,34 @@
     const ta = document.createElement("textarea");
     ta.className = "cp-textarea" + (multilinea ? "" : " cp-corta");
     ta.value = it[field] == null ? "" : String(it[field]);
+    if (conPrediccion) { ta.spellcheck = true; ta.setAttribute("lang", "es"); }
     pop.appendChild(lab);
     pop.appendChild(ta);
+
+    // Aviso de duplicado (Exp. Logística)
+    let warn = null;
+    if (field === "expLogistica") {
+      warn = document.createElement("div");
+      warn.className = "cp-warn hidden";
+      pop.appendChild(warn);
+    }
+    // Sugerencias de valores ya usados en este campo
+    let sugBox = null, sugValores = [];
+    if (conSugerencias) {
+      sugValores = valoresFrecuentes(field);
+      sugBox = document.createElement("div");
+      sugBox.className = "cp-sugerencias";
+      pop.appendChild(sugBox);
+    }
+    // Predicción de palabra mientras se escribe (Tab completa)
+    let predBar = null, predPalabra = null, vocab = null;
+    if (conPrediccion) {
+      vocab = construirVocabulario();
+      predBar = document.createElement("div");
+      predBar.className = "cp-pred hidden";
+      pop.appendChild(predBar);
+    }
+
     document.body.appendChild(back);
     document.body.appendChild(pop);
 
@@ -432,6 +514,53 @@
       if (top + total + 12 > tope) top = Math.max(8, tope - total - 4);
       pop.style.top = top + "px";
     };
+
+    const refreshWarn = () => {
+      if (!warn) return;
+      const dup = buscarDuplicado(ta.value, it.id);
+      warn.classList.toggle("hidden", !dup);
+      if (dup) warn.textContent = `⚠ Ya existe este Exp.: N° ${dup.nro || "—"} en «${tabNombre(dup.pestana)}»`;
+    };
+    const refreshSug = () => {
+      if (!sugBox) return;
+      const q = normalizarTxt(ta.value.trim());
+      const lista = sugValores
+        .filter((v) => normalizarTxt(v) !== q)
+        .filter((v) => !q || normalizarTxt(v).indexOf(q) >= 0)
+        .slice(0, 6);
+      sugBox.innerHTML = lista.length
+        ? '<span class="cp-sug-tit">Ya usados:</span>' + lista.map((v) => `<button type="button" class="cp-sug" data-v="${esc(v)}" title="${esc(v)}">${esc(v)}</button>`).join("")
+        : "";
+    };
+    const refreshPred = () => {
+      predPalabra = null;
+      if (!predBar) return;
+      const pos = ta.selectionStart == null ? ta.value.length : ta.selectionStart;
+      const hasta = ta.value.slice(0, pos);
+      const m = hasta.match(/[0-9A-Za-zÁÉÍÓÚÑÜáéíóúñü°\.\-\/]+$/);
+      const sug = m ? predecirPalabra(vocab, m[0]) : null;
+      if (sug) {
+        predPalabra = { actual: m[0], completa: sug };
+        predBar.innerHTML = `Sugerencia: <b>${esc(sug)}</b> · pulsa <b>Tab</b> para completar`;
+        predBar.classList.remove("hidden");
+      } else {
+        predBar.classList.add("hidden");
+      }
+    };
+
+    if (sugBox) {
+      sugBox.addEventListener("mousedown", (e) => e.preventDefault());
+      sugBox.addEventListener("click", (e) => {
+        const b = e.target.closest(".cp-sug");
+        if (!b) return;
+        ta.value = b.getAttribute("data-v");
+        refreshSug(); refreshWarn(); refreshPred(); ajustar();
+        ta.focus();
+        ta.setSelectionRange(ta.value.length, ta.value.length);
+      });
+    }
+
+    refreshSug(); refreshWarn();
     ajustar();
     ta.focus();
     ta.setSelectionRange(ta.value.length, ta.value.length);
@@ -442,13 +571,33 @@
       if (done) return; done = true;
       const val = ta.value.trim();
       if ((it[field] == null ? "" : String(it[field])) !== val) {
+        snapshot();
         it[field] = val; it.actualizado = Date.now(); guardar();
       }
       cerrar(); render();
+      if (field === "expLogistica") {
+        const dup = buscarDuplicado(val, it.id);
+        if (dup) toast(`⚠ Ojo: el Exp. ${val} ya existía (N° ${dup.nro || "—"} en «${tabNombre(dup.pestana)}»).`);
+      }
     };
     const cancel = () => { if (done) return; done = true; cerrar(); };
-    ta.addEventListener("input", ajustar);
+    ta.addEventListener("input", () => { ajustar(); refreshSug(); refreshWarn(); refreshPred(); });
+    ta.addEventListener("keyup", (e) => {
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown") refreshPred();
+    });
+    ta.addEventListener("click", refreshPred);
     ta.addEventListener("keydown", (e) => {
+      if (e.key === "Tab" && predPalabra) {
+        e.preventDefault();
+        const pos = ta.selectionStart;
+        const antes = ta.value.slice(0, pos - predPalabra.actual.length);
+        const despues = ta.value.slice(pos);
+        ta.value = antes + predPalabra.completa + despues;
+        const np = antes.length + predPalabra.completa.length;
+        ta.setSelectionRange(np, np);
+        ajustar(); refreshSug(); refreshWarn(); refreshPred();
+        return;
+      }
       if (e.key === "Escape") { e.preventDefault(); cancel(); }
       else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commit(); }
       else if (e.key === "Enter" && !multilinea && !e.shiftKey) { e.preventDefault(); commit(); }
@@ -504,6 +653,7 @@
       let val = editor.value;
       if ((editor.tagName === "INPUT" && editor.type === "text") || editor.tagName === "TEXTAREA") val = val.trim();
       if ((it[field] == null ? "" : String(it[field])) !== val) {
+        snapshot();
         it[field] = val;
         it.actualizado = Date.now();
         guardar();
@@ -557,6 +707,9 @@
     set("#f-tengoExp", it ? it.tengoExp : "");
     set("#f-aCargo", it ? it.aCargo : "");
     set("#f-observaciones", it ? it.observaciones : "");
+    poblarDatalist("dl-areaEstrategica", "areaEstrategica");
+    poblarDatalist("dl-areaUsuaria", "areaUsuaria");
+    poblarDatalist("dl-especialista", "especialista");
     $("#modal").classList.remove("hidden");
     setTimeout(() => $("#f-expLogistica").focus(), 50);
   }
@@ -566,6 +719,10 @@
     ev.preventDefault();
     const expLogistica = $("#f-expLogistica").value.trim();
     if (!expLogistica) { toast("El N° de Exp. Logística es obligatorio."); return; }
+    const idActual = $("#f-id").value || null;
+    const dup = buscarDuplicado(expLogistica, idActual);
+    if (dup && !confirm(`Ya existe un requerimiento con Exp. Logística ${expLogistica} (N° ${dup.nro || "—"} en «${tabNombre(dup.pestana)}»).\n¿Registrar de todos modos?`)) return;
+    snapshot();
     const datos = {
       pestana: $("#f-pestana").value,
       nro: $("#f-nro").value.trim(),
@@ -601,9 +758,132 @@
   function eliminar(id) {
     const it = items.find((x) => x.id === id);
     if (!it) return;
-    if (!confirm(`¿Eliminar el requerimiento N° ${it.nro || ""} (Exp. ${it.expLogistica || ""})?\nEsta acción no se puede deshacer.`)) return;
+    snapshot();
     items = items.filter((x) => x.id !== id);
-    guardar(); render(); toast("Requerimiento eliminado.");
+    enviarAPapelera([it]);
+    seleccion.delete(id);
+    guardar(); render();
+    toast(`N° ${it.nro || "—"} (Exp. ${it.expLogistica || "—"}) se movió a la 🗑 Papelera; puedes restaurarlo.`);
+  }
+
+  // ---------- Deshacer (Ctrl+Z) ----------
+  function actualizarBotonDeshacer() {
+    const btn = $("#btn-deshacer");
+    if (btn) btn.disabled = undoStack.length === 0;
+  }
+  function snapshot() {
+    undoStack.push(JSON.stringify(items));
+    if (undoStack.length > UNDO_MAX) undoStack.shift();
+    actualizarBotonDeshacer();
+  }
+  function descartarSnapshot() { undoStack.pop(); actualizarBotonDeshacer(); }
+  function deshacer() {
+    if (!undoStack.length) { toast("No hay cambios para deshacer."); return; }
+    try { items = JSON.parse(undoStack.pop()); } catch (e) { return; }
+    guardar();
+    seleccion.clear();
+    render();
+    toast("Último cambio deshecho.");
+  }
+
+  // ---------- Papelera ----------
+  function cargarPapelera() {
+    try {
+      papelera = JSON.parse(localStorage.getItem(PAPELERA_KEY)) || [];
+      if (!Array.isArray(papelera)) papelera = [];
+    } catch (e) { papelera = []; }
+  }
+  function guardarPapelera() {
+    try { localStorage.setItem(PAPELERA_KEY, JSON.stringify(papelera)); } catch (e) {}
+  }
+  function enviarAPapelera(arr) {
+    const ahora = Date.now();
+    arr.forEach((it) => papelera.unshift(Object.assign({}, it, { eliminadoEn: ahora })));
+    if (papelera.length > 200) papelera.length = 200;
+    guardarPapelera();
+  }
+  function abrirPapelera() { renderPapelera(); $("#modal-papelera").classList.remove("hidden"); }
+  function cerrarPapelera() { $("#modal-papelera").classList.add("hidden"); }
+  function renderPapelera() {
+    const cont = $("#papelera-lista");
+    if (!cont) return;
+    if (!papelera.length) {
+      cont.innerHTML = '<p class="empty" style="padding:24px">La papelera está vacía.</p>';
+      return;
+    }
+    cont.innerHTML = papelera.map((it) => `
+      <div class="pap-row">
+        <div class="pap-info">
+          <span class="pap-title">N° ${esc(it.nro) || "—"} · Exp. ${esc(it.expLogistica) || "—"} · ${esc(tabNombre(it.pestana))}</span>
+          <span class="pap-sub">${esc(it.item || it.denominacion || "")}</span>
+          <span class="pap-fecha">Eliminado: ${new Date(it.eliminadoEn).toLocaleString("es-PE")}</span>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" data-restaurar="${it.id}">↩ Restaurar</button>
+      </div>`).join("");
+  }
+  function restaurarDePapelera(id) {
+    const idx = papelera.findIndex((x) => x.id === id);
+    if (idx < 0) return;
+    if (items.some((x) => x.id === id)) {
+      papelera.splice(idx, 1);
+      guardarPapelera(); renderPapelera(); sincronizarSeleccion();
+      toast("Ese requerimiento ya estaba de vuelta en la lista (quizá lo recuperaste con Deshacer).");
+      return;
+    }
+    snapshot();
+    const it = Object.assign({}, papelera[idx]);
+    delete it.eliminadoEn;
+    items.push(it);
+    papelera.splice(idx, 1);
+    guardarPapelera(); guardar(); render(); renderPapelera();
+    toast(`N° ${it.nro || "—"} (Exp. ${it.expLogistica || "—"}) restaurado.`);
+  }
+
+  // ---------- Selección múltiple y acciones en lote ----------
+  function toggleSel(id, on) {
+    if (on) seleccion.add(id); else seleccion.delete(id);
+    sincronizarSeleccion();
+  }
+  function sincronizarSeleccion() {
+    const existentes = new Set(items.map((it) => it.id));
+    [...seleccion].forEach((id) => { if (!existentes.has(id)) seleccion.delete(id); });
+    const bar = $("#batch-bar");
+    if (bar) {
+      bar.classList.toggle("hidden", seleccion.size === 0);
+      $("#batch-count").textContent = seleccion.size + " seleccionado" + (seleccion.size === 1 ? "" : "s");
+    }
+    const selAll = $("#sel-all");
+    if (selAll) {
+      const lista = visibles();
+      selAll.checked = lista.length > 0 && lista.every((it) => seleccion.has(it.id));
+    }
+    const pc = $("#papelera-count");
+    if (pc) pc.textContent = papelera.length;
+    actualizarBotonDeshacer();
+  }
+  function aplicarLote(campo, valor, etiqueta) {
+    if (!seleccion.size) return;
+    snapshot();
+    let n = 0;
+    items.forEach((it) => {
+      if (seleccion.has(it.id)) { it[campo] = valor; it.actualizado = Date.now(); n++; }
+    });
+    guardar();
+    seleccion.clear();
+    render();
+    toast(`${etiqueta} aplicado a ${n} requerimiento${n === 1 ? "" : "s"}.`);
+  }
+  function eliminarLote() {
+    if (!seleccion.size) return;
+    if (!confirm(`¿Enviar ${seleccion.size} requerimiento(s) a la papelera?`)) return;
+    snapshot();
+    const ids = new Set(seleccion);
+    const borrados = items.filter((it) => ids.has(it.id));
+    items = items.filter((it) => !ids.has(it.id));
+    enviarAPapelera(borrados);
+    seleccion.clear();
+    guardar(); render();
+    toast(`${borrados.length} requerimiento${borrados.length === 1 ? "" : "s"} enviados a la 🗑 Papelera.`);
   }
 
   // ---------- Configuración (estados / tipos / prioridades) ----------
@@ -942,7 +1222,7 @@
     return n;
   }
   function finalizarImport(n) {
-    if (n > 0) { guardar(); render(); }
+    if (n > 0) { guardar(); render(); } else descartarSnapshot();
     toast(n > 0 ? `Importados ${n} requerimientos.` : "No reconocí datos para importar. Usa el formato de Exportar.");
   }
   function filasDeTabla(tableEl) {
@@ -1002,6 +1282,7 @@
     return tablas;
   }
   function importarArchivo(texto) {
+    snapshot();
     const t = texto.replace(/^﻿/, "");
     let n = 0;
     if (/<\?mso-application/i.test(t) || /<Workbook[\s>]/i.test(t)) {
@@ -1140,6 +1421,7 @@
   // ---------- Cargar datos de JUNIO ----------
   function cargarJunio() {
     if (!DATOS_JUNIO.length) { toast("No hay datos de junio embebidos."); return; }
+    snapshot();
     const existentes = new Set(items.map((it) => String(it.expLogistica)));
     let n = 0;
     DATOS_JUNIO.forEach((d) => {
@@ -1147,13 +1429,15 @@
       items.push(Object.assign({ id: uid(), creado: Date.now(), aCargo: "", pestana: tabs[0].id }, d));
       n++;
     });
+    if (!n) descartarSnapshot();
     guardar(); render();
     toast(n ? `Cargados ${n} requerimientos de junio en «${tabNombre(tabs[0].id)}».` : "Tus datos de junio ya estaban cargados.");
   }
   function borrarTodo() {
     if (!items.length) { toast("No hay datos para borrar."); return; }
-    if (!confirm(`¿Borrar TODOS los ${items.length} requerimientos?\nEsta acción no se puede deshacer.`)) return;
-    items = []; guardar(); render(); toast("Se borraron todos los datos.");
+    if (!confirm(`¿Borrar TODOS los ${items.length} requerimientos?\n(Podrás recuperarlos con ↶ Deshacer mientras no cierres la app.)`)) return;
+    snapshot();
+    items = []; seleccion.clear(); guardar(); render(); toast("Se borraron todos los datos. Usa ↶ Deshacer si fue un error.");
   }
 
   // ---------- Toast ----------
@@ -1190,6 +1474,9 @@
     $("#filtro-estado").innerHTML = '<option value="">Todo estado</option>' + optList(config.estados);
     $("#filtro-prioridad").innerHTML = '<option value="">Toda prioridad</option>' + optList(config.prioridades);
     $("#filtro-tipo").innerHTML = '<option value="">Todo tipo</option>' + optList(config.tipos);
+    $("#batch-estado").innerHTML = '<option value="">Cambiar estado…</option>' + optList(config.estados);
+    $("#batch-prioridad").innerHTML = '<option value="">Cambiar prioridad…</option>' + optList(config.prioridades);
+    $("#batch-pestana").innerHTML = '<option value="">Mover a pestaña…</option>' + tabs.map((t) => `<option value="${t.id}">${esc(t.nombre)}</option>`).join("");
   }
   function resetFiltros() {
     filtro.q = ""; filtro.cargo = ""; filtro.estado = ""; filtro.prioridad = ""; filtro.tipo = ""; filtro.tengo = "";
@@ -1253,6 +1540,14 @@
 
     // Edición en línea y eliminación (delegación en el tbody)
     $("#tbody").addEventListener("click", (e) => {
+      const chk = e.target.closest(".sel-check");
+      if (chk) { toggleSel(chk.getAttribute("data-sel"), chk.checked); return; }
+      const selTd = e.target.closest("td.sel-col");
+      if (selTd) {
+        const c = selTd.querySelector(".sel-check");
+        if (c) { c.checked = !c.checked; toggleSel(c.getAttribute("data-sel"), c.checked); }
+        return;
+      }
       const del = e.target.closest("[data-del]");
       if (del) { eliminar(del.getAttribute("data-del")); return; }
       const td = e.target.closest("td.ed");
@@ -1264,6 +1559,52 @@
     $("#glosario-close").addEventListener("click", cerrarGlosario);
     $("#glosario-cerrar").addEventListener("click", cerrarGlosario);
     $("#modal-glosario").addEventListener("click", (e) => { if (e.target.id === "modal-glosario") cerrarGlosario(); });
+
+    // Selección múltiple / acciones en lote
+    $("#sel-all").addEventListener("change", (e) => {
+      const lista = visibles();
+      if (e.target.checked) lista.forEach((it) => seleccion.add(it.id));
+      else lista.forEach((it) => seleccion.delete(it.id));
+      renderTabla(); sincronizarSeleccion();
+    });
+    $("#batch-estado").addEventListener("change", (e) => { const v = e.target.value; e.target.value = ""; if (v) aplicarLote("estado", v, "Estado"); });
+    $("#batch-prioridad").addEventListener("change", (e) => { const v = e.target.value; e.target.value = ""; if (v) aplicarLote("prioridad", v, "Prioridad"); });
+    $("#batch-pestana").addEventListener("change", (e) => { const v = e.target.value; e.target.value = ""; if (v) aplicarLote("pestana", v, "Pestaña"); });
+    $("#batch-cargo").addEventListener("change", (e) => { const v = e.target.value; e.target.value = ""; if (v) aplicarLote("aCargo", v, "A cargo"); });
+    $("#batch-especialista").addEventListener("click", () => {
+      const nombre = prompt("Especialista a asignar a los seleccionados:", "");
+      if (nombre === null) return;
+      aplicarLote("especialista", nombre.trim(), "Especialista");
+    });
+    $("#batch-eliminar").addEventListener("click", eliminarLote);
+    $("#batch-cancelar").addEventListener("click", () => { seleccion.clear(); renderTabla(); sincronizarSeleccion(); });
+
+    // Papelera
+    $("#btn-papelera").addEventListener("click", abrirPapelera);
+    $("#papelera-close").addEventListener("click", cerrarPapelera);
+    $("#papelera-cerrar").addEventListener("click", cerrarPapelera);
+    $("#modal-papelera").addEventListener("click", (e) => { if (e.target.id === "modal-papelera") cerrarPapelera(); });
+    $("#papelera-lista").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-restaurar]");
+      if (b) restaurarDePapelera(b.getAttribute("data-restaurar"));
+    });
+    $("#papelera-vaciar").addEventListener("click", () => {
+      if (!papelera.length) { toast("La papelera ya está vacía."); return; }
+      if (!confirm(`¿Vaciar la papelera (${papelera.length})? Esto no se puede deshacer.`)) return;
+      papelera = []; guardarPapelera(); renderPapelera(); sincronizarSeleccion();
+      toast("Papelera vaciada.");
+    });
+
+    // Deshacer
+    $("#btn-deshacer").addEventListener("click", deshacer);
+    document.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z") {
+        const el = document.activeElement;
+        if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) return;
+        e.preventDefault();
+        deshacer();
+      }
+    });
 
     // Configuración
     $("#btn-config").addEventListener("click", abrirConfig);
@@ -1279,6 +1620,7 @@
       // El glosario puede abrirse sobre otro modal (ej. mientras se llena "Nuevo
       // requerimiento"); Escape debe cerrar primero el glosario sin perder el formulario.
       if (!$("#modal-glosario").classList.contains("hidden")) cerrarGlosario();
+      else if (!$("#modal-papelera").classList.contains("hidden")) cerrarPapelera();
       else if (!$("#modal").classList.contains("hidden")) cerrarModal();
       else if (!$("#modal-config").classList.contains("hidden")) cerrarConfig();
     });
@@ -1316,6 +1658,7 @@
   document.addEventListener("DOMContentLoaded", () => {
     cargarTabs();
     cargarConfig();
+    cargarPapelera();
     poblarSelects();
     conectarEventos();
     cargar();
