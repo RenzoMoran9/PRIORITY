@@ -455,7 +455,6 @@
   // ---------- Edición en línea (tipo Excel) ----------
   function editarTextareaPopover(td, it, field) {
     const multilinea = MULTILINEA.has(field);
-    const conSugerencias = AUTOCOMP.has(field);
     const conPrediccion = CAMPOS_TEXTO_VOCAB.indexOf(field) >= 0;
     const etiqueta = ENCABEZADOS_CSV[field] || "Editar";
     const rect = td.getBoundingClientRect();
@@ -466,12 +465,22 @@
     const lab = document.createElement("div");
     lab.className = "cp-label";
     lab.textContent = etiqueta + " · Esc cancela · " + (multilinea ? "clic fuera o Ctrl+Enter guarda" : "Enter o clic fuera guarda");
+
+    // Contenedor con capa fantasma (predicción tipo teclado de celular) detrás del textarea
+    const wrap = document.createElement("div");
+    wrap.className = "cp-ta-wrap";
+    const ghost = document.createElement("div");
+    ghost.className = "cp-ghost" + (multilinea ? "" : " cp-corta");
+    ghost.setAttribute("aria-hidden", "true");
     const ta = document.createElement("textarea");
     ta.className = "cp-textarea" + (multilinea ? "" : " cp-corta");
     ta.value = it[field] == null ? "" : String(it[field]);
     if (conPrediccion) { ta.spellcheck = true; ta.setAttribute("lang", "es"); }
+    wrap.appendChild(ghost);
+    wrap.appendChild(ta);
+
     pop.appendChild(lab);
-    pop.appendChild(ta);
+    pop.appendChild(wrap);
 
     // Aviso de duplicado (Exp. Logística)
     let warn = null;
@@ -480,22 +489,9 @@
       warn.className = "cp-warn hidden";
       pop.appendChild(warn);
     }
-    // Sugerencias de valores ya usados en este campo
-    let sugBox = null, sugValores = [];
-    if (conSugerencias) {
-      sugValores = valoresFrecuentes(field);
-      sugBox = document.createElement("div");
-      sugBox.className = "cp-sugerencias";
-      pop.appendChild(sugBox);
-    }
-    // Predicción de palabra mientras se escribe (Tab completa)
-    let predBar = null, predPalabra = null, vocab = null;
-    if (conPrediccion) {
-      vocab = construirVocabulario();
-      predBar = document.createElement("div");
-      predBar.className = "cp-pred hidden";
-      pop.appendChild(predBar);
-    }
+
+    const vocab = conPrediccion ? construirVocabulario() : null;
+    let predRemainder = "";
 
     document.body.appendChild(back);
     document.body.appendChild(pop);
@@ -509,6 +505,7 @@
       ta.style.height = "auto";
       const h = Math.max(minH, Math.min(320, ta.scrollHeight + 4));
       ta.style.height = h + "px";
+      ghost.style.height = h + "px";
       let top = rect.bottom + 4;
       const total = pop.offsetHeight || (h + 44);
       if (top + total + 12 > tope) top = Math.max(8, tope - total - 4);
@@ -521,49 +518,38 @@
       warn.classList.toggle("hidden", !dup);
       if (dup) warn.textContent = `⚠ Ya existe este Exp.: N° ${dup.nro || "—"} en «${tabNombre(dup.pestana)}»`;
     };
-    const refreshSug = () => {
-      if (!sugBox) return;
-      const q = normalizarTxt(ta.value.trim());
-      const lista = sugValores
-        .filter((v) => normalizarTxt(v) !== q)
-        .filter((v) => !q || normalizarTxt(v).indexOf(q) >= 0)
-        .slice(0, 6);
-      sugBox.innerHTML = lista.length
-        ? '<span class="cp-sug-tit">Ya usados:</span>' + lista.map((v) => `<button type="button" class="cp-sug" data-v="${esc(v)}" title="${esc(v)}">${esc(v)}</button>`).join("")
-        : "";
-    };
-    const refreshPred = () => {
-      predPalabra = null;
-      if (!predBar) return;
-      const pos = ta.selectionStart == null ? ta.value.length : ta.selectionStart;
-      const hasta = ta.value.slice(0, pos);
-      const m = hasta.match(/[0-9A-Za-zÁÉÍÓÚÑÜáéíóúñü°\.\-\/]+$/);
-      const sug = m ? predecirPalabra(vocab, m[0]) : null;
-      if (sug) {
-        predPalabra = { actual: m[0], completa: sug };
-        predBar.innerHTML = `Sugerencia: <b>${esc(sug)}</b> · pulsa <b>Tab</b> para completar`;
-        predBar.classList.remove("hidden");
-      } else {
-        predBar.classList.add("hidden");
+    const setGhost = () => {
+      predRemainder = "";
+      if (!conPrediccion) return;
+      const val = ta.value;
+      const pos = ta.selectionStart == null ? val.length : ta.selectionStart;
+      // Solo predecir si el cursor está al final de todo el texto (como en el celular)
+      if (pos !== val.length) { ghost.innerHTML = ""; return; }
+      const m = val.match(/[0-9A-Za-zÁÉÍÓÚÑÜáéíóúñü°\.\-\/]+$/);
+      let sufijo = "";
+      if (m) {
+        const sug = predecirPalabra(vocab, m[0]);
+        if (sug && sug.length > m[0].length) sufijo = sug.slice(m[0].length);
       }
+      predRemainder = sufijo;
+      ghost.innerHTML = esc(val) + (sufijo ? '<span class="g">' + esc(sufijo) + "</span>" : "") + "​";
+      ghost.scrollTop = ta.scrollTop;
+    };
+    const aceptarGhost = () => {
+      if (!predRemainder) return false;
+      const pos = ta.selectionStart;
+      ta.value = ta.value.slice(0, pos) + predRemainder + ta.value.slice(pos);
+      const np = pos + predRemainder.length;
+      ta.setSelectionRange(np, np);
+      ajustar(); refreshWarn(); setGhost();
+      return true;
     };
 
-    if (sugBox) {
-      sugBox.addEventListener("mousedown", (e) => e.preventDefault());
-      sugBox.addEventListener("click", (e) => {
-        const b = e.target.closest(".cp-sug");
-        if (!b) return;
-        ta.value = b.getAttribute("data-v");
-        refreshSug(); refreshWarn(); refreshPred(); ajustar();
-        ta.focus();
-        ta.setSelectionRange(ta.value.length, ta.value.length);
-      });
-    }
-
-    refreshSug(); refreshWarn();
+    refreshWarn();
     ajustar();
     ta.focus();
     ta.setSelectionRange(ta.value.length, ta.value.length);
+    setGhost();
 
     let done = false;
     const cerrar = () => { back.remove(); pop.remove(); };
@@ -581,22 +567,17 @@
       }
     };
     const cancel = () => { if (done) return; done = true; cerrar(); };
-    ta.addEventListener("input", () => { ajustar(); refreshSug(); refreshWarn(); refreshPred(); });
+
+    ta.addEventListener("input", () => { ajustar(); refreshWarn(); setGhost(); });
+    ta.addEventListener("scroll", () => { ghost.scrollTop = ta.scrollTop; ghost.scrollLeft = ta.scrollLeft; });
+    ta.addEventListener("click", setGhost);
     ta.addEventListener("keyup", (e) => {
-      if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown") refreshPred();
+      if (e.key.indexOf("Arrow") === 0 || e.key === "Home" || e.key === "End") setGhost();
     });
-    ta.addEventListener("click", refreshPred);
     ta.addEventListener("keydown", (e) => {
-      if (e.key === "Tab" && predPalabra) {
-        e.preventDefault();
-        const pos = ta.selectionStart;
-        const antes = ta.value.slice(0, pos - predPalabra.actual.length);
-        const despues = ta.value.slice(pos);
-        ta.value = antes + predPalabra.completa + despues;
-        const np = antes.length + predPalabra.completa.length;
-        ta.setSelectionRange(np, np);
-        ajustar(); refreshSug(); refreshWarn(); refreshPred();
-        return;
+      // Aceptar la sugerencia fantasma con Tab, o con → cuando el cursor está al final
+      if (predRemainder && (e.key === "Tab" || (e.key === "ArrowRight" && ta.selectionStart === ta.value.length))) {
+        e.preventDefault(); aceptarGhost(); return;
       }
       if (e.key === "Escape") { e.preventDefault(); cancel(); }
       else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commit(); }

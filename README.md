@@ -100,12 +100,12 @@ Cada pestaña muestra su propio conteo y su propio tablero de indicadores.
 
 ## Ayudas de escritura
 
-- **Sugerencias de valores ya usados**: al editar Área, Especialista, Doc. o Ítem, la app
-  te muestra los valores que ya usaste para elegirlos con un clic (evita escribir distinto
-  la misma área). El formulario de «Nuevo requerimiento» también sugiere mientras escribes.
-- **Predicción de palabras**: en los campos de texto, la app aprende de tus propios datos
-  y te sugiere la palabra que estás escribiendo (ej. escribes "ADQUIS" → sugiere
-  "ADQUISICION"); púlsala con **Tab** para completarla.
+- **Predicción tipo teclado de celular (texto fantasma)**: mientras escribes en un campo
+  de texto, la palabra probable aparece **en gris, pegada a lo que escribes** (aprendida
+  de tus propios datos). La aceptas con **Tab** o **flecha derecha →** (ej. escribes
+  "ADQUIS" y ves "ADQUIS**ICION**"; Tab la completa). Solo aparece al final de la línea.
+- El formulario de «Nuevo requerimiento» además sugiere áreas y especialistas ya usados
+  (lista desplegable del navegador).
 - **Corrector ortográfico**: los cuadros de texto tienen activado el corrector del
   navegador en español (subraya errores y sugiere correcciones con clic derecho).
 
