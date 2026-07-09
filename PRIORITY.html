@@ -173,6 +173,7 @@ input:focus, .select:focus, textarea:focus {
   gap: 12px; padding: 4px 24px 0; flex-wrap: wrap;
 }
 .tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.tabs-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .tab {
   display: inline-flex; align-items: center; gap: 8px;
   border: 1px solid var(--border); border-bottom: none;
@@ -600,7 +601,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
   .table-wrap { margin-left: 14px; margin-right: 14px; }
 }
 
-  </style>
+</style>
 </head>
 <body>
   <header class="topbar">
@@ -655,9 +656,14 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
   <!-- Pestañas -->
   <section class="tabs-bar">
     <div class="tabs" id="tabs"></div>
-    <button id="btn-jalar" class="btn btn-primary btn-sm" title="Mueve a la pestaña «Mi trabajo» los requerimientos marcados como «a mi cargo»">
-      ⇄ Traer a mi trabajo (los que tengo a mi cargo)
-    </button>
+    <div class="tabs-actions">
+      <button id="btn-archivar" class="btn btn-ghost btn-sm" title="Mueve a la pestaña «Terminados» todos los requerimientos en estado TERMINADO">
+        📁 Archivar terminados
+      </button>
+      <button id="btn-jalar" class="btn btn-primary btn-sm" title="Mueve a la pestaña «Mi trabajo» los requerimientos marcados como «a mi cargo»">
+        ⇄ Traer a mi trabajo (los que tengo a mi cargo)
+      </button>
+    </div>
   </section>
 
   <!-- Filtros -->
@@ -1159,6 +1165,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
   const DEF_TABS = [
     { id: "t1", nombre: "Heredados" },
     { id: "t2", nombre: "Mi trabajo" },
+    { id: "t3", nombre: "Terminados" },
   ];
 
   const PALETA = ["#3b56d6", "#1f9d57", "#c77700", "#d63b4b", "#7b3fd1", "#2f5fd0",
@@ -1250,6 +1257,13 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
     try { pestanaActiva = localStorage.getItem(ACTIVA_KEY) || tabs[0].id; }
     catch (e) { pestanaActiva = tabs[0].id; }
     if (!tabs.some((t) => t.id === pestanaActiva)) pestanaActiva = tabs[0].id;
+    // Migración única: asegurar la pestaña "Terminados"
+    try {
+      if (!localStorage.getItem("priority_migr_tab_terminados")) {
+        if (!tabs.some((t) => t.id === "t3")) { tabs.push({ id: "t3", nombre: "Terminados" }); guardarTabs(); }
+        localStorage.setItem("priority_migr_tab_terminados", "1");
+      }
+    } catch (e) {}
   }
   function guardarTabs() {
     try { localStorage.setItem(TABS_KEY, JSON.stringify(tabs)); } catch (e) {}
@@ -1291,6 +1305,19 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
     toast(n
       ? `Se trajeron ${n} requerimientos a «${tabNombre(destino)}».`
       : "No hay requerimientos marcados «a mi cargo» para traer. Márcalos primero en la columna «A cargo».");
+  }
+  function archivarTerminados() {
+    const destino = tabs.find((t) => t.id === "t3") ? "t3" : (tabs[tabs.length - 1] && tabs[tabs.length - 1].id);
+    if (!destino) return;
+    snapshot();
+    let n = 0;
+    items.forEach((it) => {
+      if (it.estado === "TERMINADO" && it.pestana !== destino) { it.pestana = destino; n++; }
+    });
+    if (n) { guardar(); render(); } else descartarSnapshot();
+    toast(n
+      ? `Se archivaron ${n} requerimiento${n === 1 ? "" : "s"} TERMINADO en «${tabNombre(destino)}».`
+      : "No hay requerimientos en estado TERMINADO para archivar (cambia el estado a TERMINADO primero).");
   }
 
   // ---------- Persistencia ----------
@@ -2545,6 +2572,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
     $("#btn-junio").addEventListener("click", cargarJunio);
     $("#btn-junio-2").addEventListener("click", cargarJunio);
     $("#btn-jalar").addEventListener("click", jalarACargo);
+    $("#btn-archivar").addEventListener("click", archivarTerminados);
     $("#zoom-menos").addEventListener("click", () => cambiarZoom(-0.1));
     $("#zoom-mas").addEventListener("click", () => cambiarZoom(0.1));
     $("#zoom-nivel").addEventListener("click", () => { zoom = 1; aplicarZoom(); });
@@ -2692,6 +2720,6 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
   });
 })();
 
-  </script>
+</script>
 </body>
 </html>

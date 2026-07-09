@@ -45,22 +45,28 @@ Basados en tu hoja "JUNIO MEJORADO":
 - **Prioridad**: Alta / Media / Baja
 - **¿Tengo el expediente físico?** (Sí / No)
 
-## Pestañas (dos hojas de trabajo)
+## Pestañas (tres hojas de trabajo)
 
-La app tiene **dos pestañas**, como hojas de Excel:
+La app tiene **tres pestañas**, como hojas de Excel:
 
 - **Heredados**: los expedientes que venían de la persona anterior.
 - **Mi trabajo**: lo que llevas tú ahora.
+- **Terminados**: los expedientes ya cerrados, apartados para que tus dos
+  pestañas de trabajo queden **más limpias**.
 
 Cómo usarlas:
 
 1. En **Heredados**, marca en la columna **A cargo = Sí** los requerimientos que estás viendo tú.
 2. Pulsa **«⇄ Traer a mi trabajo»**: esos requerimientos se **mueven** a la pestaña «Mi trabajo».
-3. Los **nuevos** que te asignen los registras con **+ Nuevo requerimiento** (quedan en la pestaña activa).
-4. Puedes **mover cualquier fila** entre pestañas editando su celda **Pestaña**.
-5. **Doble clic** en el nombre de una pestaña para **renombrarla**.
+3. Cuando un expediente esté en estado **TERMINADO**, pulsa **«📁 Archivar terminados»**
+   y todos los que estén en ese estado se **mueven de una vez** a la pestaña «Terminados»
+   (también puedes moverlos manualmente desde su celda **Pestaña**).
+4. Los **nuevos** que te asignen los registras con **+ Nuevo requerimiento** (quedan en la pestaña activa).
+5. Puedes **mover cualquier fila** entre pestañas editando su celda **Pestaña**.
+6. **Doble clic** en el nombre de una pestaña para **renombrarla**.
 
-Cada pestaña muestra su propio conteo y su propio tablero de indicadores.
+Cada pestaña muestra su propio conteo y su propio tablero de indicadores, así que los
+indicadores de «Heredados» y «Mi trabajo» **no cuentan** lo que ya está en «Terminados».
 
 ## Funciones
 
@@ -75,7 +81,7 @@ Cada pestaña muestra su propio conteo y su propio tablero de indicadores.
 - **Antigüedad en UPROG**: muestra los días desde el ingreso y resalta los que llevan más de 30 días.
 - **Exportar a Excel con formato**: el archivo sale con las **mismas columnas, orden y
   colores** que la app (encabezado azul; prioridad/estado/tipo/«a cargo»/«¿tengo exp?» como
-  celdas de color y bordes), con **una hoja por pestaña** (p. ej. «Heredados» y «Mi trabajo»),
+  celdas de color y bordes), con **una hoja por pestaña** (p. ej. «Heredados», «Mi trabajo» y «Terminados»),
   **fila de título fija** y **listas desplegables** en las columnas Pestaña, A cargo,
   Prioridad, Estado, Tipo y ¿Tengo exp.? (para elegir el valor dentro de Excel, igual que
   en la app). **Importar** acepta de vuelta ese mismo Excel sin perder a qué pestaña

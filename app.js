@@ -115,6 +115,7 @@
   const DEF_TABS = [
     { id: "t1", nombre: "Heredados" },
     { id: "t2", nombre: "Mi trabajo" },
+    { id: "t3", nombre: "Terminados" },
   ];
 
   const PALETA = ["#3b56d6", "#1f9d57", "#c77700", "#d63b4b", "#7b3fd1", "#2f5fd0",
@@ -206,6 +207,13 @@
     try { pestanaActiva = localStorage.getItem(ACTIVA_KEY) || tabs[0].id; }
     catch (e) { pestanaActiva = tabs[0].id; }
     if (!tabs.some((t) => t.id === pestanaActiva)) pestanaActiva = tabs[0].id;
+    // Migración única: asegurar la pestaña "Terminados"
+    try {
+      if (!localStorage.getItem("priority_migr_tab_terminados")) {
+        if (!tabs.some((t) => t.id === "t3")) { tabs.push({ id: "t3", nombre: "Terminados" }); guardarTabs(); }
+        localStorage.setItem("priority_migr_tab_terminados", "1");
+      }
+    } catch (e) {}
   }
   function guardarTabs() {
     try { localStorage.setItem(TABS_KEY, JSON.stringify(tabs)); } catch (e) {}
@@ -247,6 +255,19 @@
     toast(n
       ? `Se trajeron ${n} requerimientos a «${tabNombre(destino)}».`
       : "No hay requerimientos marcados «a mi cargo» para traer. Márcalos primero en la columna «A cargo».");
+  }
+  function archivarTerminados() {
+    const destino = tabs.find((t) => t.id === "t3") ? "t3" : (tabs[tabs.length - 1] && tabs[tabs.length - 1].id);
+    if (!destino) return;
+    snapshot();
+    let n = 0;
+    items.forEach((it) => {
+      if (it.estado === "TERMINADO" && it.pestana !== destino) { it.pestana = destino; n++; }
+    });
+    if (n) { guardar(); render(); } else descartarSnapshot();
+    toast(n
+      ? `Se archivaron ${n} requerimiento${n === 1 ? "" : "s"} TERMINADO en «${tabNombre(destino)}».`
+      : "No hay requerimientos en estado TERMINADO para archivar (cambia el estado a TERMINADO primero).");
   }
 
   // ---------- Persistencia ----------
@@ -1501,6 +1522,7 @@
     $("#btn-junio").addEventListener("click", cargarJunio);
     $("#btn-junio-2").addEventListener("click", cargarJunio);
     $("#btn-jalar").addEventListener("click", jalarACargo);
+    $("#btn-archivar").addEventListener("click", archivarTerminados);
     $("#zoom-menos").addEventListener("click", () => cambiarZoom(-0.1));
     $("#zoom-mas").addEventListener("click", () => cambiarZoom(0.1));
     $("#zoom-nivel").addEventListener("click", () => { zoom = 1; aplicarZoom(); });
