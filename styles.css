@@ -626,6 +626,13 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
 :root[data-theme="dark"] textarea,
 :root[data-theme="dark"] .field input,
 :root[data-theme="dark"] .field textarea { background: var(--surface); color: var(--text); }
+:root[data-theme="dark"] .cell-popover,
+:root[data-theme="dark"] .cell-editor { background: var(--surface); color: var(--text); }
+:root[data-theme="dark"] .batch-bar { background: var(--surface-2); border-color: var(--border); }
+:root[data-theme="dark"] .cargo-no { background: var(--surface-2); color: var(--muted); }
+:root[data-theme="dark"] .tengo-si { background: rgba(70,192,127,.18); color: var(--ok); }
+:root[data-theme="dark"] .badge { border-color: rgba(255,255,255,.08); }
+:root[data-theme="dark"] ::placeholder { color: #7a869c; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 880px) {

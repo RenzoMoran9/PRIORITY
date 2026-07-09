@@ -193,6 +193,12 @@
   }
   function badgeStyle(hex) {
     const { r, g, b } = hexToRgb(hex);
+    if (document.documentElement.getAttribute("data-theme") === "dark") {
+      // En oscuro: texto aclarado (hacia blanco) sobre un tinte más presente,
+      // para que la etiqueta resalte en vez de quedar oscuro sobre oscuro.
+      const l = (x) => Math.round(x + (255 - x) * 0.55);
+      return `background:rgba(${r},${g},${b},0.20);color:rgb(${l(r)},${l(g)},${l(b)});border-color:rgba(${r},${g},${b},0.38)`;
+    }
     const t = (x) => Math.round(x * 0.58);
     return `background:rgba(${r},${g},${b},0.15);color:rgb(${t(r)},${t(g)},${t(b)})`;
   }
@@ -1490,6 +1496,7 @@
   function alternarTema() {
     const actual = document.documentElement.getAttribute("data-theme") === "dark" ? "oscuro" : "claro";
     aplicarTema(actual === "oscuro" ? "claro" : "oscuro");
+    if (typeof render === "function") render(); // recalcular colores de etiquetas según el tema
   }
 
   // ---------- Init ----------
