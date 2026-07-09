@@ -115,6 +115,12 @@ indicadores de «Heredados» y «Mi trabajo» **no cuentan** lo que ya está en 
 - **Corrector ortográfico**: los cuadros de texto tienen activado el corrector del
   navegador en español (subraya errores y sugiere correcciones con clic derecho).
 
+## Tema claro u oscuro
+
+- Arriba, junto al zoom, hay un botón **🌙 / ☀** para cambiar entre **tema claro y
+  oscuro**. Tu elección **queda recordada** en el navegador. La primera vez respeta
+  el tema que use tu sistema operativo.
+
 ## Pantallas pequeñas: zoom y barra fija
 
 - **Zoom**: arriba a la derecha hay botones **−** y **+** para alejar o acercar la tabla

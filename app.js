@@ -1466,6 +1466,32 @@
   }
   function cambiarZoom(delta) { zoom += delta; aplicarZoom(); }
 
+  // ---------- Tema (claro / oscuro) ----------
+  const TEMA_KEY = "priority_tema";
+  function aplicarTema(tema) {
+    const oscuro = tema === "oscuro";
+    document.documentElement.setAttribute("data-theme", oscuro ? "dark" : "light");
+    const btn = $("#btn-tema");
+    if (btn) {
+      btn.textContent = oscuro ? "☀" : "🌙";
+      btn.title = oscuro ? "Cambiar a tema claro" : "Cambiar a tema oscuro";
+    }
+    try { localStorage.setItem(TEMA_KEY, tema); } catch (e) {}
+  }
+  function cargarTema() {
+    let tema = "claro";
+    try {
+      const g = localStorage.getItem(TEMA_KEY);
+      if (g === "oscuro" || g === "claro") tema = g;
+      else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) tema = "oscuro";
+    } catch (e) {}
+    aplicarTema(tema);
+  }
+  function alternarTema() {
+    const actual = document.documentElement.getAttribute("data-theme") === "dark" ? "oscuro" : "claro";
+    aplicarTema(actual === "oscuro" ? "claro" : "oscuro");
+  }
+
   // ---------- Init ----------
   function poblarSelects() {
     const optList = (arr) => arr.map((o) => `<option value="${esc(o.nombre)}">${esc(o.nombre)}</option>`).join("");
@@ -1526,6 +1552,7 @@
     $("#zoom-menos").addEventListener("click", () => cambiarZoom(-0.1));
     $("#zoom-mas").addEventListener("click", () => cambiarZoom(0.1));
     $("#zoom-nivel").addEventListener("click", () => { zoom = 1; aplicarZoom(); });
+    $("#btn-tema").addEventListener("click", alternarTema);
     $("#modal-close").addEventListener("click", cerrarModal);
     $("#btn-cancelar").addEventListener("click", cerrarModal);
     $("#form").addEventListener("submit", guardarDesdeForm);
@@ -1659,6 +1686,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
+    cargarTema();
     cargarTabs();
     cargarConfig();
     cargarPapelera();

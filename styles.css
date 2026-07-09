@@ -581,6 +581,52 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
 
 .hidden { display: none !important; }
 
+/* ---------- Tema oscuro ---------- */
+:root { color-scheme: light; }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1522;
+  --surface: #1a2233;
+  --surface-2: #222c40;
+  --border: #303c52;
+  --text: #e7ebf3;
+  --muted: #9aa5bb;
+  --primary: #7189ee;
+  --primary-dark: #92a6f4;
+  --primary-soft: #27324f;
+  --danger: #f26b7c;
+  --danger-soft: #3a2530;
+  --warn: #e6a13a;
+  --warn-soft: #3a2f1c;
+  --ok: #46c07f;
+  --shadow: 0 1px 3px rgba(0,0,0,.45), 0 10px 28px rgba(0,0,0,.4);
+}
+/* Ajustes de colores fijos que no usan variables */
+:root[data-theme="dark"] .grid thead th { color: var(--muted); background: var(--surface-2); }
+:root[data-theme="dark"] .grid thead th,
+:root[data-theme="dark"] .grid tbody td { border-color: var(--border); }
+:root[data-theme="dark"] .grid tbody td { color: var(--text); }
+:root[data-theme="dark"] .grid tbody tr:hover > td,
+:root[data-theme="dark"] .grid td.ed:hover { background: #232f47; }
+:root[data-theme="dark"] .grid td.editing { background: var(--surface); }
+:root[data-theme="dark"] .grid thead th[data-sort]:hover { background: var(--surface); }
+:root[data-theme="dark"] .cell-area,
+:root[data-theme="dark"] .cell-doc { color: #aeb7ca; }
+:root[data-theme="dark"] .muted-cell,
+:root[data-theme="dark"] .antig-tag,
+:root[data-theme="dark"] .pap-fecha { color: var(--muted); }
+:root[data-theme="dark"] .cp-label { background: var(--surface-2); color: var(--muted); }
+:root[data-theme="dark"] .cp-ghost .g { color: #6b7688; }
+:root[data-theme="dark"] .row-cargo > td { background: #1d2740; }
+:root[data-theme="dark"] .row-cargo:hover > td { background: #222e4a; }
+:root[data-theme="dark"] .tab:hover { background: var(--surface-2); }
+:root[data-theme="dark"] .btn.vinculado { background: rgba(70,192,127,.16); border-color: rgba(70,192,127,.45); }
+:root[data-theme="dark"] .toast { background: #2c3850; color: var(--text); }
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] .field input,
+:root[data-theme="dark"] .field textarea { background: var(--surface); color: var(--text); }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 880px) {
   .kpis { grid-template-columns: repeat(2, 1fr); }

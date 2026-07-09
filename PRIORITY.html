@@ -588,6 +588,52 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
 
 .hidden { display: none !important; }
 
+/* ---------- Tema oscuro ---------- */
+:root { color-scheme: light; }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1522;
+  --surface: #1a2233;
+  --surface-2: #222c40;
+  --border: #303c52;
+  --text: #e7ebf3;
+  --muted: #9aa5bb;
+  --primary: #7189ee;
+  --primary-dark: #92a6f4;
+  --primary-soft: #27324f;
+  --danger: #f26b7c;
+  --danger-soft: #3a2530;
+  --warn: #e6a13a;
+  --warn-soft: #3a2f1c;
+  --ok: #46c07f;
+  --shadow: 0 1px 3px rgba(0,0,0,.45), 0 10px 28px rgba(0,0,0,.4);
+}
+/* Ajustes de colores fijos que no usan variables */
+:root[data-theme="dark"] .grid thead th { color: var(--muted); background: var(--surface-2); }
+:root[data-theme="dark"] .grid thead th,
+:root[data-theme="dark"] .grid tbody td { border-color: var(--border); }
+:root[data-theme="dark"] .grid tbody td { color: var(--text); }
+:root[data-theme="dark"] .grid tbody tr:hover > td,
+:root[data-theme="dark"] .grid td.ed:hover { background: #232f47; }
+:root[data-theme="dark"] .grid td.editing { background: var(--surface); }
+:root[data-theme="dark"] .grid thead th[data-sort]:hover { background: var(--surface); }
+:root[data-theme="dark"] .cell-area,
+:root[data-theme="dark"] .cell-doc { color: #aeb7ca; }
+:root[data-theme="dark"] .muted-cell,
+:root[data-theme="dark"] .antig-tag,
+:root[data-theme="dark"] .pap-fecha { color: var(--muted); }
+:root[data-theme="dark"] .cp-label { background: var(--surface-2); color: var(--muted); }
+:root[data-theme="dark"] .cp-ghost .g { color: #6b7688; }
+:root[data-theme="dark"] .row-cargo > td { background: #1d2740; }
+:root[data-theme="dark"] .row-cargo:hover > td { background: #222e4a; }
+:root[data-theme="dark"] .tab:hover { background: var(--surface-2); }
+:root[data-theme="dark"] .btn.vinculado { background: rgba(70,192,127,.16); border-color: rgba(70,192,127,.45); }
+:root[data-theme="dark"] .toast { background: #2c3850; color: var(--text); }
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] .field input,
+:root[data-theme="dark"] .field textarea { background: var(--surface); color: var(--text); }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 880px) {
   .kpis { grid-template-columns: repeat(2, 1fr); }
@@ -618,6 +664,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
         <button id="zoom-nivel" class="btn btn-ghost btn-zoom" title="Clic para restablecer al 100%">100%</button>
         <button id="zoom-mas" class="btn btn-ghost btn-icon" title="Acercar (ver más grande)">+</button>
       </div>
+      <button id="btn-tema" class="btn btn-ghost btn-icon" title="Cambiar entre tema claro y oscuro">🌙</button>
       <button id="btn-deshacer" class="btn btn-ghost btn-icon" title="Deshacer último cambio (Ctrl+Z)" disabled>↶</button>
       <button id="btn-glosario" class="btn btn-ghost" title="Glosario: qué significa cada término">📖 Glosario</button>
       <button id="btn-config" class="btn btn-ghost" title="Configurar estados, tipos y prioridades">⚙ Configurar</button>
@@ -2516,6 +2563,32 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
   }
   function cambiarZoom(delta) { zoom += delta; aplicarZoom(); }
 
+  // ---------- Tema (claro / oscuro) ----------
+  const TEMA_KEY = "priority_tema";
+  function aplicarTema(tema) {
+    const oscuro = tema === "oscuro";
+    document.documentElement.setAttribute("data-theme", oscuro ? "dark" : "light");
+    const btn = $("#btn-tema");
+    if (btn) {
+      btn.textContent = oscuro ? "☀" : "🌙";
+      btn.title = oscuro ? "Cambiar a tema claro" : "Cambiar a tema oscuro";
+    }
+    try { localStorage.setItem(TEMA_KEY, tema); } catch (e) {}
+  }
+  function cargarTema() {
+    let tema = "claro";
+    try {
+      const g = localStorage.getItem(TEMA_KEY);
+      if (g === "oscuro" || g === "claro") tema = g;
+      else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) tema = "oscuro";
+    } catch (e) {}
+    aplicarTema(tema);
+  }
+  function alternarTema() {
+    const actual = document.documentElement.getAttribute("data-theme") === "dark" ? "oscuro" : "claro";
+    aplicarTema(actual === "oscuro" ? "claro" : "oscuro");
+  }
+
   // ---------- Init ----------
   function poblarSelects() {
     const optList = (arr) => arr.map((o) => `<option value="${esc(o.nombre)}">${esc(o.nombre)}</option>`).join("");
@@ -2576,6 +2649,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
     $("#zoom-menos").addEventListener("click", () => cambiarZoom(-0.1));
     $("#zoom-mas").addEventListener("click", () => cambiarZoom(0.1));
     $("#zoom-nivel").addEventListener("click", () => { zoom = 1; aplicarZoom(); });
+    $("#btn-tema").addEventListener("click", alternarTema);
     $("#modal-close").addEventListener("click", cerrarModal);
     $("#btn-cancelar").addEventListener("click", cerrarModal);
     $("#form").addEventListener("submit", guardarDesdeForm);
@@ -2709,6 +2783,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
   }
 
   document.addEventListener("DOMContentLoaded", () => {
+    cargarTema();
     cargarTabs();
     cargarConfig();
     cargarPapelera();
