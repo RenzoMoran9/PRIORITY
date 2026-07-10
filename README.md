@@ -58,9 +58,10 @@ Cómo usarlas:
 
 1. En **Heredados**, marca en la columna **A cargo = Sí** los requerimientos que estás viendo tú.
 2. Pulsa **«⇄ Traer a mi trabajo»**: esos requerimientos se **mueven** a la pestaña «Mi trabajo».
-3. Cuando un expediente esté en estado **TERMINADO**, pulsa **«📁 Archivar terminados»**
-   y todos los que estén en ese estado se **mueven de una vez** a la pestaña «Terminados»
-   (también puedes moverlos manualmente desde su celda **Pestaña**).
+3. Cuando pongas un expediente en estado **TERMINADO**, se **mueve solo** a la
+   pestaña «Terminados» (al editar la celda Estado, en lote o al registrarlo). Si
+   necesitas mover de golpe los que ya estaban en TERMINADO, usa **«📁 Archivar
+   terminados»**. También puedes moverlos manualmente desde su celda **Pestaña**.
 4. Los **nuevos** que te asignen los registras con **+ Nuevo requerimiento** (quedan en la pestaña activa).
 5. Puedes **mover cualquier fila** entre pestañas editando su celda **Pestaña**.
 6. **Doble clic** en el nombre de una pestaña para **renombrarla**.

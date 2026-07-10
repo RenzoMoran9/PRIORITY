@@ -262,8 +262,19 @@
       ? `Se trajeron ${n} requerimientos a «${tabNombre(destino)}».`
       : "No hay requerimientos marcados «a mi cargo» para traer. Márcalos primero en la columna «A cargo».");
   }
+  function destinoTerminados() {
+    return tabs.find((t) => t.id === "t3") ? "t3" : (tabs[tabs.length - 1] && tabs[tabs.length - 1].id);
+  }
+  // Si el estado quedó en TERMINADO, mueve el expediente a la pestaña «Terminados».
+  // Devuelve true si lo movió. (No hace snapshot/guardar; lo maneja quien lo llama.)
+  function autoArchivarTerminado(it) {
+    if (!it || it.estado !== "TERMINADO") return false;
+    const destino = destinoTerminados();
+    if (destino && it.pestana !== destino) { it.pestana = destino; return true; }
+    return false;
+  }
   function archivarTerminados() {
-    const destino = tabs.find((t) => t.id === "t3") ? "t3" : (tabs[tabs.length - 1] && tabs[tabs.length - 1].id);
+    const destino = destinoTerminados();
     if (!destino) return;
     snapshot();
     let n = 0;
@@ -664,7 +675,9 @@
         snapshot();
         it[field] = val;
         it.actualizado = Date.now();
+        const movido = field === "estado" && autoArchivarTerminado(it);
         guardar();
+        if (movido) toast(`Estado TERMINADO: se movió a la pestaña «${tabNombre(it.pestana)}».`);
       }
       render();
     };
@@ -751,6 +764,11 @@
       aCargo: $("#f-aCargo").value,
       observaciones: $("#f-observaciones").value.trim(),
     };
+    // Si el estado es TERMINADO, el expediente va directo a la pestaña «Terminados».
+    if (datos.estado === "TERMINADO") {
+      const destino = destinoTerminados();
+      if (destino) datos.pestana = destino;
+    }
     const id = $("#f-id").value;
     if (id) {
       const idx = items.findIndex((x) => x.id === id);
@@ -872,14 +890,18 @@
   function aplicarLote(campo, valor, etiqueta) {
     if (!seleccion.size) return;
     snapshot();
-    let n = 0;
+    let n = 0, movidos = 0;
     items.forEach((it) => {
-      if (seleccion.has(it.id)) { it[campo] = valor; it.actualizado = Date.now(); n++; }
+      if (seleccion.has(it.id)) {
+        it[campo] = valor; it.actualizado = Date.now(); n++;
+        if (campo === "estado" && autoArchivarTerminado(it)) movidos++;
+      }
     });
     guardar();
     seleccion.clear();
     render();
-    toast(`${etiqueta} aplicado a ${n} requerimiento${n === 1 ? "" : "s"}.`);
+    toast(`${etiqueta} aplicado a ${n} requerimiento${n === 1 ? "" : "s"}.` +
+      (movidos ? ` ${movidos} pasó a «Terminados».` : ""));
   }
   function eliminarLote() {
     if (!seleccion.size) return;
