@@ -235,6 +235,9 @@
   }
   function setPestana(id) {
     pestanaActiva = id;
+    // La selección es de la vista actual: al cambiar de pestaña se limpia para
+    // no aplicar acciones en lote a filas que ya no se ven.
+    if (seleccion.size) seleccion.clear();
     try { localStorage.setItem(ACTIVA_KEY, id); } catch (e) {}
     render();
   }
@@ -265,10 +268,15 @@
   function destinoTerminados() {
     return tabs.find((t) => t.id === "t3") ? "t3" : (tabs[tabs.length - 1] && tabs[tabs.length - 1].id);
   }
+  // ¿El estado es "TERMINADO"? Tolerante a mayúsculas/minúsculas, espacios y tildes,
+  // para que el archivado automático no falle con datos importados o renombrados.
+  function esTerminado(estado) {
+    return normalizarTxt(estado).trim() === "terminado";
+  }
   // Si el estado quedó en TERMINADO, mueve el expediente a la pestaña «Terminados».
   // Devuelve true si lo movió. (No hace snapshot/guardar; lo maneja quien lo llama.)
   function autoArchivarTerminado(it) {
-    if (!it || it.estado !== "TERMINADO") return false;
+    if (!it || !esTerminado(it.estado)) return false;
     const destino = destinoTerminados();
     if (destino && it.pestana !== destino) { it.pestana = destino; return true; }
     return false;
@@ -279,7 +287,7 @@
     snapshot();
     let n = 0;
     items.forEach((it) => {
-      if (it.estado === "TERMINADO" && it.pestana !== destino) { it.pestana = destino; n++; }
+      if (esTerminado(it.estado) && it.pestana !== destino) { it.pestana = destino; n++; }
     });
     if (n) { guardar(); render(); } else descartarSnapshot();
     toast(n
@@ -438,7 +446,7 @@
 
   function filaHTML(it) {
     const dias = diasDesde(it.fechaIngreso);
-    const cerrado = it.estado === "PARA SALDO" || it.estado === "ENTREGADO A GRISEL" || it.estado === "TERMINADO";
+    const cerrado = it.estado === "PARA SALDO" || it.estado === "ENTREGADO A GRISEL" || esTerminado(it.estado);
     const vieja = dias !== null && dias > 30 && !cerrado;
     const antig = dias !== null ? `<span class="antig-tag ${vieja ? "alerta" : ""}">${dias} d</span>` : "";
     const cargo = it.aCargo || "";
@@ -765,7 +773,7 @@
       observaciones: $("#f-observaciones").value.trim(),
     };
     // Si el estado es TERMINADO, el expediente va directo a la pestaña «Terminados».
-    if (datos.estado === "TERMINADO") {
+    if (esTerminado(datos.estado)) {
       const destino = destinoTerminados();
       if (destino) datos.pestana = destino;
     }
@@ -1007,14 +1015,19 @@
         vivos.add(nuevo);
         if (o.orig && o.orig !== nuevo) renameMap[o.orig] = nuevo;
       });
-      items.forEach((it) => { if (it[field] && renameMap[it[field]]) it[field] = renameMap[it[field]]; });
-      items.forEach((it) => {
-        const v = it[field];
-        if (v && !vivos.has(v)) {
-          it[field] = g === "prioridades" ? (arr[Math.min(1, arr.length - 1)].nombre.trim()) : "";
-        }
+      // Aplicar renombres/eliminaciones también a la papelera, para que al
+      // restaurar un requerimiento no vuelva con un valor que ya no existe.
+      [items, papelera].forEach((lista) => {
+        lista.forEach((it) => { if (it[field] && renameMap[it[field]]) it[field] = renameMap[it[field]]; });
+        lista.forEach((it) => {
+          const v = it[field];
+          if (v && !vivos.has(v)) {
+            it[field] = g === "prioridades" ? (arr[Math.min(1, arr.length - 1)].nombre.trim()) : "";
+          }
+        });
       });
     });
+    guardarPapelera();
     config = {
       estados: configDraft.estados.map((o) => ({ nombre: o.nombre.trim(), color: o.color })),
       tipos: configDraft.tipos.map((o) => ({ nombre: o.nombre.trim(), color: o.color })),
@@ -1222,38 +1235,76 @@
   }
 
   // ---------- Importar (CSV, Excel SpreadsheetML, Excel HTML/MHTML) ----------
-  function agregarDesdeFilas(filas) {
-    if (filas.length < 2) return 0;
+  // Devuelve el id de pestaña SOLO si el nombre existe (para no mover filas por error).
+  function idTabPorNombreEstricto(nombre) {
+    if (!nombre) return null;
+    const t = tabs.find((x) => x.nombre.toLowerCase() === nombre.trim().toLowerCase());
+    return t ? t.id : null;
+  }
+  // Importa filas SIN duplicar: si el N° Exp. Logística ya existe, actualiza ese
+  // requerimiento (las celdas vacías del archivo no borran datos); si no, lo agrega.
+  function agregarDesdeFilas(filas, res) {
+    if (filas.length < 2) return;
     const idx = indiceColumnas(filas[0]);
-    if (idx.expLogistica == null && idx.item == null && idx.denominacion == null) return 0;
-    let n = 0;
+    if (idx.expLogistica == null && idx.item == null && idx.denominacion == null) return;
+    const porExp = {};
+    items.forEach((it) => {
+      const k = String(it.expLogistica || "").trim();
+      if (k && !porExp[k]) porExp[k] = it;
+    });
     for (let i = 1; i < filas.length; i++) {
       const f = filas[i];
       const get = (k) => (idx[k] != null ? (f[idx[k]] || "").trim() : "");
       const item = get("item"), den = get("denominacion"), exp = get("expLogistica");
       if (!exp && !item && !den) continue;
-      items.push({
-        id: uid(),
-        pestana: idTabPorNombre(get("pestana")),
-        nro: get("nro") || nextNro(),
-        fechaIngreso: normalizarFecha(get("fechaIngreso")),
-        expLogistica: exp, expDireccion: get("expDireccion"), docArea: get("docArea"),
-        areaEstrategica: get("areaEstrategica"), areaUsuaria: get("areaUsuaria"),
-        tipo: get("tipo") || defTipo(), denominacion: den, item,
-        especialista: get("especialista"), fechaPase: normalizarFecha(get("fechaPase")),
-        estado: get("estado") || defEstado(),
-        prioridad: get("prioridad") || defPrioridad(),
-        observaciones: get("observaciones"),
-        tengoExp: siNo(get("tengoExp")), aCargo: siNo(get("aCargo")),
-        creado: Date.now(),
-      });
-      n++;
+      const existente = exp ? porExp[exp] : null;
+      if (existente) {
+        const pon = (campo, val) => { if (val !== "") existente[campo] = val; };
+        pon("nro", get("nro"));
+        pon("fechaIngreso", normalizarFecha(get("fechaIngreso")));
+        pon("expDireccion", get("expDireccion")); pon("docArea", get("docArea"));
+        pon("areaEstrategica", get("areaEstrategica")); pon("areaUsuaria", get("areaUsuaria"));
+        pon("tipo", get("tipo")); pon("denominacion", den); pon("item", item);
+        pon("especialista", get("especialista")); pon("fechaPase", normalizarFecha(get("fechaPase")));
+        pon("estado", get("estado")); pon("prioridad", get("prioridad"));
+        pon("observaciones", get("observaciones"));
+        pon("tengoExp", siNo(get("tengoExp"))); pon("aCargo", siNo(get("aCargo")));
+        const tabId = idTabPorNombreEstricto(get("pestana"));
+        if (tabId) existente.pestana = tabId;
+        existente.actualizado = Date.now();
+        autoArchivarTerminado(existente);
+        res.actualizados++;
+      } else {
+        const nuevo = {
+          id: uid(),
+          pestana: idTabPorNombre(get("pestana")),
+          nro: get("nro") || nextNro(),
+          fechaIngreso: normalizarFecha(get("fechaIngreso")),
+          expLogistica: exp, expDireccion: get("expDireccion"), docArea: get("docArea"),
+          areaEstrategica: get("areaEstrategica"), areaUsuaria: get("areaUsuaria"),
+          tipo: get("tipo") || defTipo(), denominacion: den, item,
+          especialista: get("especialista"), fechaPase: normalizarFecha(get("fechaPase")),
+          estado: get("estado") || defEstado(),
+          prioridad: get("prioridad") || defPrioridad(),
+          observaciones: get("observaciones"),
+          tengoExp: siNo(get("tengoExp")), aCargo: siNo(get("aCargo")),
+          creado: Date.now(),
+        };
+        autoArchivarTerminado(nuevo);
+        items.push(nuevo);
+        if (exp) porExp[exp] = nuevo;
+        res.nuevos++;
+      }
     }
-    return n;
   }
-  function finalizarImport(n) {
-    if (n > 0) { guardar(); render(); } else descartarSnapshot();
-    toast(n > 0 ? `Importados ${n} requerimientos.` : "No reconocí datos para importar. Usa el formato de Exportar.");
+  function finalizarImport(res) {
+    const total = res.nuevos + res.actualizados;
+    if (total > 0) { guardar(); render(); } else descartarSnapshot();
+    if (!total) { toast("No reconocí datos para importar. Usa el formato de Exportar."); return; }
+    const partes = [];
+    if (res.nuevos) partes.push(`${res.nuevos} nuevo${res.nuevos === 1 ? "" : "s"}`);
+    if (res.actualizados) partes.push(`${res.actualizados} actualizado${res.actualizados === 1 ? "" : "s"} (ya existían, no se duplicaron)`);
+    toast("Importación: " + partes.join(" y ") + ".");
   }
   function filasDeTabla(tableEl) {
     return [...tableEl.querySelectorAll("tr")]
@@ -1314,21 +1365,21 @@
   function importarArchivo(texto) {
     snapshot();
     const t = texto.replace(/^﻿/, "");
-    let n = 0;
+    const res = { nuevos: 0, actualizados: 0 };
     if (/<\?mso-application/i.test(t) || /<Workbook[\s>]/i.test(t)) {
-      filasDeSpreadsheetML(texto).forEach((filas) => { n += agregarDesdeFilas(filas); });
-      finalizarImport(n); return;
+      filasDeSpreadsheetML(texto).forEach((filas) => { agregarDesdeFilas(filas, res); });
+      finalizarImport(res); return;
     }
     if (/multipart\/related/i.test(t) || /^MIME-Version/i.test(t)) {
-      partesMHTML(t).forEach((h) => tablasDeHTML(h).forEach((tb) => { n += agregarDesdeFilas(filasDeTabla(tb)); }));
-      finalizarImport(n); return;
+      partesMHTML(t).forEach((h) => tablasDeHTML(h).forEach((tb) => { agregarDesdeFilas(filasDeTabla(tb), res); }));
+      finalizarImport(res); return;
     }
     if (/<table/i.test(t)) {
-      tablasDeHTML(t).forEach((tb) => { n += agregarDesdeFilas(filasDeTabla(tb)); });
-      finalizarImport(n); return;
+      tablasDeHTML(t).forEach((tb) => { agregarDesdeFilas(filasDeTabla(tb), res); });
+      finalizarImport(res); return;
     }
-    n = agregarDesdeFilas(parseCSV(texto));
-    finalizarImport(n);
+    agregarDesdeFilas(parseCSV(texto), res);
+    finalizarImport(res);
   }
 
   // ---------- Vincular a un archivo (Excel/CSV) que se actualiza solo ----------
@@ -1415,39 +1466,6 @@
     v = (v || "").trim().toUpperCase();
     return v.startsWith("S") ? "SÍ" : (v.startsWith("N") ? "NO" : "");
   }
-  function importarCSV(texto) {
-    const filas = parseCSV(texto);
-    if (filas.length < 2) { toast("El archivo no tiene datos para importar."); return; }
-    const idx = indiceColumnas(filas[0]);
-    if (idx.expLogistica == null && idx.item == null && idx.denominacion == null) {
-      toast("No reconocí las columnas. Usa el formato de Exportar."); return;
-    }
-    let n = 0;
-    for (let i = 1; i < filas.length; i++) {
-      const f = filas[i];
-      const get = (k) => (idx[k] != null ? (f[idx[k]] || "").trim() : "");
-      const item = get("item"), den = get("denominacion"), exp = get("expLogistica");
-      if (!exp && !item && !den) continue;
-      items.push({
-        id: uid(),
-        pestana: idTabPorNombre(get("pestana")),
-        nro: get("nro") || nextNro(),
-        fechaIngreso: normalizarFecha(get("fechaIngreso")),
-        expLogistica: exp, expDireccion: get("expDireccion"), docArea: get("docArea"),
-        areaEstrategica: get("areaEstrategica"), areaUsuaria: get("areaUsuaria"),
-        tipo: get("tipo") || defTipo(), denominacion: den, item,
-        especialista: get("especialista"), fechaPase: normalizarFecha(get("fechaPase")),
-        estado: get("estado") || defEstado(),
-        prioridad: get("prioridad") || defPrioridad(),
-        observaciones: get("observaciones"),
-        tengoExp: siNo(get("tengoExp")), aCargo: siNo(get("aCargo")),
-        creado: Date.now(),
-      });
-      n++;
-    }
-    guardar(); render(); toast(`Importados ${n} requerimientos.`);
-  }
-
   // ---------- Cargar datos de JUNIO ----------
   function cargarJunio() {
     if (!DATOS_JUNIO.length) { toast("No hay datos de junio embebidos."); return; }
