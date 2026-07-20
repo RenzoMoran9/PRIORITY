@@ -1733,6 +1733,19 @@
     if (e.key === "Escape" && nav.fila >= 0) { nav.fila = -1; nav.col = -1; aplicarNav(); }
   }
 
+  // ---------- Modo enfoque: la tabla ocupa casi toda la página al navegar ----------
+  function conectarModoFoco() {
+    const wrap = document.querySelector(".table-wrap");
+    if (!wrap) return;
+    let foco = false;
+    wrap.addEventListener("scroll", () => {
+      const y = wrap.scrollTop;
+      // Histéresis: compacta al bajar más de 60px, restaura al volver casi arriba
+      if (!foco && y > 60) { foco = true; document.body.classList.add("modo-foco"); }
+      else if (foco && y < 10) { foco = false; document.body.classList.remove("modo-foco"); }
+    });
+  }
+
   // ---------- Tema (claro / oscuro) ----------
   const TEMA_KEY = "priority_tema";
   function aplicarTema(tema) {
@@ -1990,5 +2003,6 @@
     cargar();
     render();
     cargarZoom();
+    conectarModoFoco();
   });
 })();

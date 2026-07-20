@@ -608,6 +608,21 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
 
 .hidden { display: none !important; }
 
+/* ---------- Modo enfoque: al navegar por la tabla, arriba se compacta ----------
+   Se activa solo al desplazarse dentro de la tabla y se desactiva al volver arriba,
+   para que el cuadro ocupe casi toda la página mientras trabajas en él. */
+.topbar, .toolbar, .tabs-bar, .footer { transition: padding .18s ease; }
+body.modo-foco .kpis { display: none; }
+body.modo-foco .topbar { padding: 5px 24px; }
+body.modo-foco .brand-logo { width: 30px; height: 30px; font-size: 15px; border-radius: 8px; }
+body.modo-foco .brand-text h1 { font-size: 14px; }
+body.modo-foco .brand-text span { display: none; }
+body.modo-foco .topbar-actions .btn { padding: 5px 9px; font-size: 12px; }
+body.modo-foco .tabs-bar { padding-top: 2px; }
+body.modo-foco .toolbar { padding-top: 4px; padding-bottom: 4px; }
+body.modo-foco .footer { padding-top: 4px; padding-bottom: 4px; font-size: 11.5px; }
+body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
+
 /* ---------- KPIs clickeables ---------- */
 .kpi-btn { cursor: pointer; transition: border-color .15s ease, transform .15s ease; }
 .kpi-btn:hover { border-color: var(--primary); transform: translateY(-1px); }
