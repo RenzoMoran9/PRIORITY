@@ -22,6 +22,10 @@
   --ok: #1f9d57;
   --shadow: 0 1px 3px rgba(18, 28, 53, .08), 0 8px 24px rgba(18, 28, 53, .06);
   --radius: 12px;
+  /* Fondos de fila: cebra sutil, «a mi cargo» y fila bajo el mouse (bien diferenciados) */
+  --row-zebra: #f7f9fc;
+  --row-cargo: #eef4ff;
+  --row-hover: #e7effd;
 }
 
 * { box-sizing: border-box; }
@@ -72,7 +76,9 @@ body {
 }
 .brand-text h1 { margin: 0; font-size: 17px; letter-spacing: .5px; }
 .brand-text span { color: var(--muted); font-size: 12px; }
-.topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+/* Separador fino entre grupos de botones (vista · listas · Excel · registrar) */
+.tb-sep { width: 1px; align-self: stretch; background: var(--border); margin: 3px 2px; }
 
 /* ---------- Buttons ---------- */
 .btn {
@@ -208,6 +214,15 @@ input:focus, .select:focus, textarea:focus {
 }
 .grid { width: 100%; border-collapse: collapse; min-width: 2100px; }
 
+/* Barras de desplazamiento más limpias (la horizontal se usa todo el tiempo) */
+.table-wrap::-webkit-scrollbar { width: 12px; height: 13px; }
+.table-wrap::-webkit-scrollbar-track { background: transparent; }
+.table-wrap::-webkit-scrollbar-thumb {
+  background: #c9d2e2; border-radius: 8px;
+  border: 3px solid var(--surface); background-clip: padding-box;
+}
+.table-wrap::-webkit-scrollbar-thumb:hover { background: var(--muted); background-clip: padding-box; }
+
 /* Edición en línea (tipo Excel) */
 .grid td.ed { cursor: cell; position: relative; transition: background .12s ease, box-shadow .12s ease; }
 .grid td.ed:hover { background: #f0f4fe; box-shadow: inset 0 0 0 1px rgba(59,86,214,.22); }
@@ -287,7 +302,19 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
 .grid thead th { border-right: 1px solid #eef1f6; }
 .grid thead th:last-child, .grid tbody td:last-child { border-right: none; }
 .grid tbody tr:last-child td { border-bottom: none; }
-.grid tbody tr:hover > td { background: #f6f9ff; }
+
+/* Columnas fijas (selección y N°): no se pierden al desplazar la tabla a lo ancho */
+.grid th.sel-col, .grid td.sel-col { position: sticky; left: 0; z-index: 2; background: var(--surface); }
+.grid th.col-nro, .grid td.col-nro {
+  position: sticky; left: 36px; z-index: 2; background: var(--surface);
+  box-shadow: 4px 0 6px -4px rgba(18, 28, 53, .22);
+}
+.grid thead th.sel-col, .grid thead th.col-nro { z-index: 4; }
+
+/* Cebra: filas alternadas para seguir la línea con la vista en una tabla tan ancha */
+.grid tbody tr:nth-child(even) > td { background: var(--row-zebra); }
+.grid tbody tr.row-cargo > td { background: var(--row-cargo); }
+.grid tbody tr:hover > td { background: var(--row-hover); }
 .grid td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cell-strong { font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--text); }
 .cell-item { min-width: 240px; max-width: 340px; }
@@ -297,6 +324,8 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
 .cell-doc { min-width: 160px; font-size: 12.5px; color: #4a5468; }
 .muted-cell { color: #aab2c2; }
 .row-vieja > td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
+/* Prioridad más alta: barra roja al inicio de la fila (gana sobre la naranja de antigüedad) */
+.row-alta > td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
 
 /* ---------- Badges ---------- */
 .badge {
@@ -334,8 +363,6 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
 .tengo-no { background: var(--danger-soft); color: var(--danger); }
 .cargo-si { background: var(--primary-soft); color: var(--primary); }
 .cargo-no { background: #eef1f6; color: #5a6678; }
-.row-cargo > td { background: #f5f8ff; }
-.row-cargo:hover > td { background: #eef3ff; }
 
 /* Anchos de celdas de la tabla editable */
 .cell-den { min-width: 240px; max-width: 360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -637,15 +664,20 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
   --warn-soft: #3a2f1c;
   --ok: #46c07f;
   --shadow: 0 1px 3px rgba(0,0,0,.45), 0 10px 28px rgba(0,0,0,.4);
+  --row-zebra: #1e2737;
+  --row-cargo: #202c48;
+  --row-hover: #283552;
 }
 /* Ajustes de colores fijos que no usan variables */
 :root[data-theme="dark"] .grid thead th { color: var(--muted); background: var(--surface-2); }
 :root[data-theme="dark"] .grid thead th,
 :root[data-theme="dark"] .grid tbody td { border-color: var(--border); }
 :root[data-theme="dark"] .grid tbody td { color: var(--text); }
-:root[data-theme="dark"] .grid tbody tr:hover > td,
 :root[data-theme="dark"] .grid td.ed:hover { background: #232f47; }
 :root[data-theme="dark"] .grid td.editing { background: var(--surface); }
+:root[data-theme="dark"] .grid td.col-nro,
+:root[data-theme="dark"] .grid th.col-nro { box-shadow: 4px 0 6px -4px rgba(0,0,0,.55); }
+:root[data-theme="dark"] .table-wrap::-webkit-scrollbar-thumb { background: #3a475f; background-clip: padding-box; }
 :root[data-theme="dark"] .grid thead th[data-sort]:hover { background: var(--surface); }
 :root[data-theme="dark"] .cell-area,
 :root[data-theme="dark"] .cell-doc { color: #aeb7ca; }
@@ -654,8 +686,6 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
 :root[data-theme="dark"] .pap-fecha { color: var(--muted); }
 :root[data-theme="dark"] .cp-label { background: var(--surface-2); color: var(--muted); }
 :root[data-theme="dark"] .cp-ghost .g { color: #6b7688; }
-:root[data-theme="dark"] .row-cargo > td { background: #1d2740; }
-:root[data-theme="dark"] .row-cargo:hover > td { background: #222e4a; }
 :root[data-theme="dark"] .tab:hover { background: var(--surface-2); }
 :root[data-theme="dark"] .btn.vinculado { background: rgba(70,192,127,.16); border-color: rgba(70,192,127,.45); }
 :root[data-theme="dark"] .toast { background: #2c3850; color: var(--text); }
@@ -703,11 +733,14 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
       </div>
       <button id="btn-tema" class="btn btn-ghost btn-icon" title="Cambiar entre tema claro y oscuro">🌙</button>
       <button id="btn-deshacer" class="btn btn-ghost btn-icon" title="Deshacer último cambio (Ctrl+Z)" disabled>↶</button>
+      <span class="tb-sep"></span>
       <button id="btn-glosario" class="btn btn-ghost" title="Glosario: qué significa cada término">📖 Glosario</button>
       <button id="btn-config" class="btn btn-ghost" title="Configurar estados, tipos y prioridades">⚙ Configurar</button>
+      <span class="tb-sep"></span>
       <button id="btn-vincular" class="btn btn-ghost" title="Vincular a un archivo CSV que se actualiza solo (Chrome/Edge)">🔗 Vincular Excel</button>
       <button id="btn-importar" class="btn btn-ghost" title="Importar desde CSV/Excel">⬆ Importar</button>
       <button id="btn-exportar" class="btn btn-ghost" title="Exportar a Excel con formato (mismas columnas, colores y orden que la app)">⬇ Exportar Excel</button>
+      <span class="tb-sep"></span>
       <button id="btn-express" class="btn btn-ghost" title="Registro exprés: solo los datos esenciales, el resto se completa después">⚡ Exprés</button>
       <button id="btn-nuevo" class="btn btn-primary">+ Nuevo requerimiento</button>
       <input type="file" id="file-import" accept=".csv,.xls,.xlsx,.html,text/csv,application/vnd.ms-excel" hidden />
@@ -717,11 +750,11 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
   <!-- Tablero de indicadores (clic en una tarjeta = filtrar la tabla) -->
   <section class="kpis" id="kpis">
     <div class="kpi kpi-btn" data-kpi="total" title="Clic: quitar todos los filtros">
-      <span class="kpi-label">Total requerimientos</span>
+      <span class="kpi-label">🗂 Total requerimientos</span>
       <span class="kpi-value" id="kpi-total">0</span>
     </div>
     <div class="kpi kpi-accent kpi-btn" data-kpi="cargo" title="Clic: ver solo los que tengo a mi cargo">
-      <span class="kpi-label">A mi cargo</span>
+      <span class="kpi-label">👤 A mi cargo</span>
       <span class="kpi-value" id="kpi-cargo">0</span>
     </div>
     <div class="kpi kpi-danger kpi-btn" data-kpi="alta" title="Clic: ver solo prioridad más alta">
@@ -729,11 +762,11 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
       <span class="kpi-value" id="kpi-alta">0</span>
     </div>
     <div class="kpi kpi-warn kpi-btn" data-kpi="sinexp" title="Clic: ver solo los que no tengo en físico">
-      <span class="kpi-label">Sin expediente físico</span>
+      <span class="kpi-label">📄 Sin expediente físico</span>
       <span class="kpi-value" id="kpi-sinexp">0</span>
     </div>
     <div class="kpi kpi-btn" data-kpi="pend" title="Clic: ver solo los pendientes">
-      <span class="kpi-label">Pendientes / por iniciar</span>
+      <span class="kpi-label">⏳ Pendientes / por iniciar</span>
       <span class="kpi-value" id="kpi-pend">0</span>
     </div>
   </section>
@@ -813,7 +846,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
       <thead>
         <tr>
           <th class="sel-col"><input type="checkbox" id="sel-all" title="Seleccionar todo lo visible" /></th>
-          <th data-sort="nro" class="num">N°</th>
+          <th data-sort="nro" class="num col-nro">N°</th>
           <th data-sort="pestana">Pestaña</th>
           <th data-sort="aCargo">A cargo</th>
           <th data-sort="prioridad">Prioridad</th>
@@ -1611,7 +1644,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
     $("#kpi-total").textContent = tabItems.length;
     $("#kpi-cargo").textContent = tabItems.filter((it) => (it.aCargo || "") === "SÍ").length;
     $("#kpi-alta").textContent = tabItems.filter((it) => it.prioridad === top).length;
-    $("#kpi-alta-label").textContent = "Prioridad " + (top || "—").toLowerCase();
+    $("#kpi-alta-label").textContent = "🔥 Prioridad " + (top || "—").toLowerCase();
     $("#kpi-sinexp").textContent = tabItems.filter((it) => (it.tengoExp || "") === "NO").length;
     $("#kpi-pend").textContent = tabItems.filter((it) => !it.estado || it.estado === defEstado()).length;
   }
@@ -1663,11 +1696,12 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
       ? `<span class="badge ${tengo === "SÍ" ? "tengo-si" : "tengo-no"}">${esc(tengo)}</span>` : GUION;
     const ed = (f, inner, cls) => `<td class="ed ${cls || ""}" data-id="${it.id}" data-field="${f}">${inner}</td>`;
     const txt = (f, cls) => ed(f, esc(it[f]) || GUION, cls);
+    const esAlta = !!it.prioridad && it.prioridad === prioridadTop();
 
     return `
-      <tr class="${vieja ? "row-vieja" : ""} ${cargo === "SÍ" ? "row-cargo" : ""}">
+      <tr class="${vieja ? "row-vieja" : ""} ${cargo === "SÍ" ? "row-cargo" : ""} ${esAlta ? "row-alta" : ""}">
         <td class="sel-col"><input type="checkbox" class="sel-check" data-sel="${it.id}"${seleccion.has(it.id) ? " checked" : ""} /></td>
-        ${ed("nro", esc(it.nro) || GUION, "num cell-strong")}
+        ${ed("nro", esc(it.nro) || GUION, "num cell-strong col-nro")}
         ${ed("pestana", `<span class="badge pest-badge">${esc(tabNombre(it.pestana))}</span>`)}
         ${ed("aCargo", cargoBadge)}
         ${ed("prioridad", badge(it.prioridad, COL.prioridad))}

@@ -461,7 +461,7 @@
     $("#kpi-total").textContent = tabItems.length;
     $("#kpi-cargo").textContent = tabItems.filter((it) => (it.aCargo || "") === "SÍ").length;
     $("#kpi-alta").textContent = tabItems.filter((it) => it.prioridad === top).length;
-    $("#kpi-alta-label").textContent = "Prioridad " + (top || "—").toLowerCase();
+    $("#kpi-alta-label").textContent = "🔥 Prioridad " + (top || "—").toLowerCase();
     $("#kpi-sinexp").textContent = tabItems.filter((it) => (it.tengoExp || "") === "NO").length;
     $("#kpi-pend").textContent = tabItems.filter((it) => !it.estado || it.estado === defEstado()).length;
   }
@@ -513,11 +513,12 @@
       ? `<span class="badge ${tengo === "SÍ" ? "tengo-si" : "tengo-no"}">${esc(tengo)}</span>` : GUION;
     const ed = (f, inner, cls) => `<td class="ed ${cls || ""}" data-id="${it.id}" data-field="${f}">${inner}</td>`;
     const txt = (f, cls) => ed(f, esc(it[f]) || GUION, cls);
+    const esAlta = !!it.prioridad && it.prioridad === prioridadTop();
 
     return `
-      <tr class="${vieja ? "row-vieja" : ""} ${cargo === "SÍ" ? "row-cargo" : ""}">
+      <tr class="${vieja ? "row-vieja" : ""} ${cargo === "SÍ" ? "row-cargo" : ""} ${esAlta ? "row-alta" : ""}">
         <td class="sel-col"><input type="checkbox" class="sel-check" data-sel="${it.id}"${seleccion.has(it.id) ? " checked" : ""} /></td>
-        ${ed("nro", esc(it.nro) || GUION, "num cell-strong")}
+        ${ed("nro", esc(it.nro) || GUION, "num cell-strong col-nro")}
         ${ed("pestana", `<span class="badge pest-badge">${esc(tabNombre(it.pestana))}</span>`)}
         ${ed("aCargo", cargoBadge)}
         ${ed("prioridad", badge(it.prioridad, COL.prioridad))}

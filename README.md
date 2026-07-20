@@ -144,6 +144,18 @@ indicadores de «Heredados» y «Mi trabajo» **no cuentan** lo que ya está en 
   oscuro**. Tu elección **queda recordada** en el navegador. La primera vez respeta
   el tema que use tu sistema operativo.
 
+## Diseño pensado para leer la tabla
+
+- **Filas cebra**: las filas alternan un fondo muy suave para seguir la línea con
+  la vista a lo ancho de las 19 columnas.
+- **Columnas fijas**: la casilla de selección y el **N°** se quedan a la vista al
+  desplazarte a la derecha — nunca pierdes de qué expediente estás leyendo.
+- **Barra roja al inicio de la fila** = prioridad más alta; **barra naranja** =
+  lleva más de 30 días abierto. Se ven incluso con la tabla desplazada.
+- Las filas **a mi cargo** van con fondo azulado, distinto del resaltado del mouse.
+- La barra superior agrupa los botones por función (vista · listas · Excel ·
+  registrar) con separadores finos, y las tarjetas del tablero llevan icono.
+
 ## Pantallas pequeñas: zoom y barra fija
 
 - **Zoom**: arriba a la derecha hay botones **−** y **+** para alejar o acercar la tabla

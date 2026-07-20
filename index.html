@@ -23,11 +23,14 @@
       </div>
       <button id="btn-tema" class="btn btn-ghost btn-icon" title="Cambiar entre tema claro y oscuro">🌙</button>
       <button id="btn-deshacer" class="btn btn-ghost btn-icon" title="Deshacer último cambio (Ctrl+Z)" disabled>↶</button>
+      <span class="tb-sep"></span>
       <button id="btn-glosario" class="btn btn-ghost" title="Glosario: qué significa cada término">📖 Glosario</button>
       <button id="btn-config" class="btn btn-ghost" title="Configurar estados, tipos y prioridades">⚙ Configurar</button>
+      <span class="tb-sep"></span>
       <button id="btn-vincular" class="btn btn-ghost" title="Vincular a un archivo CSV que se actualiza solo (Chrome/Edge)">🔗 Vincular Excel</button>
       <button id="btn-importar" class="btn btn-ghost" title="Importar desde CSV/Excel">⬆ Importar</button>
       <button id="btn-exportar" class="btn btn-ghost" title="Exportar a Excel con formato (mismas columnas, colores y orden que la app)">⬇ Exportar Excel</button>
+      <span class="tb-sep"></span>
       <button id="btn-express" class="btn btn-ghost" title="Registro exprés: solo los datos esenciales, el resto se completa después">⚡ Exprés</button>
       <button id="btn-nuevo" class="btn btn-primary">+ Nuevo requerimiento</button>
       <input type="file" id="file-import" accept=".csv,.xls,.xlsx,.html,text/csv,application/vnd.ms-excel" hidden />
@@ -37,11 +40,11 @@
   <!-- Tablero de indicadores (clic en una tarjeta = filtrar la tabla) -->
   <section class="kpis" id="kpis">
     <div class="kpi kpi-btn" data-kpi="total" title="Clic: quitar todos los filtros">
-      <span class="kpi-label">Total requerimientos</span>
+      <span class="kpi-label">🗂 Total requerimientos</span>
       <span class="kpi-value" id="kpi-total">0</span>
     </div>
     <div class="kpi kpi-accent kpi-btn" data-kpi="cargo" title="Clic: ver solo los que tengo a mi cargo">
-      <span class="kpi-label">A mi cargo</span>
+      <span class="kpi-label">👤 A mi cargo</span>
       <span class="kpi-value" id="kpi-cargo">0</span>
     </div>
     <div class="kpi kpi-danger kpi-btn" data-kpi="alta" title="Clic: ver solo prioridad más alta">
@@ -49,11 +52,11 @@
       <span class="kpi-value" id="kpi-alta">0</span>
     </div>
     <div class="kpi kpi-warn kpi-btn" data-kpi="sinexp" title="Clic: ver solo los que no tengo en físico">
-      <span class="kpi-label">Sin expediente físico</span>
+      <span class="kpi-label">📄 Sin expediente físico</span>
       <span class="kpi-value" id="kpi-sinexp">0</span>
     </div>
     <div class="kpi kpi-btn" data-kpi="pend" title="Clic: ver solo los pendientes">
-      <span class="kpi-label">Pendientes / por iniciar</span>
+      <span class="kpi-label">⏳ Pendientes / por iniciar</span>
       <span class="kpi-value" id="kpi-pend">0</span>
     </div>
   </section>
@@ -133,7 +136,7 @@
       <thead>
         <tr>
           <th class="sel-col"><input type="checkbox" id="sel-all" title="Seleccionar todo lo visible" /></th>
-          <th data-sort="nro" class="num">N°</th>
+          <th data-sort="nro" class="num col-nro">N°</th>
           <th data-sort="pestana">Pestaña</th>
           <th data-sort="aCargo">A cargo</th>
           <th data-sort="prioridad">Prioridad</th>
