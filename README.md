@@ -92,6 +92,28 @@ indicadores de «Heredados» y «Mi trabajo» **no cuentan** lo que ya está en 
 > Para agregar un requerimiento nuevo usa **+ Nuevo requerimiento**; para modificar uno existente,
 > edita directamente sus celdas en la tabla.
 
+## Rapidez al llenar y consultar
+
+- **⚡ Registro exprés** (botón arriba): una sola línea con lo esencial — Exp.
+  Logística, documento, área, denominación y tipo. La fecha (hoy), el N°, la
+  pestaña activa y «a mi cargo = SÍ» se ponen solos, y el área estratégica se
+  copia del área usuaria. **Enter guarda y deja el cursor listo** para el
+  siguiente. El resto se completa después directo en la tabla.
+- **Tarjetas del tablero clickeables**: tocar «Sin expediente físico», «A mi
+  cargo», «Prioridad alta» o «Pendientes» **filtra la tabla al instante**
+  (segundo toque = quitar el filtro; «Total» limpia todo).
+- **Navegación con teclado**: muévete por las celdas con las **flechas** y abre
+  el editor con **Enter** (o F2), como en Excel. Esc quita el resaltado.
+- **Frases rápidas en Observaciones**: al editar una observación aparecen
+  botones con tus frases más usadas (aprendidas de tus propios datos, ej.
+  «CUADRO COMPARATIVO», «ENTREGADO A GRISEL») y un botón **📅 fecha de hoy**;
+  un toque y se insertan.
+- **Historial de estados automático (🕘 en cada fila)**: cada cambio de estado
+  se anota solo con fecha y hora. Toca 🕘 para ver el recorrido completo del
+  expediente («PENDIENTE → INVITACION → …»).
+- **⏸ Días sin movimiento**: si un requerimiento abierto lleva **7 días o más
+  sin ninguna edición**, la celda de Estado lo avisa para que no se te duerma.
+
 ## Trabajo en lote, deshacer y papelera
 
 - **Selección múltiple**: marca las casillas de la primera columna (o la casilla del

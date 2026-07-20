@@ -43,7 +43,7 @@ body {
 
 /* La cabecera, indicadores, pestañas, filtros y pie quedan anclados;
    solo la tabla se desplaza por dentro. */
-.topbar, .kpis, .tabs-bar, .toolbar, .batch-bar, .footer { flex: 0 0 auto; }
+.topbar, .kpis, .tabs-bar, .toolbar, .batch-bar, .express-bar, .footer { flex: 0 0 auto; }
 
 /* ---------- Topbar ---------- */
 .topbar {
@@ -588,6 +588,36 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
 
 .hidden { display: none !important; }
 
+/* ---------- KPIs clickeables ---------- */
+.kpi-btn { cursor: pointer; transition: border-color .15s ease, transform .15s ease; }
+.kpi-btn:hover { border-color: var(--primary); transform: translateY(-1px); }
+.kpi-btn.kpi-activo { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+
+/* ---------- Registro exprés ---------- */
+.express-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 24px;
+  background: var(--primary-soft);
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+}
+.express-tit { font-weight: 800; color: var(--primary); font-size: 13px; white-space: nowrap; }
+.ex-input { flex: 0 1 150px; min-width: 110px; cursor: text; }
+.ex-ancho { flex: 1 1 210px; }
+.ex-max { flex: 2 1 260px; }
+.express-ayuda { flex-basis: 100%; font-size: 11px; color: var(--muted); }
+
+/* ---------- Navegación con teclado (celda activa) ---------- */
+.grid td.celda-activa { box-shadow: inset 0 0 0 2px var(--primary); border-radius: 2px; }
+
+/* ---------- Bitácora de estados ---------- */
+.hist-lista { max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; min-width: 300px; }
+.hist-item { display: flex; gap: 8px; align-items: baseline; font-size: 12.5px; }
+.hist-fecha { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.hist-vacio { color: var(--muted); font-size: 12.5px; padding: 6px 2px; }
+
+/* ---------- Días sin movimiento ---------- */
+.sinmov-tag { display: block; font-size: 10.5px; color: var(--warn); margin-top: 3px; white-space: nowrap; }
+
 /* ---------- Tema oscuro ---------- */
 :root { color-scheme: light; }
 :root[data-theme="dark"] {
@@ -678,30 +708,31 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
       <button id="btn-vincular" class="btn btn-ghost" title="Vincular a un archivo CSV que se actualiza solo (Chrome/Edge)">🔗 Vincular Excel</button>
       <button id="btn-importar" class="btn btn-ghost" title="Importar desde CSV/Excel">⬆ Importar</button>
       <button id="btn-exportar" class="btn btn-ghost" title="Exportar a Excel con formato (mismas columnas, colores y orden que la app)">⬇ Exportar Excel</button>
+      <button id="btn-express" class="btn btn-ghost" title="Registro exprés: solo los datos esenciales, el resto se completa después">⚡ Exprés</button>
       <button id="btn-nuevo" class="btn btn-primary">+ Nuevo requerimiento</button>
       <input type="file" id="file-import" accept=".csv,.xls,.xlsx,.html,text/csv,application/vnd.ms-excel" hidden />
     </div>
   </header>
 
-  <!-- Tablero de indicadores -->
+  <!-- Tablero de indicadores (clic en una tarjeta = filtrar la tabla) -->
   <section class="kpis" id="kpis">
-    <div class="kpi">
+    <div class="kpi kpi-btn" data-kpi="total" title="Clic: quitar todos los filtros">
       <span class="kpi-label">Total requerimientos</span>
       <span class="kpi-value" id="kpi-total">0</span>
     </div>
-    <div class="kpi kpi-accent">
+    <div class="kpi kpi-accent kpi-btn" data-kpi="cargo" title="Clic: ver solo los que tengo a mi cargo">
       <span class="kpi-label">A mi cargo</span>
       <span class="kpi-value" id="kpi-cargo">0</span>
     </div>
-    <div class="kpi kpi-danger">
+    <div class="kpi kpi-danger kpi-btn" data-kpi="alta" title="Clic: ver solo prioridad más alta">
       <span class="kpi-label" id="kpi-alta-label">Prioridad alta</span>
       <span class="kpi-value" id="kpi-alta">0</span>
     </div>
-    <div class="kpi kpi-warn">
+    <div class="kpi kpi-warn kpi-btn" data-kpi="sinexp" title="Clic: ver solo los que no tengo en físico">
       <span class="kpi-label">Sin expediente físico</span>
       <span class="kpi-value" id="kpi-sinexp">0</span>
     </div>
-    <div class="kpi">
+    <div class="kpi kpi-btn" data-kpi="pend" title="Clic: ver solo los pendientes">
       <span class="kpi-label">Pendientes / por iniciar</span>
       <span class="kpi-value" id="kpi-pend">0</span>
     </div>
@@ -718,6 +749,21 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
         ⇄ Traer a mi trabajo (los que tengo a mi cargo)
       </button>
     </div>
+  </section>
+
+  <!-- Registro exprés: lo esencial en una línea, Enter guarda y sigue -->
+  <section class="express-bar hidden" id="express-bar">
+    <span class="express-tit">⚡ Registro exprés</span>
+    <input type="text" id="ex-exp" class="select ex-input" placeholder="N° Exp. Logística *" />
+    <input type="text" id="ex-doc" class="select ex-input ex-ancho" placeholder="N° doc. del área (NOTA INFORMATIVA…)" list="dl-ex-doc" />
+    <input type="text" id="ex-area" class="select ex-input ex-ancho" placeholder="Área usuaria" list="dl-ex-area" />
+    <input type="text" id="ex-den" class="select ex-input ex-max" placeholder="Denominación del requerimiento" />
+    <select id="ex-tipo" class="select ex-input"></select>
+    <button id="ex-guardar" class="btn btn-primary btn-sm" title="Guardar y seguir con el siguiente (Enter)">Guardar ↵</button>
+    <button id="ex-cerrar" class="btn btn-ghost btn-sm" title="Cerrar (Esc)">✕</button>
+    <span class="express-ayuda">Fecha de hoy, N° y pestaña se ponen solos · Enter guarda y sigue</span>
+    <datalist id="dl-ex-doc"></datalist>
+    <datalist id="dl-ex-area"></datalist>
   </section>
 
   <!-- Filtros -->
@@ -1180,6 +1226,18 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
     }
     return mejor;
   }
+  // Frases frecuentes de Observaciones: segmentos entre "/" que se repiten en tus datos
+  function frasesFrecuentes() {
+    const freq = {};
+    items.forEach((it) => {
+      String(it.observaciones || "").split("/").forEach((s) => {
+        s = s.trim();
+        if (s.length >= 3 && s.length <= 40 && !/^\d/.test(s)) freq[s] = (freq[s] || 0) + 1;
+      });
+    });
+    return Object.keys(freq).filter((f) => freq[f] >= 2)
+      .sort((a, b) => freq[b] - freq[a]).slice(0, 8);
+  }
   function buscarDuplicado(val, exceptoId) {
     val = String(val == null ? "" : val).trim();
     if (!val) return null;
@@ -1385,6 +1443,44 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
     if (destino && it.pestana !== destino) { it.pestana = destino; return true; }
     return false;
   }
+  // Bitácora: anota cada cambio de estado dentro del propio requerimiento.
+  function logEstado(it, de, a) {
+    de = de == null ? "" : String(de); a = a == null ? "" : String(a);
+    if (de === a) return;
+    if (!Array.isArray(it.historial)) it.historial = [];
+    it.historial.push({ f: Date.now(), de, a });
+    if (it.historial.length > 30) it.historial.shift();
+  }
+  function abrirHistorial(id, btn) {
+    const it = items.find((x) => x.id === id);
+    if (!it) return;
+    const rect = btn.getBoundingClientRect();
+    const back = document.createElement("div"); back.className = "popover-backdrop";
+    const pop = document.createElement("div"); pop.className = "cell-popover";
+    const lab = document.createElement("div"); lab.className = "cp-label";
+    lab.textContent = `Historial de estados · N° ${it.nro || "—"} · Exp. ${it.expLogistica || "—"}`;
+    const lista = document.createElement("div"); lista.className = "hist-lista";
+    const h = Array.isArray(it.historial) ? it.historial.slice().reverse() : [];
+    lista.innerHTML = h.length
+      ? h.map((x) => {
+          const f = new Date(x.f).toLocaleString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+          return `<div class="hist-item"><span class="hist-fecha">${f}</span><span>${x.de ? esc(x.de) + " → " : ""}<strong>${esc(x.a) || "—"}</strong></span></div>`;
+        }).join("")
+      : '<div class="hist-vacio">Aún no hay cambios de estado anotados para este requerimiento. Desde ahora se registran solos cada vez que cambies su estado.</div>';
+    pop.appendChild(lab); pop.appendChild(lista);
+    document.body.appendChild(back); document.body.appendChild(pop);
+    const w = Math.min(420, window.innerWidth - 16);
+    pop.style.width = w + "px";
+    pop.style.left = Math.max(8, Math.min(rect.left - w + 30, window.innerWidth - w - 8)) + "px";
+    let top = rect.bottom + 4;
+    if (top + pop.offsetHeight + 12 > window.innerHeight) top = Math.max(8, window.innerHeight - pop.offsetHeight - 12);
+    pop.style.top = top + "px";
+    const cerrar = () => { back.remove(); pop.remove(); document.removeEventListener("keydown", escHandler, true); };
+    const escHandler = (e) => { if (e.key === "Escape") { e.stopPropagation(); cerrar(); } };
+    back.addEventListener("mousedown", cerrar);
+    document.addEventListener("keydown", escHandler, true);
+  }
+
   function archivarTerminados() {
     const destino = destinoTerminados();
     if (!destino) return;
@@ -1497,7 +1593,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
   }
 
   // ---------- Render ----------
-  function render() { renderTabs(); renderKpis(); renderTabla(); renderCabeceraOrden(); sincronizarSeleccion(); }
+  function render() { renderTabs(); renderKpis(); renderTabla(); renderCabeceraOrden(); sincronizarSeleccion(); aplicarNav(); }
 
   function renderTabs() {
     const cont = $("#tabs");
@@ -1546,6 +1642,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
     $("#footer-count").textContent = mostrados === tabTotal
       ? `${tabTotal} en «${tabNombre(pestanaActiva)}»`
       : `${mostrados} de ${tabTotal} en «${tabNombre(pestanaActiva)}»`;
+    marcarKpis();
   }
 
   function filaHTML(it) {
@@ -1553,6 +1650,11 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
     const cerrado = it.estado === "PARA SALDO" || it.estado === "ENTREGADO A GRISEL" || esTerminado(it.estado);
     const vieja = dias !== null && dias > 30 && !cerrado;
     const antig = dias !== null ? `<span class="antig-tag ${vieja ? "alerta" : ""}">${dias} d</span>` : "";
+    // Días sin movimiento: desde la última edición (o su registro si nunca se editó)
+    const ts = it.actualizado || it.creado;
+    const sinMov = ts ? Math.floor((Date.now() - ts) / 86400000) : null;
+    const movTag = (!cerrado && sinMov !== null && sinMov >= 7)
+      ? `<span class="sinmov-tag" title="Días desde la última vez que editaste este requerimiento">⏸ ${sinMov} d sin movimiento</span>` : "";
     const cargo = it.aCargo || "";
     const cargoBadge = cargo
       ? `<span class="badge ${cargo === "SÍ" ? "cargo-si" : "cargo-no"}">${esc(cargo)}</span>` : GUION;
@@ -1569,7 +1671,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
         ${ed("pestana", `<span class="badge pest-badge">${esc(tabNombre(it.pestana))}</span>`)}
         ${ed("aCargo", cargoBadge)}
         ${ed("prioridad", badge(it.prioridad, COL.prioridad))}
-        ${ed("estado", badge(it.estado, COL.estado))}
+        ${ed("estado", badge(it.estado, COL.estado) + movTag)}
         ${ed("fechaIngreso", fmtFecha(it.fechaIngreso) + antig)}
         ${txt("expLogistica", "cell-strong")}
         ${txt("expDireccion")}
@@ -1584,6 +1686,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
         ${ed("tengoExp", tengoBadge)}
         ${txt("observaciones", "cell-obs")}
         <td><div class="row-actions">
+          <button class="icon-btn" data-hist="${it.id}" title="Historial de estados (se anota solo)">🕘</button>
           <button class="icon-btn danger" data-del="${it.id}" title="Eliminar">🗑</button>
         </div></td>
       </tr>`;
@@ -1642,6 +1745,36 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
 
     const vocab = conPrediccion ? construirVocabulario() : null;
     let predRemainder = "";
+
+    // Frases rápidas en Observaciones: un toque y se insertan (aprendidas de tus datos)
+    if (field === "observaciones") {
+      const insertarFrase = (f) => {
+        const pos = ta.selectionStart == null ? ta.value.length : ta.selectionStart;
+        const antes = ta.value.slice(0, pos), despues = ta.value.slice(pos);
+        let sep = "";
+        if (antes.trim() && !/[\/\s:]$/.test(antes)) sep = "/ ";
+        ta.value = antes + sep + f + despues;
+        const np = (antes + sep + f).length;
+        ta.setSelectionRange(np, np);
+        ta.focus();
+        ajustar(); setGhost();
+      };
+      const chips = document.createElement("div");
+      chips.className = "cp-sugerencias";
+      const frases = frasesFrecuentes();
+      chips.innerHTML = '<span class="cp-sug-tit">Frases:</span>' +
+        '<button type="button" class="cp-sug" data-frase="__fecha">📅 fecha de hoy</button>' +
+        frases.map((f) => `<button type="button" class="cp-sug" data-frase="${esc(f)}">${esc(f)}</button>`).join("");
+      chips.addEventListener("mousedown", (e) => e.preventDefault()); // no perder el cursor del textarea
+      chips.addEventListener("click", (e) => {
+        const b = e.target.closest(".cp-sug");
+        if (!b) return;
+        let f = b.getAttribute("data-frase");
+        if (f === "__fecha") { const p = hoyISO().split("-"); f = `${p[2]}/${p[1]}/${p[0]}: `; }
+        insertarFrase(f);
+      });
+      pop.appendChild(chips);
+    }
 
     document.body.appendChild(back);
     document.body.appendChild(pop);
@@ -1785,6 +1918,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
       if ((editor.tagName === "INPUT" && editor.type === "text") || editor.tagName === "TEXTAREA") val = val.trim();
       if ((it[field] == null ? "" : String(it[field])) !== val) {
         snapshot();
+        if (field === "estado") logEstado(it, it.estado, val);
         it[field] = val;
         it.actualizado = Date.now();
         const movido = field === "estado" && autoArchivarTerminado(it);
@@ -1884,10 +2018,16 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
     const id = $("#f-id").value;
     if (id) {
       const idx = items.findIndex((x) => x.id === id);
-      if (idx >= 0) items[idx] = Object.assign({}, items[idx], datos, { actualizado: Date.now() });
+      if (idx >= 0) {
+        const estadoAntes = items[idx].estado;
+        items[idx] = Object.assign({}, items[idx], datos, { actualizado: Date.now() });
+        logEstado(items[idx], estadoAntes, items[idx].estado);
+      }
       toast("Requerimiento actualizado.");
     } else {
-      items.push(Object.assign({ id: uid(), creado: Date.now() }, datos));
+      const nuevo = Object.assign({ id: uid(), creado: Date.now() }, datos);
+      logEstado(nuevo, "", nuevo.estado);
+      items.push(nuevo);
       toast("Requerimiento agregado.");
     }
     guardar(); cerrarModal(); render();
@@ -2005,6 +2145,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
     let n = 0, movidos = 0;
     items.forEach((it) => {
       if (seleccion.has(it.id)) {
+        if (campo === "estado") logEstado(it, it.estado, valor);
         it[campo] = valor; it.actualizado = Date.now(); n++;
         if (campo === "estado" && autoArchivarTerminado(it)) movidos++;
       }
@@ -2363,6 +2504,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
       if (!exp && !item && !den) continue;
       const existente = exp ? porExp[exp] : null;
       if (existente) {
+        const estadoAntes = existente.estado;
         const pon = (campo, val) => { if (val !== "") existente[campo] = val; };
         pon("nro", get("nro"));
         pon("fechaIngreso", normalizarFecha(get("fechaIngreso")));
@@ -2376,6 +2518,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
         const tabId = idTabPorNombreEstricto(get("pestana"));
         if (tabId) existente.pestana = tabId;
         existente.actualizado = Date.now();
+        logEstado(existente, estadoAntes, existente.estado);
         autoArchivarTerminado(existente);
         res.actualizados++;
       } else {
@@ -2394,6 +2537,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
           tengoExp: siNo(get("tengoExp")), aCargo: siNo(get("aCargo")),
           creado: Date.now(),
         };
+        logEstado(nuevo, "", nuevo.estado);
         autoArchivarTerminado(nuevo);
         items.push(nuevo);
         if (exp) porExp[exp] = nuevo;
@@ -2578,7 +2722,9 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
     let n = 0;
     DATOS_JUNIO.forEach((d) => {
       if (existentes.has(String(d.expLogistica))) return;
-      items.push(Object.assign({ id: uid(), creado: Date.now(), aCargo: "", pestana: tabs[0].id }, d));
+      const obj = Object.assign({ id: uid(), creado: Date.now(), aCargo: "", pestana: tabs[0].id }, d);
+      logEstado(obj, "", obj.estado);
+      items.push(obj);
       n++;
     });
     if (!n) descartarSnapshot();
@@ -2615,6 +2761,126 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
     try { localStorage.setItem(ZOOM_KEY, String(zoom)); } catch (e) {}
   }
   function cambiarZoom(delta) { zoom += delta; aplicarZoom(); }
+
+  // ---------- KPIs clickeables (tocar una tarjeta filtra la tabla) ----------
+  function clickKpi(tipo) {
+    if (tipo === "total") { resetFiltros(); renderTabla(); marcarKpis(); return; }
+    const mapa = {
+      cargo: ["cargo", "SÍ", "#filtro-cargo"],
+      alta: ["prioridad", prioridadTop(), "#filtro-prioridad"],
+      sinexp: ["tengo", "NO", "#filtro-tengo"],
+      pend: ["estado", defEstado(), "#filtro-estado"],
+    };
+    const par = mapa[tipo];
+    if (!par || !par[1]) return;
+    const [campo, valor, sel] = par;
+    const ya = filtro[campo] === valor;   // segundo clic en la misma tarjeta = quitar el filtro
+    resetFiltros();
+    if (!ya) { filtro[campo] = valor; $(sel).value = valor; }
+    renderTabla(); marcarKpis();
+  }
+  function marcarKpis() {
+    const activos = {
+      cargo: filtro.cargo === "SÍ",
+      alta: !!prioridadTop() && filtro.prioridad === prioridadTop(),
+      sinexp: filtro.tengo === "NO",
+      pend: !!filtro.estado && filtro.estado === defEstado(),
+    };
+    $$(".kpi-btn").forEach((k) => {
+      const t = k.getAttribute("data-kpi");
+      k.classList.toggle("kpi-activo", !!activos[t]);
+    });
+  }
+
+  // ---------- Registro exprés ----------
+  function toggleExpress(abrir) {
+    const bar = $("#express-bar");
+    const mostrar = abrir != null ? abrir : bar.classList.contains("hidden");
+    bar.classList.toggle("hidden", !mostrar);
+    if (mostrar) {
+      $("#ex-tipo").innerHTML = config.tipos.map((o) => `<option value="${esc(o.nombre)}">${esc(o.nombre)}</option>`).join("");
+      poblarDatalist("dl-ex-doc", "docArea");
+      poblarDatalist("dl-ex-area", "areaUsuaria");
+      $("#ex-exp").focus();
+    }
+  }
+  function guardarExpress() {
+    const exp = $("#ex-exp").value.trim();
+    if (!exp) { toast("Escribe el N° Exp. Logística (es lo único obligatorio)."); $("#ex-exp").focus(); return; }
+    const dup = buscarDuplicado(exp, null);
+    if (dup && !confirm(`Ya existe el Exp. ${exp} (N° ${dup.nro || "—"} en «${tabNombre(dup.pestana)}»).\n¿Registrar de todos modos?`)) return;
+    snapshot();
+    const area = $("#ex-area").value.trim();
+    const nuevo = {
+      id: uid(), creado: Date.now(),
+      pestana: pestanaActiva,
+      nro: nextNro(),
+      fechaIngreso: hoyISO(),
+      expLogistica: exp, expDireccion: "",
+      docArea: $("#ex-doc").value.trim(),
+      // El área estratégica casi siempre coincide con el área usuaria; se copia y se corrige luego si difiere
+      areaEstrategica: area, areaUsuaria: area,
+      tipo: $("#ex-tipo").value || defTipo(),
+      item: "", denominacion: $("#ex-den").value.trim(),
+      prioridad: defPrioridad(), estado: defEstado(),
+      especialista: "", fechaPase: "", tengoExp: "", aCargo: "SÍ",
+      observaciones: "",
+    };
+    logEstado(nuevo, "", nuevo.estado);
+    items.push(nuevo);
+    guardar(); render();
+    ["#ex-exp", "#ex-doc", "#ex-area", "#ex-den"].forEach((s) => { $(s).value = ""; });
+    poblarDatalist("dl-ex-doc", "docArea");
+    poblarDatalist("dl-ex-area", "areaUsuaria");
+    $("#ex-exp").focus();
+    toast(`N° ${nuevo.nro} · Exp. ${exp} registrado en «${tabNombre(pestanaActiva)}». Sigue con el siguiente.`);
+  }
+
+  // ---------- Navegación con teclado en la tabla (tipo Excel) ----------
+  const nav = { fila: -1, col: -1 };
+  function filasNavegables() { return $$("#tbody tr").filter((tr) => tr.querySelector("td.ed")); }
+  function aplicarNav() {
+    $$("#tbody td.celda-activa").forEach((td) => td.classList.remove("celda-activa"));
+    if (nav.fila < 0 || nav.col < 0) return;
+    const filas = filasNavegables();
+    if (!filas.length) { nav.fila = -1; return; }
+    nav.fila = Math.min(nav.fila, filas.length - 1);
+    const celdas = filas[nav.fila].querySelectorAll("td.ed");
+    nav.col = Math.min(nav.col, celdas.length - 1);
+    const td = celdas[nav.col];
+    if (td) {
+      td.classList.add("celda-activa");
+      if (td.scrollIntoView) td.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+  }
+  function moverNav(df, dc) {
+    const filas = filasNavegables();
+    if (!filas.length) return;
+    if (nav.fila < 0) { nav.fila = 0; nav.col = 0; }
+    else {
+      nav.fila = Math.max(0, Math.min(filas.length - 1, nav.fila + df));
+      const nCols = filas[nav.fila].querySelectorAll("td.ed").length;
+      nav.col = Math.max(0, Math.min(nCols - 1, nav.col + dc));
+    }
+    aplicarNav();
+  }
+  function tecladoTabla(e) {
+    const el = document.activeElement;
+    if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) return;
+    if (document.querySelector(".cell-popover")) return;  // hay un editor abierto
+    const modalAbierto = ["modal", "modal-glosario", "modal-config", "modal-papelera"]
+      .some((id) => { const m = document.getElementById(id); return m && !m.classList.contains("hidden"); });
+    if (modalAbierto) return;
+    const dir = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
+    if (dir) { e.preventDefault(); moverNav(dir[0], dir[1]); return; }
+    if ((e.key === "Enter" || e.key === "F2") && nav.fila >= 0) {
+      const filas = filasNavegables();
+      const td = filas[nav.fila] && filas[nav.fila].querySelectorAll("td.ed")[nav.col];
+      if (td) { e.preventDefault(); startEdit(td); }
+      return;
+    }
+    if (e.key === "Escape" && nav.fila >= 0) { nav.fila = -1; nav.col = -1; aplicarNav(); }
+  }
 
   // ---------- Tema (claro / oscuro) ----------
   const TEMA_KEY = "priority_tema";
@@ -2696,6 +2962,24 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
   function conectarEventos() {
     $("#btn-nuevo").addEventListener("click", () => abrirModal(null));
     $("#btn-nuevo-2").addEventListener("click", () => abrirModal(null));
+
+    // Registro exprés
+    $("#btn-express").addEventListener("click", () => toggleExpress());
+    $("#ex-guardar").addEventListener("click", guardarExpress);
+    $("#ex-cerrar").addEventListener("click", () => toggleExpress(false));
+    $("#express-bar").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); guardarExpress(); }
+      else if (e.key === "Escape") { e.preventDefault(); toggleExpress(false); }
+    });
+
+    // KPIs clickeables
+    $("#kpis").addEventListener("click", (e) => {
+      const k = e.target.closest(".kpi-btn");
+      if (k) clickKpi(k.getAttribute("data-kpi"));
+    });
+
+    // Navegación con teclado en la tabla
+    document.addEventListener("keydown", tecladoTabla);
     $("#btn-junio").addEventListener("click", cargarJunio);
     $("#btn-junio-2").addEventListener("click", cargarJunio);
     $("#btn-jalar").addEventListener("click", jalarACargo);
@@ -2729,10 +3013,19 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
         if (c) { c.checked = !c.checked; toggleSel(c.getAttribute("data-sel"), c.checked); }
         return;
       }
+      const his = e.target.closest("[data-hist]");
+      if (his) { abrirHistorial(his.getAttribute("data-hist"), his); return; }
       const del = e.target.closest("[data-del]");
       if (del) { eliminar(del.getAttribute("data-del")); return; }
       const td = e.target.closest("td.ed");
-      if (td) startEdit(td);
+      if (td) {
+        // El clic también fija la celda activa para seguir con el teclado
+        const tr = td.parentElement;
+        nav.fila = filasNavegables().indexOf(tr);
+        nav.col = Array.prototype.indexOf.call(tr.querySelectorAll("td.ed"), td);
+        aplicarNav();
+        startEdit(td);
+      }
     });
 
     // Glosario

@@ -76,6 +76,18 @@
     }
     return mejor;
   }
+  // Frases frecuentes de Observaciones: segmentos entre "/" que se repiten en tus datos
+  function frasesFrecuentes() {
+    const freq = {};
+    items.forEach((it) => {
+      String(it.observaciones || "").split("/").forEach((s) => {
+        s = s.trim();
+        if (s.length >= 3 && s.length <= 40 && !/^\d/.test(s)) freq[s] = (freq[s] || 0) + 1;
+      });
+    });
+    return Object.keys(freq).filter((f) => freq[f] >= 2)
+      .sort((a, b) => freq[b] - freq[a]).slice(0, 8);
+  }
   function buscarDuplicado(val, exceptoId) {
     val = String(val == null ? "" : val).trim();
     if (!val) return null;
@@ -281,6 +293,44 @@
     if (destino && it.pestana !== destino) { it.pestana = destino; return true; }
     return false;
   }
+  // Bitácora: anota cada cambio de estado dentro del propio requerimiento.
+  function logEstado(it, de, a) {
+    de = de == null ? "" : String(de); a = a == null ? "" : String(a);
+    if (de === a) return;
+    if (!Array.isArray(it.historial)) it.historial = [];
+    it.historial.push({ f: Date.now(), de, a });
+    if (it.historial.length > 30) it.historial.shift();
+  }
+  function abrirHistorial(id, btn) {
+    const it = items.find((x) => x.id === id);
+    if (!it) return;
+    const rect = btn.getBoundingClientRect();
+    const back = document.createElement("div"); back.className = "popover-backdrop";
+    const pop = document.createElement("div"); pop.className = "cell-popover";
+    const lab = document.createElement("div"); lab.className = "cp-label";
+    lab.textContent = `Historial de estados · N° ${it.nro || "—"} · Exp. ${it.expLogistica || "—"}`;
+    const lista = document.createElement("div"); lista.className = "hist-lista";
+    const h = Array.isArray(it.historial) ? it.historial.slice().reverse() : [];
+    lista.innerHTML = h.length
+      ? h.map((x) => {
+          const f = new Date(x.f).toLocaleString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+          return `<div class="hist-item"><span class="hist-fecha">${f}</span><span>${x.de ? esc(x.de) + " → " : ""}<strong>${esc(x.a) || "—"}</strong></span></div>`;
+        }).join("")
+      : '<div class="hist-vacio">Aún no hay cambios de estado anotados para este requerimiento. Desde ahora se registran solos cada vez que cambies su estado.</div>';
+    pop.appendChild(lab); pop.appendChild(lista);
+    document.body.appendChild(back); document.body.appendChild(pop);
+    const w = Math.min(420, window.innerWidth - 16);
+    pop.style.width = w + "px";
+    pop.style.left = Math.max(8, Math.min(rect.left - w + 30, window.innerWidth - w - 8)) + "px";
+    let top = rect.bottom + 4;
+    if (top + pop.offsetHeight + 12 > window.innerHeight) top = Math.max(8, window.innerHeight - pop.offsetHeight - 12);
+    pop.style.top = top + "px";
+    const cerrar = () => { back.remove(); pop.remove(); document.removeEventListener("keydown", escHandler, true); };
+    const escHandler = (e) => { if (e.key === "Escape") { e.stopPropagation(); cerrar(); } };
+    back.addEventListener("mousedown", cerrar);
+    document.addEventListener("keydown", escHandler, true);
+  }
+
   function archivarTerminados() {
     const destino = destinoTerminados();
     if (!destino) return;
@@ -393,7 +443,7 @@
   }
 
   // ---------- Render ----------
-  function render() { renderTabs(); renderKpis(); renderTabla(); renderCabeceraOrden(); sincronizarSeleccion(); }
+  function render() { renderTabs(); renderKpis(); renderTabla(); renderCabeceraOrden(); sincronizarSeleccion(); aplicarNav(); }
 
   function renderTabs() {
     const cont = $("#tabs");
@@ -442,6 +492,7 @@
     $("#footer-count").textContent = mostrados === tabTotal
       ? `${tabTotal} en «${tabNombre(pestanaActiva)}»`
       : `${mostrados} de ${tabTotal} en «${tabNombre(pestanaActiva)}»`;
+    marcarKpis();
   }
 
   function filaHTML(it) {
@@ -449,6 +500,11 @@
     const cerrado = it.estado === "PARA SALDO" || it.estado === "ENTREGADO A GRISEL" || esTerminado(it.estado);
     const vieja = dias !== null && dias > 30 && !cerrado;
     const antig = dias !== null ? `<span class="antig-tag ${vieja ? "alerta" : ""}">${dias} d</span>` : "";
+    // Días sin movimiento: desde la última edición (o su registro si nunca se editó)
+    const ts = it.actualizado || it.creado;
+    const sinMov = ts ? Math.floor((Date.now() - ts) / 86400000) : null;
+    const movTag = (!cerrado && sinMov !== null && sinMov >= 7)
+      ? `<span class="sinmov-tag" title="Días desde la última vez que editaste este requerimiento">⏸ ${sinMov} d sin movimiento</span>` : "";
     const cargo = it.aCargo || "";
     const cargoBadge = cargo
       ? `<span class="badge ${cargo === "SÍ" ? "cargo-si" : "cargo-no"}">${esc(cargo)}</span>` : GUION;
@@ -465,7 +521,7 @@
         ${ed("pestana", `<span class="badge pest-badge">${esc(tabNombre(it.pestana))}</span>`)}
         ${ed("aCargo", cargoBadge)}
         ${ed("prioridad", badge(it.prioridad, COL.prioridad))}
-        ${ed("estado", badge(it.estado, COL.estado))}
+        ${ed("estado", badge(it.estado, COL.estado) + movTag)}
         ${ed("fechaIngreso", fmtFecha(it.fechaIngreso) + antig)}
         ${txt("expLogistica", "cell-strong")}
         ${txt("expDireccion")}
@@ -480,6 +536,7 @@
         ${ed("tengoExp", tengoBadge)}
         ${txt("observaciones", "cell-obs")}
         <td><div class="row-actions">
+          <button class="icon-btn" data-hist="${it.id}" title="Historial de estados (se anota solo)">🕘</button>
           <button class="icon-btn danger" data-del="${it.id}" title="Eliminar">🗑</button>
         </div></td>
       </tr>`;
@@ -538,6 +595,36 @@
 
     const vocab = conPrediccion ? construirVocabulario() : null;
     let predRemainder = "";
+
+    // Frases rápidas en Observaciones: un toque y se insertan (aprendidas de tus datos)
+    if (field === "observaciones") {
+      const insertarFrase = (f) => {
+        const pos = ta.selectionStart == null ? ta.value.length : ta.selectionStart;
+        const antes = ta.value.slice(0, pos), despues = ta.value.slice(pos);
+        let sep = "";
+        if (antes.trim() && !/[\/\s:]$/.test(antes)) sep = "/ ";
+        ta.value = antes + sep + f + despues;
+        const np = (antes + sep + f).length;
+        ta.setSelectionRange(np, np);
+        ta.focus();
+        ajustar(); setGhost();
+      };
+      const chips = document.createElement("div");
+      chips.className = "cp-sugerencias";
+      const frases = frasesFrecuentes();
+      chips.innerHTML = '<span class="cp-sug-tit">Frases:</span>' +
+        '<button type="button" class="cp-sug" data-frase="__fecha">📅 fecha de hoy</button>' +
+        frases.map((f) => `<button type="button" class="cp-sug" data-frase="${esc(f)}">${esc(f)}</button>`).join("");
+      chips.addEventListener("mousedown", (e) => e.preventDefault()); // no perder el cursor del textarea
+      chips.addEventListener("click", (e) => {
+        const b = e.target.closest(".cp-sug");
+        if (!b) return;
+        let f = b.getAttribute("data-frase");
+        if (f === "__fecha") { const p = hoyISO().split("-"); f = `${p[2]}/${p[1]}/${p[0]}: `; }
+        insertarFrase(f);
+      });
+      pop.appendChild(chips);
+    }
 
     document.body.appendChild(back);
     document.body.appendChild(pop);
@@ -681,6 +768,7 @@
       if ((editor.tagName === "INPUT" && editor.type === "text") || editor.tagName === "TEXTAREA") val = val.trim();
       if ((it[field] == null ? "" : String(it[field])) !== val) {
         snapshot();
+        if (field === "estado") logEstado(it, it.estado, val);
         it[field] = val;
         it.actualizado = Date.now();
         const movido = field === "estado" && autoArchivarTerminado(it);
@@ -780,10 +868,16 @@
     const id = $("#f-id").value;
     if (id) {
       const idx = items.findIndex((x) => x.id === id);
-      if (idx >= 0) items[idx] = Object.assign({}, items[idx], datos, { actualizado: Date.now() });
+      if (idx >= 0) {
+        const estadoAntes = items[idx].estado;
+        items[idx] = Object.assign({}, items[idx], datos, { actualizado: Date.now() });
+        logEstado(items[idx], estadoAntes, items[idx].estado);
+      }
       toast("Requerimiento actualizado.");
     } else {
-      items.push(Object.assign({ id: uid(), creado: Date.now() }, datos));
+      const nuevo = Object.assign({ id: uid(), creado: Date.now() }, datos);
+      logEstado(nuevo, "", nuevo.estado);
+      items.push(nuevo);
       toast("Requerimiento agregado.");
     }
     guardar(); cerrarModal(); render();
@@ -901,6 +995,7 @@
     let n = 0, movidos = 0;
     items.forEach((it) => {
       if (seleccion.has(it.id)) {
+        if (campo === "estado") logEstado(it, it.estado, valor);
         it[campo] = valor; it.actualizado = Date.now(); n++;
         if (campo === "estado" && autoArchivarTerminado(it)) movidos++;
       }
@@ -1259,6 +1354,7 @@
       if (!exp && !item && !den) continue;
       const existente = exp ? porExp[exp] : null;
       if (existente) {
+        const estadoAntes = existente.estado;
         const pon = (campo, val) => { if (val !== "") existente[campo] = val; };
         pon("nro", get("nro"));
         pon("fechaIngreso", normalizarFecha(get("fechaIngreso")));
@@ -1272,6 +1368,7 @@
         const tabId = idTabPorNombreEstricto(get("pestana"));
         if (tabId) existente.pestana = tabId;
         existente.actualizado = Date.now();
+        logEstado(existente, estadoAntes, existente.estado);
         autoArchivarTerminado(existente);
         res.actualizados++;
       } else {
@@ -1290,6 +1387,7 @@
           tengoExp: siNo(get("tengoExp")), aCargo: siNo(get("aCargo")),
           creado: Date.now(),
         };
+        logEstado(nuevo, "", nuevo.estado);
         autoArchivarTerminado(nuevo);
         items.push(nuevo);
         if (exp) porExp[exp] = nuevo;
@@ -1474,7 +1572,9 @@
     let n = 0;
     DATOS_JUNIO.forEach((d) => {
       if (existentes.has(String(d.expLogistica))) return;
-      items.push(Object.assign({ id: uid(), creado: Date.now(), aCargo: "", pestana: tabs[0].id }, d));
+      const obj = Object.assign({ id: uid(), creado: Date.now(), aCargo: "", pestana: tabs[0].id }, d);
+      logEstado(obj, "", obj.estado);
+      items.push(obj);
       n++;
     });
     if (!n) descartarSnapshot();
@@ -1511,6 +1611,126 @@
     try { localStorage.setItem(ZOOM_KEY, String(zoom)); } catch (e) {}
   }
   function cambiarZoom(delta) { zoom += delta; aplicarZoom(); }
+
+  // ---------- KPIs clickeables (tocar una tarjeta filtra la tabla) ----------
+  function clickKpi(tipo) {
+    if (tipo === "total") { resetFiltros(); renderTabla(); marcarKpis(); return; }
+    const mapa = {
+      cargo: ["cargo", "SÍ", "#filtro-cargo"],
+      alta: ["prioridad", prioridadTop(), "#filtro-prioridad"],
+      sinexp: ["tengo", "NO", "#filtro-tengo"],
+      pend: ["estado", defEstado(), "#filtro-estado"],
+    };
+    const par = mapa[tipo];
+    if (!par || !par[1]) return;
+    const [campo, valor, sel] = par;
+    const ya = filtro[campo] === valor;   // segundo clic en la misma tarjeta = quitar el filtro
+    resetFiltros();
+    if (!ya) { filtro[campo] = valor; $(sel).value = valor; }
+    renderTabla(); marcarKpis();
+  }
+  function marcarKpis() {
+    const activos = {
+      cargo: filtro.cargo === "SÍ",
+      alta: !!prioridadTop() && filtro.prioridad === prioridadTop(),
+      sinexp: filtro.tengo === "NO",
+      pend: !!filtro.estado && filtro.estado === defEstado(),
+    };
+    $$(".kpi-btn").forEach((k) => {
+      const t = k.getAttribute("data-kpi");
+      k.classList.toggle("kpi-activo", !!activos[t]);
+    });
+  }
+
+  // ---------- Registro exprés ----------
+  function toggleExpress(abrir) {
+    const bar = $("#express-bar");
+    const mostrar = abrir != null ? abrir : bar.classList.contains("hidden");
+    bar.classList.toggle("hidden", !mostrar);
+    if (mostrar) {
+      $("#ex-tipo").innerHTML = config.tipos.map((o) => `<option value="${esc(o.nombre)}">${esc(o.nombre)}</option>`).join("");
+      poblarDatalist("dl-ex-doc", "docArea");
+      poblarDatalist("dl-ex-area", "areaUsuaria");
+      $("#ex-exp").focus();
+    }
+  }
+  function guardarExpress() {
+    const exp = $("#ex-exp").value.trim();
+    if (!exp) { toast("Escribe el N° Exp. Logística (es lo único obligatorio)."); $("#ex-exp").focus(); return; }
+    const dup = buscarDuplicado(exp, null);
+    if (dup && !confirm(`Ya existe el Exp. ${exp} (N° ${dup.nro || "—"} en «${tabNombre(dup.pestana)}»).\n¿Registrar de todos modos?`)) return;
+    snapshot();
+    const area = $("#ex-area").value.trim();
+    const nuevo = {
+      id: uid(), creado: Date.now(),
+      pestana: pestanaActiva,
+      nro: nextNro(),
+      fechaIngreso: hoyISO(),
+      expLogistica: exp, expDireccion: "",
+      docArea: $("#ex-doc").value.trim(),
+      // El área estratégica casi siempre coincide con el área usuaria; se copia y se corrige luego si difiere
+      areaEstrategica: area, areaUsuaria: area,
+      tipo: $("#ex-tipo").value || defTipo(),
+      item: "", denominacion: $("#ex-den").value.trim(),
+      prioridad: defPrioridad(), estado: defEstado(),
+      especialista: "", fechaPase: "", tengoExp: "", aCargo: "SÍ",
+      observaciones: "",
+    };
+    logEstado(nuevo, "", nuevo.estado);
+    items.push(nuevo);
+    guardar(); render();
+    ["#ex-exp", "#ex-doc", "#ex-area", "#ex-den"].forEach((s) => { $(s).value = ""; });
+    poblarDatalist("dl-ex-doc", "docArea");
+    poblarDatalist("dl-ex-area", "areaUsuaria");
+    $("#ex-exp").focus();
+    toast(`N° ${nuevo.nro} · Exp. ${exp} registrado en «${tabNombre(pestanaActiva)}». Sigue con el siguiente.`);
+  }
+
+  // ---------- Navegación con teclado en la tabla (tipo Excel) ----------
+  const nav = { fila: -1, col: -1 };
+  function filasNavegables() { return $$("#tbody tr").filter((tr) => tr.querySelector("td.ed")); }
+  function aplicarNav() {
+    $$("#tbody td.celda-activa").forEach((td) => td.classList.remove("celda-activa"));
+    if (nav.fila < 0 || nav.col < 0) return;
+    const filas = filasNavegables();
+    if (!filas.length) { nav.fila = -1; return; }
+    nav.fila = Math.min(nav.fila, filas.length - 1);
+    const celdas = filas[nav.fila].querySelectorAll("td.ed");
+    nav.col = Math.min(nav.col, celdas.length - 1);
+    const td = celdas[nav.col];
+    if (td) {
+      td.classList.add("celda-activa");
+      if (td.scrollIntoView) td.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+  }
+  function moverNav(df, dc) {
+    const filas = filasNavegables();
+    if (!filas.length) return;
+    if (nav.fila < 0) { nav.fila = 0; nav.col = 0; }
+    else {
+      nav.fila = Math.max(0, Math.min(filas.length - 1, nav.fila + df));
+      const nCols = filas[nav.fila].querySelectorAll("td.ed").length;
+      nav.col = Math.max(0, Math.min(nCols - 1, nav.col + dc));
+    }
+    aplicarNav();
+  }
+  function tecladoTabla(e) {
+    const el = document.activeElement;
+    if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) return;
+    if (document.querySelector(".cell-popover")) return;  // hay un editor abierto
+    const modalAbierto = ["modal", "modal-glosario", "modal-config", "modal-papelera"]
+      .some((id) => { const m = document.getElementById(id); return m && !m.classList.contains("hidden"); });
+    if (modalAbierto) return;
+    const dir = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[e.key];
+    if (dir) { e.preventDefault(); moverNav(dir[0], dir[1]); return; }
+    if ((e.key === "Enter" || e.key === "F2") && nav.fila >= 0) {
+      const filas = filasNavegables();
+      const td = filas[nav.fila] && filas[nav.fila].querySelectorAll("td.ed")[nav.col];
+      if (td) { e.preventDefault(); startEdit(td); }
+      return;
+    }
+    if (e.key === "Escape" && nav.fila >= 0) { nav.fila = -1; nav.col = -1; aplicarNav(); }
+  }
 
   // ---------- Tema (claro / oscuro) ----------
   const TEMA_KEY = "priority_tema";
@@ -1592,6 +1812,24 @@
   function conectarEventos() {
     $("#btn-nuevo").addEventListener("click", () => abrirModal(null));
     $("#btn-nuevo-2").addEventListener("click", () => abrirModal(null));
+
+    // Registro exprés
+    $("#btn-express").addEventListener("click", () => toggleExpress());
+    $("#ex-guardar").addEventListener("click", guardarExpress);
+    $("#ex-cerrar").addEventListener("click", () => toggleExpress(false));
+    $("#express-bar").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); guardarExpress(); }
+      else if (e.key === "Escape") { e.preventDefault(); toggleExpress(false); }
+    });
+
+    // KPIs clickeables
+    $("#kpis").addEventListener("click", (e) => {
+      const k = e.target.closest(".kpi-btn");
+      if (k) clickKpi(k.getAttribute("data-kpi"));
+    });
+
+    // Navegación con teclado en la tabla
+    document.addEventListener("keydown", tecladoTabla);
     $("#btn-junio").addEventListener("click", cargarJunio);
     $("#btn-junio-2").addEventListener("click", cargarJunio);
     $("#btn-jalar").addEventListener("click", jalarACargo);
@@ -1625,10 +1863,19 @@
         if (c) { c.checked = !c.checked; toggleSel(c.getAttribute("data-sel"), c.checked); }
         return;
       }
+      const his = e.target.closest("[data-hist]");
+      if (his) { abrirHistorial(his.getAttribute("data-hist"), his); return; }
       const del = e.target.closest("[data-del]");
       if (del) { eliminar(del.getAttribute("data-del")); return; }
       const td = e.target.closest("td.ed");
-      if (td) startEdit(td);
+      if (td) {
+        // El clic también fija la celda activa para seguir con el teclado
+        const tr = td.parentElement;
+        nav.fila = filasNavegables().indexOf(tr);
+        nav.col = Array.prototype.indexOf.call(tr.querySelectorAll("td.ed"), td);
+        aplicarNav();
+        startEdit(td);
+      }
     });
 
     // Glosario

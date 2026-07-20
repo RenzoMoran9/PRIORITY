@@ -36,7 +36,7 @@ body {
 
 /* La cabecera, indicadores, pestañas, filtros y pie quedan anclados;
    solo la tabla se desplaza por dentro. */
-.topbar, .kpis, .tabs-bar, .toolbar, .batch-bar, .footer { flex: 0 0 auto; }
+.topbar, .kpis, .tabs-bar, .toolbar, .batch-bar, .express-bar, .footer { flex: 0 0 auto; }
 
 /* ---------- Topbar ---------- */
 .topbar {
@@ -580,6 +580,36 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
 }
 
 .hidden { display: none !important; }
+
+/* ---------- KPIs clickeables ---------- */
+.kpi-btn { cursor: pointer; transition: border-color .15s ease, transform .15s ease; }
+.kpi-btn:hover { border-color: var(--primary); transform: translateY(-1px); }
+.kpi-btn.kpi-activo { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+
+/* ---------- Registro exprés ---------- */
+.express-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 24px;
+  background: var(--primary-soft);
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+}
+.express-tit { font-weight: 800; color: var(--primary); font-size: 13px; white-space: nowrap; }
+.ex-input { flex: 0 1 150px; min-width: 110px; cursor: text; }
+.ex-ancho { flex: 1 1 210px; }
+.ex-max { flex: 2 1 260px; }
+.express-ayuda { flex-basis: 100%; font-size: 11px; color: var(--muted); }
+
+/* ---------- Navegación con teclado (celda activa) ---------- */
+.grid td.celda-activa { box-shadow: inset 0 0 0 2px var(--primary); border-radius: 2px; }
+
+/* ---------- Bitácora de estados ---------- */
+.hist-lista { max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; min-width: 300px; }
+.hist-item { display: flex; gap: 8px; align-items: baseline; font-size: 12.5px; }
+.hist-fecha { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.hist-vacio { color: var(--muted); font-size: 12.5px; padding: 6px 2px; }
+
+/* ---------- Días sin movimiento ---------- */
+.sinmov-tag { display: block; font-size: 10.5px; color: var(--warn); margin-top: 3px; white-space: nowrap; }
 
 /* ---------- Tema oscuro ---------- */
 :root { color-scheme: light; }
