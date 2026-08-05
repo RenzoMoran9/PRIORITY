@@ -1738,11 +1738,26 @@
     const wrap = document.querySelector(".table-wrap");
     if (!wrap) return;
     let foco = false;
+    let bloqueadoHasta = 0;
     wrap.addEventListener("scroll", () => {
+      const ahora = Date.now();
+      // Tras cada cambio se ignoran los eventos del reacomodo (el navegador recorta
+      // el scroll al crecer/encoger la tabla y eso volvía a disparar el modo).
+      if (ahora < bloqueadoHasta) return;
       const y = wrap.scrollTop;
-      // Histéresis: compacta al bajar más de 60px, restaura al volver casi arriba
-      if (!foco && y > 60) { foco = true; document.body.classList.add("modo-foco"); }
-      else if (foco && y < 10) { foco = false; document.body.classList.remove("modo-foco"); }
+      const rango = wrap.scrollHeight - wrap.clientHeight;
+      if (!foco) {
+        // Compactar solo si hay bastante que desplazar: con una lista corta (p. ej.
+        // filtrada por el buscador) la tabla crecería, todo cabría y el modo se
+        // apagaría solo, quedando en un bucle de parpadeo que "traba" la página.
+        if (y > 60 && rango > 340) {
+          foco = true; document.body.classList.add("modo-foco");
+          bloqueadoHasta = ahora + 350;
+        }
+      } else if (y < 10) {
+        foco = false; document.body.classList.remove("modo-foco");
+        bloqueadoHasta = ahora + 350;
+      }
     });
   }
 
