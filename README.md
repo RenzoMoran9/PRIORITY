@@ -144,6 +144,23 @@ indicadores de «Heredados» y «Mi trabajo» **no cuentan** lo que ya está en 
   oscuro**. Tu elección **queda recordada** en el navegador. La primera vez respeta
   el tema que use tu sistema operativo.
 
+## Vista de trabajo (reestructurada) y 👁 Columnas
+
+El orden de columnas sigue tu flujo real: **N° → Exp. Logística → Ítem → Tipo →
+Estado → Ingreso → Área → Documentos**. Además:
+
+- **Ítem** muestra debajo, en gris, la **denominación completa** (clic en esa línea
+  para editarla). **Área usuaria** muestra la estratégica solo cuando difiere.
+- Las columnas heredadas del Excel anterior que hoy no aportan van **ocultas por
+  defecto**: Pestaña, Prioridad, Área estratégica, Denominación, Especialista y
+  F. pase. **Nada se pierde**: siguen en el formulario, en la búsqueda y en el
+  Excel exportado, y se reactivan con el botón **👁 Columnas** (con «Vista
+  recomendada» para volver al orden sugerido).
+- **A cargo** aparece solo en «Heredados» (donde sirve para jalar los tuyos).
+- **Prioridad** ahora se cambia con **un clic** en la celda: rota Alta → Media → Baja.
+- **El Excel exportado NO cambia**: sale siempre con las 18 columnas, colores,
+  hojas y desplegables de siempre, aunque en pantalla ocultes columnas.
+
 ## Diseño pensado para leer la tabla
 
 - **Filas cebra**: las filas alternan un fondo muy suave para seguir la línea con

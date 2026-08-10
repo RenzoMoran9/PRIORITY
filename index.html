@@ -110,6 +110,7 @@
         <option value="SÍ">Con expediente</option>
         <option value="NO">Sin expediente</option>
       </select>
+      <button id="btn-columnas" class="btn btn-ghost btn-sm" title="Elegir qué columnas se ven (los datos ocultos no se pierden: siguen en el formulario y en el Excel)">👁 Columnas</button>
       <button id="btn-limpiar" class="btn btn-ghost btn-sm" title="Limpiar filtros">Limpiar</button>
     </div>
   </section>
@@ -134,28 +135,7 @@
   <main class="table-wrap">
     <table class="grid" id="tabla">
       <thead>
-        <tr>
-          <th class="sel-col"><input type="checkbox" id="sel-all" title="Seleccionar todo lo visible" /></th>
-          <th data-sort="nro" class="num col-nro">N°</th>
-          <th data-sort="pestana">Pestaña</th>
-          <th data-sort="aCargo">A cargo</th>
-          <th data-sort="prioridad">Prioridad</th>
-          <th data-sort="estado">Estado</th>
-          <th data-sort="fechaIngreso">Ingreso a UPROG</th>
-          <th data-sort="expLogistica">Exp. Logística</th>
-          <th data-sort="expDireccion">Exp. Dirección</th>
-          <th data-sort="docArea">Doc. del área</th>
-          <th data-sort="areaEstrategica">Área estratégica</th>
-          <th data-sort="areaUsuaria">Área usuaria</th>
-          <th data-sort="tipo">Tipo</th>
-          <th data-sort="item">Ítem</th>
-          <th data-sort="denominacion">Denominación</th>
-          <th data-sort="especialista">Especialista</th>
-          <th data-sort="fechaPase">F. pase</th>
-          <th data-sort="tengoExp">¿Tengo exp.?</th>
-          <th data-sort="observaciones">Observaciones</th>
-          <th class="acciones-col">Acciones</th>
-        </tr>
+        <tr id="thead-row"><!-- se construye desde app.js según las columnas visibles --></tr>
       </thead>
       <tbody id="tbody"></tbody>
     </table>

@@ -443,7 +443,7 @@
   }
 
   // ---------- Render ----------
-  function render() { renderTabs(); renderKpis(); renderTabla(); renderCabeceraOrden(); sincronizarSeleccion(); aplicarNav(); }
+  function render() { renderTabs(); renderKpis(); renderThead(); renderTabla(); renderCabeceraOrden(); sincronizarSeleccion(); aplicarNav(); }
 
   function renderTabs() {
     const cont = $("#tabs");
@@ -480,7 +480,7 @@
         const msg = tabTotal === 0
           ? `La pestaña «${esc(tabNombre(pestanaActiva))}» aún no tiene requerimientos. Usa «⇄ Traer a mi trabajo» o «+ Nuevo requerimiento».`
           : "Ningún requerimiento coincide con los filtros.";
-        tbody.innerHTML = `<tr><td colspan="20" class="empty" style="padding:34px">${msg}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${colsVisibles().length + 2}" class="empty" style="padding:34px">${msg}</td></tr>`;
       }
       $("#footer-count").textContent = `${tabTotal} en «${tabNombre(pestanaActiva)}»`;
       return;
@@ -493,6 +493,94 @@
       ? `${tabTotal} en «${tabNombre(pestanaActiva)}»`
       : `${mostrados} de ${tabTotal} en «${tabNombre(pestanaActiva)}»`;
     marcarKpis();
+  }
+
+  // ---------- Columnas de la tabla ----------
+  // Orden de trabajo: identificar (N°, Exp.) → qué es (Ítem, Tipo) → decidir (Estado,
+  // fecha) → contexto (área, documentos). Las columnas heredadas del Excel anterior
+  // que hoy no aportan van ocultas por defecto; se reactivan con «👁 Columnas».
+  // IMPORTANTE: esto es solo la VISTA — el Excel exportable (COLS_EXPORT) no cambia.
+  const COLS_KEY = "priority_columnas_v1";
+  const COLS_TABLA = [
+    { f: "nro",          h: "N°",              def: true,  cls: "num col-nro" },
+    { f: "expLogistica", h: "Exp. Logística",  def: true },
+    { f: "item",         h: "Ítem",            def: true },
+    { f: "tipo",         h: "Tipo",            def: true },
+    { f: "estado",       h: "Estado",          def: true },
+    { f: "prioridad",    h: "Prioridad",       def: false },
+    { f: "fechaIngreso", h: "Ingreso a UPROG", def: true },
+    { f: "areaUsuaria",  h: "Área usuaria",    def: true },
+    { f: "docArea",      h: "Doc. del área",   def: true },
+    { f: "expDireccion", h: "Exp. Dirección",  def: true },
+    { f: "tengoExp",     h: "¿Tengo exp.?",    def: true },
+    { f: "aCargo",       h: "A cargo",         def: "auto" }, // solo en «Heredados»
+    { f: "pestana",      h: "Pestaña",         def: false },
+    { f: "areaEstrategica", h: "Área estratégica", def: false },
+    { f: "denominacion", h: "Denominación",    def: false },
+    { f: "especialista", h: "Especialista",    def: false },
+    { f: "fechaPase",    h: "F. pase",         def: false },
+    { f: "observaciones", h: "Observaciones",  def: true },
+  ];
+  let colOverrides = {};
+  function cargarColumnas() {
+    try { colOverrides = JSON.parse(localStorage.getItem(COLS_KEY)) || {}; }
+    catch (e) { colOverrides = {}; }
+    if (typeof colOverrides !== "object" || !colOverrides) colOverrides = {};
+  }
+  function guardarColumnas() {
+    try { localStorage.setItem(COLS_KEY, JSON.stringify(colOverrides)); } catch (e) {}
+  }
+  function colVisible(c) {
+    if (colOverrides[c.f] === true) return true;
+    if (colOverrides[c.f] === false) return false;
+    if (c.def === "auto") return pestanaActiva === tabs[0].id;
+    return !!c.def;
+  }
+  function colsVisibles() { return COLS_TABLA.filter(colVisible); }
+
+  function renderThead() {
+    const tr = $("#thead-row");
+    if (!tr) return;
+    tr.innerHTML =
+      '<th class="sel-col"><input type="checkbox" id="sel-all" title="Seleccionar todo lo visible" /></th>' +
+      colsVisibles().map((c) => `<th data-sort="${c.f}" class="${c.cls || ""}">${esc(c.h)}</th>`).join("") +
+      '<th class="acciones-col">Acciones</th>';
+  }
+
+  function abrirSelectorColumnas(btn) {
+    const rect = btn.getBoundingClientRect();
+    const back = document.createElement("div"); back.className = "popover-backdrop";
+    const pop = document.createElement("div"); pop.className = "cell-popover";
+    const pinta = () => {
+      pop.innerHTML = '<div class="cp-label">Columnas visibles · lo oculto NO se pierde: sigue en el formulario, la búsqueda y el Excel exportado</div>' +
+        '<div class="cols-lista">' +
+        COLS_TABLA.filter((c) => c.f !== "nro").map((c) => {
+          const nota = c.def === "auto" ? ' <span class="cols-nota">(auto: solo en «Heredados»)</span>' : "";
+          return `<label class="cols-item"><input type="checkbox" data-col="${c.f}"${colVisible(c) ? " checked" : ""} /> ${esc(c.h)}${nota}</label>`;
+        }).join("") +
+        '</div><div class="cols-foot"><button type="button" class="btn btn-ghost btn-sm" id="cols-reset">Vista recomendada</button></div>';
+    };
+    pinta();
+    document.body.appendChild(back); document.body.appendChild(pop);
+    const w = Math.min(300, window.innerWidth - 16);
+    pop.style.width = w + "px";
+    pop.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - w - 8)) + "px";
+    let top = rect.bottom + 4;
+    if (top + pop.offsetHeight + 12 > window.innerHeight) top = Math.max(8, window.innerHeight - pop.offsetHeight - 12);
+    pop.style.top = top + "px";
+    pop.addEventListener("change", (e) => {
+      const f = e.target.getAttribute("data-col");
+      if (!f) return;
+      colOverrides[f] = e.target.checked;
+      guardarColumnas(); render();
+    });
+    pop.addEventListener("click", (e) => {
+      if (e.target.id === "cols-reset") { colOverrides = {}; guardarColumnas(); render(); pinta(); }
+    });
+    const cerrar = () => { back.remove(); pop.remove(); document.removeEventListener("keydown", escHandler, true); };
+    const escHandler = (e) => { if (e.key === "Escape") { e.stopPropagation(); cerrar(); } };
+    back.addEventListener("mousedown", cerrar);
+    document.addEventListener("keydown", escHandler, true);
   }
 
   function filaHTML(it) {
@@ -515,27 +603,40 @@
     const txt = (f, cls) => ed(f, esc(it[f]) || GUION, cls);
     const esAlta = !!it.prioridad && it.prioridad === prioridadTop();
 
+    // Ítem con la denominación completa debajo (editable con su propio clic)
+    const denSub = it.denominacion
+      ? `<span class="sub-linea sub-edit" data-sub="denominacion" data-id="${it.id}" title="Denominación completa · clic para editarla">${esc(it.denominacion)}</span>` : "";
+    const celdaItem = `<div class="item-main">${esc(it.item) || GUION}</div>` + denSub;
+    // Área usuaria con la estratégica debajo SOLO si difiere (94% son iguales)
+    const difEstr = it.areaEstrategica && String(it.areaEstrategica).trim().toUpperCase() !== String(it.areaUsuaria || "").trim().toUpperCase();
+    const celdaArea = (esc(it.areaUsuaria) || GUION) +
+      (difEstr ? `<span class="sub-linea sub-edit" data-sub="areaEstrategica" data-id="${it.id}" title="Área estratégica (difiere de la usuaria) · clic para editarla">Estr.: ${esc(it.areaEstrategica)}</span>` : "");
+
+    const CELDA = {
+      nro: () => ed("nro", esc(it.nro) || GUION, "num cell-strong col-nro"),
+      expLogistica: () => txt("expLogistica", "cell-strong cell-exp"),
+      item: () => ed("item", celdaItem, "cell-item2"),
+      tipo: () => ed("tipo", badge(it.tipo, COL.tipo)),
+      estado: () => ed("estado", badge(it.estado, COL.estado) + movTag),
+      prioridad: () => ed("prioridad", badge(it.prioridad, COL.prioridad)),
+      fechaIngreso: () => ed("fechaIngreso", fmtFecha(it.fechaIngreso) + antig),
+      areaUsuaria: () => ed("areaUsuaria", celdaArea, "cell-area"),
+      docArea: () => txt("docArea", "cell-doc"),
+      expDireccion: () => txt("expDireccion"),
+      tengoExp: () => ed("tengoExp", tengoBadge),
+      aCargo: () => ed("aCargo", cargoBadge),
+      pestana: () => ed("pestana", `<span class="badge pest-badge">${esc(tabNombre(it.pestana))}</span>`),
+      areaEstrategica: () => txt("areaEstrategica", "cell-area"),
+      denominacion: () => txt("denominacion", "cell-den"),
+      especialista: () => txt("especialista"),
+      fechaPase: () => ed("fechaPase", fmtFecha(it.fechaPase)),
+      observaciones: () => txt("observaciones", "cell-obs"),
+    };
+
     return `
       <tr class="${vieja ? "row-vieja" : ""} ${cargo === "SÍ" ? "row-cargo" : ""} ${esAlta ? "row-alta" : ""}">
         <td class="sel-col"><input type="checkbox" class="sel-check" data-sel="${it.id}"${seleccion.has(it.id) ? " checked" : ""} /></td>
-        ${ed("nro", esc(it.nro) || GUION, "num cell-strong col-nro")}
-        ${ed("pestana", `<span class="badge pest-badge">${esc(tabNombre(it.pestana))}</span>`)}
-        ${ed("aCargo", cargoBadge)}
-        ${ed("prioridad", badge(it.prioridad, COL.prioridad))}
-        ${ed("estado", badge(it.estado, COL.estado) + movTag)}
-        ${ed("fechaIngreso", fmtFecha(it.fechaIngreso) + antig)}
-        ${txt("expLogistica", "cell-strong")}
-        ${txt("expDireccion")}
-        ${txt("docArea", "cell-doc")}
-        ${txt("areaEstrategica", "cell-area")}
-        ${txt("areaUsuaria", "cell-area")}
-        ${ed("tipo", badge(it.tipo, COL.tipo))}
-        ${txt("item", "cell-item2")}
-        ${txt("denominacion", "cell-den")}
-        ${txt("especialista")}
-        ${ed("fechaPase", fmtFecha(it.fechaPase))}
-        ${ed("tengoExp", tengoBadge)}
-        ${txt("observaciones", "cell-obs")}
+        ${colsVisibles().map((c) => CELDA[c.f]()).join("")}
         <td><div class="row-actions">
           <button class="icon-btn" data-hist="${it.id}" title="Historial de estados (se anota solo)">🕘</button>
           <button class="icon-btn danger" data-del="${it.id}" title="Eliminar">🗑</button>
@@ -720,11 +821,23 @@
     back.addEventListener("mousedown", commit);
   }
 
+  // Prioridad con clic rápido: cada clic rota Alta → Media → Baja (triaje de un segundo)
+  function ciclarPrioridad(it) {
+    const lista = config.prioridades.map((o) => o.nombre);
+    if (!lista.length) return;
+    const nueva = lista[(lista.indexOf(it.prioridad) + 1) % lista.length];
+    snapshot();
+    it.prioridad = nueva; it.actualizado = Date.now();
+    guardar(); render();
+    toast(`Prioridad: ${nueva} · clic de nuevo para rotar`);
+  }
+
   function startEdit(td) {
     if (td.querySelector(".cell-editor")) return;
     const id = td.getAttribute("data-id"), field = td.getAttribute("data-field");
     const it = items.find((x) => x.id === id);
     if (!it) return;
+    if (field === "prioridad") { ciclarPrioridad(it); return; }
     const tipo = FIELD_EDITOR[field] || "text";
     if (tipo === "textarea" || tipo === "text") { editarTextareaPopover(td, it, field); return; }
     const actual = it[field] == null ? "" : String(it[field]);
@@ -1894,6 +2007,14 @@
       }
       const his = e.target.closest("[data-hist]");
       if (his) { abrirHistorial(his.getAttribute("data-hist"), his); return; }
+      // Sublíneas editables (denominación bajo el ítem, estratégica bajo el área)
+      const sub = e.target.closest(".sub-edit");
+      if (sub) {
+        const it = items.find((x) => x.id === sub.getAttribute("data-id"));
+        const td = sub.closest("td");
+        if (it && td) editarTextareaPopover(td, it, sub.getAttribute("data-sub"));
+        return;
+      }
       const del = e.target.closest("[data-del]");
       if (del) { eliminar(del.getAttribute("data-del")); return; }
       const td = e.target.closest("td.ed");
@@ -1913,8 +2034,9 @@
     $("#glosario-cerrar").addEventListener("click", cerrarGlosario);
     $("#modal-glosario").addEventListener("click", (e) => { if (e.target.id === "modal-glosario") cerrarGlosario(); });
 
-    // Selección múltiple / acciones en lote
-    $("#sel-all").addEventListener("change", (e) => {
+    // Selección múltiple / acciones en lote (delegado: el thead se reconstruye)
+    $("#tabla").querySelector("thead").addEventListener("change", (e) => {
+      if (e.target.id !== "sel-all") return;
       const lista = visibles();
       if (e.target.checked) lista.forEach((it) => seleccion.add(it.id));
       else lista.forEach((it) => seleccion.delete(it.id));
@@ -1986,14 +2108,19 @@
     $("#filtro-tengo").addEventListener("change", (e) => { filtro.tengo = e.target.value; renderTabla(); });
     $("#btn-limpiar").addEventListener("click", () => { resetFiltros(); renderTabla(); });
 
-    $$("#tabla thead th[data-sort]").forEach((th) => {
-      th.addEventListener("click", () => {
-        const key = th.getAttribute("data-sort");
-        if (orden.key === key) orden.dir = orden.dir === "asc" ? "desc" : "asc";
-        else { orden.key = key; orden.dir = "asc"; }
-        render();
-      });
+    // Ordenar por columna (delegado: el thead se reconstruye al cambiar columnas)
+    $("#tabla").querySelector("thead").addEventListener("click", (e) => {
+      if (e.target.id === "sel-all" || e.target.closest(".sel-col")) return;
+      const th = e.target.closest("th[data-sort]");
+      if (!th) return;
+      const key = th.getAttribute("data-sort");
+      if (orden.key === key) orden.dir = orden.dir === "asc" ? "desc" : "asc";
+      else { orden.key = key; orden.dir = "asc"; }
+      render();
     });
+
+    // Selector de columnas visibles
+    $("#btn-columnas").addEventListener("click", (e) => abrirSelectorColumnas(e.currentTarget));
 
     $("#btn-exportar").addEventListener("click", exportarExcel);
     $("#btn-vincular").addEventListener("click", vincularArchivo);
@@ -2010,6 +2137,7 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     cargarTema();
+    cargarColumnas();
     cargarTabs();
     cargarConfig();
     cargarPapelera();
