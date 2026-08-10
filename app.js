@@ -2122,6 +2122,19 @@
     // Selector de columnas visibles
     $("#btn-columnas").addEventListener("click", (e) => abrirSelectorColumnas(e.currentTarget));
 
+    // Menú «⋯» (glosario, configurar, vincular, importar)
+    $("#btn-mas").addEventListener("click", (e) => {
+      e.stopPropagation();
+      $("#menu-mas").classList.toggle("hidden");
+    });
+    $("#menu-mas").addEventListener("click", () => $("#menu-mas").classList.add("hidden"));
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".menu-wrap")) $("#menu-mas").classList.add("hidden");
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") $("#menu-mas").classList.add("hidden");
+    });
+
     $("#btn-exportar").addEventListener("click", exportarExcel);
     $("#btn-vincular").addEventListener("click", vincularArchivo);
     $("#btn-importar").addEventListener("click", () => $("#file-import").click());

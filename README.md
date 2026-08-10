@@ -14,7 +14,7 @@ se guardan en tu propio navegador.
 3. Empieza a actualizar prioridades, estados y a registrar nuevos.
 
 > ¿No recuerdas qué significa cada Tipo, Estado u otro término (como "UPROG")?
-> Pulsa **📖 Glosario** en la barra superior.
+> Pulsa **⋯ → 📖 Glosario** en la barra superior.
 
 ## Campos de cada requerimiento
 
@@ -182,7 +182,11 @@ Estado → Ingreso → Área → Documentos**. Además:
   y su **barra de desplazamiento horizontal** (la que mueve de lado a lado) queda **siempre visible**
   en la parte inferior. Los **títulos de columna** también se quedan fijos al subir/bajar.
 
-## Configurar tus listas (⚙ Configurar)
+## Configurar tus listas (⋯ → ⚙ Configurar)
+
+> La barra superior es minimalista: lo diario a la vista (zoom, tema, deshacer,
+> **⬇ Exportar Excel**, **⚡ Exprés**, **+ Nuevo requerimiento**) y lo ocasional
+> agrupado en el menú **⋯** (Glosario, Configurar, Vincular Excel, Importar).
 
 Las listas de **Estados**, **Tipos** y **Prioridades** son totalmente editables desde
 el botón **⚙ Configurar**:

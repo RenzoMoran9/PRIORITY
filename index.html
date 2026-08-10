@@ -24,12 +24,16 @@
       <button id="btn-tema" class="btn btn-ghost btn-icon" title="Cambiar entre tema claro y oscuro">🌙</button>
       <button id="btn-deshacer" class="btn btn-ghost btn-icon" title="Deshacer último cambio (Ctrl+Z)" disabled>↶</button>
       <span class="tb-sep"></span>
-      <button id="btn-glosario" class="btn btn-ghost" title="Glosario: qué significa cada término">📖 Glosario</button>
-      <button id="btn-config" class="btn btn-ghost" title="Configurar estados, tipos y prioridades">⚙ Configurar</button>
-      <span class="tb-sep"></span>
-      <button id="btn-vincular" class="btn btn-ghost" title="Vincular a un archivo CSV que se actualiza solo (Chrome/Edge)">🔗 Vincular Excel</button>
-      <button id="btn-importar" class="btn btn-ghost" title="Importar desde CSV/Excel">⬆ Importar</button>
-      <button id="btn-exportar" class="btn btn-ghost" title="Exportar a Excel con formato (mismas columnas, colores y orden que la app)">⬇ Exportar Excel</button>
+      <button id="btn-exportar" class="btn btn-ghost" title="Exportar a Excel con formato (mismas columnas, colores y orden de siempre)">⬇ Exportar Excel</button>
+      <div class="menu-wrap">
+        <button id="btn-mas" class="btn btn-ghost btn-icon" title="Más opciones (glosario, configurar, vincular, importar)">⋯</button>
+        <div id="menu-mas" class="menu hidden">
+          <button id="btn-glosario" class="menu-item" title="Glosario: qué significa cada término">📖 Glosario</button>
+          <button id="btn-config" class="menu-item" title="Configurar estados, tipos y prioridades">⚙ Configurar listas</button>
+          <button id="btn-vincular" class="menu-item" title="Vincular a un archivo CSV que se actualiza solo (Chrome/Edge)">🔗 Vincular Excel</button>
+          <button id="btn-importar" class="menu-item" title="Importar desde CSV/Excel (actualiza los existentes, no duplica)">⬆ Importar</button>
+        </div>
+      </div>
       <span class="tb-sep"></span>
       <button id="btn-express" class="btn btn-ghost" title="Registro exprés: solo los datos esenciales, el resto se completa después">⚡ Exprés</button>
       <button id="btn-nuevo" class="btn btn-primary">+ Nuevo requerimiento</button>

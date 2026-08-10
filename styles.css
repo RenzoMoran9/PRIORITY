@@ -13,7 +13,7 @@
   --warn: #c77700;
   --warn-soft: #fff4e0;
   --ok: #1f9d57;
-  --shadow: 0 1px 3px rgba(18, 28, 53, .08), 0 8px 24px rgba(18, 28, 53, .06);
+  --shadow: 0 1px 2px rgba(18, 28, 53, .05);
   --radius: 12px;
   /* Fondos de fila: cebra sutil, «a mi cargo» y fila bajo el mouse (bien diferenciados) */
   --row-zebra: #f7f9fc;
@@ -48,7 +48,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 24px;
+  padding: 10px 24px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   position: sticky;
@@ -90,16 +90,42 @@ body {
 .btn:active { transform: translateY(0); }
 .btn-primary { background: var(--primary); color: #fff; }
 .btn-primary:hover { background: var(--primary-dark); }
-.btn-ghost { background: var(--surface); border-color: var(--border); color: var(--text); }
-.btn-ghost:hover { background: var(--surface-2); }
+/* Minimalista: los botones secundarios son solo texto; el fondo aparece al pasar */
+.btn-ghost { background: transparent; border-color: transparent; color: var(--text); }
+.btn-ghost:hover { background: var(--primary-soft); }
 .btn-sm { padding: 7px 11px; font-size: 12px; }
+/* En barras de acciones sobre fondo de página, mantener el contorno para que se vean */
+.tabs-actions .btn-ghost, .express-bar .btn-ghost, .batch-bar .btn-ghost,
+.empty-actions .btn-ghost, .modal .btn-ghost, .cell-popover .btn-ghost {
+  background: var(--surface); border-color: var(--border);
+}
 
-/* Control de zoom */
-.zoom-ctl { display: inline-flex; align-items: center; gap: 2px; margin-right: 4px; }
-.zoom-ctl .btn { padding: 6px 9px; }
+/* Menú «⋯» con las opciones que no se usan a diario */
+.menu-wrap { position: relative; }
+.menu {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 55;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 11px; box-shadow: 0 12px 32px rgba(18, 28, 53, .16);
+  padding: 6px; display: flex; flex-direction: column; gap: 2px; min-width: 205px;
+}
+.menu-item {
+  text-align: left; border: none; background: none; cursor: pointer;
+  padding: 9px 12px; border-radius: 8px;
+  font-size: 13px; font-weight: 600; color: var(--text); font-family: inherit;
+  white-space: nowrap;
+}
+.menu-item:hover { background: var(--primary-soft); }
+
+/* Control de zoom: una sola píldora */
+.zoom-ctl {
+  display: inline-flex; align-items: center; gap: 0; margin-right: 4px;
+  border: 1px solid var(--border); border-radius: 9px; overflow: hidden;
+}
+.zoom-ctl .btn { padding: 6px 9px; border-radius: 0; }
+.zoom-ctl .btn:hover { transform: none; }
 .btn-icon { font-size: 16px; line-height: 1; min-width: 32px; font-weight: 800; }
 .btn-zoom { min-width: 52px; font-variant-numeric: tabular-nums; }
-.btn.vinculado { background: #e7f6ee; color: var(--ok); border-color: #bfe6cf; }
+.btn.vinculado, .menu-item.vinculado { background: #e7f6ee; color: var(--ok); border-color: #bfe6cf; }
 
 /* ---------- KPIs ---------- */
 .kpis {
@@ -112,11 +138,10 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 10px 14px;
+  padding: 9px 14px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  box-shadow: var(--shadow);
+  gap: 2px;
 }
 .kpi-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
 .kpi-value { font-size: 22px; font-weight: 800; }
@@ -574,7 +599,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
 .batch-count { font-weight: 800; color: var(--primary); font-size: 13px; margin-right: 4px; white-space: nowrap; }
 .batch-bar .select { padding: 7px 10px; font-size: 12.5px; }
 #btn-deshacer[disabled] { opacity: .4; cursor: default; }
-#btn-deshacer[disabled]:hover { transform: none; background: var(--surface); }
+#btn-deshacer[disabled]:hover { transform: none; background: transparent; }
 
 /* ---------- Ayudas de escritura en el editor ---------- */
 .cp-warn { margin-top: 6px; font-size: 12px; color: var(--danger); font-weight: 700; }
@@ -714,7 +739,8 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
 :root[data-theme="dark"] .cp-label { background: var(--surface-2); color: var(--muted); }
 :root[data-theme="dark"] .cp-ghost .g { color: #6b7688; }
 :root[data-theme="dark"] .tab:hover { background: var(--surface-2); }
-:root[data-theme="dark"] .btn.vinculado { background: rgba(70,192,127,.16); border-color: rgba(70,192,127,.45); }
+:root[data-theme="dark"] .btn.vinculado,
+:root[data-theme="dark"] .menu-item.vinculado { background: rgba(70,192,127,.16); border-color: rgba(70,192,127,.45); }
 :root[data-theme="dark"] .toast { background: #2c3850; color: var(--text); }
 :root[data-theme="dark"] input,
 :root[data-theme="dark"] textarea,
