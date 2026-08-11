@@ -1176,7 +1176,7 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
         </div>
 
         <div class="glosario-group">
-          <h3>Estado del requerimiento <span class="config-hint">6 pasos · el color dice de quién depende</span></h3>
+          <h3>Estado del requerimiento <span class="config-hint">5 pasos · el color dice de quién depende</span></h3>
           <p class="glosario-leyenda">
             <span class="badge estado">gris</span> sin empezar ·
             <span class="badge" style="background:rgba(59,86,214,.15);color:#22337f">azul</span> me toca a mí ·
@@ -1192,14 +1192,12 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
             <dd>Armé el cuadro de validación y el memo, y se lo entregué a Grisel: el área usuaria tiene que validarlo y devolverlo.</dd>
             <dt><span class="badge" style="background:rgba(168,100,0,.15);color:#623b00">4 · ESPERANDO PRESUPUESTO</span></dt>
             <dd>Ya está validado y registrado en el Excel de la unidad; espero que le asignen presupuesto.</dd>
-            <dt><span class="badge" style="background:rgba(109,40,217,.15);color:#3f1780">5 · CERTIFICANDO</span></dt>
-            <dd>Hay presupuesto: certifico en el SIGA y preparo el cuadro comparativo con la nota a planeamiento.</dd>
-            <dt><span class="badge estado" data-e="TERMINADO">6 · TERMINADO</span></dt>
-            <dd>Última entrega a Grisel, que lo envía a planeamiento. Al marcarlo pasa solo a la pestaña «Terminados».</dd>
+            <dt><span class="badge estado" data-e="TERMINADO">5 · TERMINADO</span></dt>
+            <dd>Llegó el presupuesto: certificas en el SIGA, haces el cuadro comparativo con la nota y lo entregas. Al marcarlo pasa solo a la pestaña «Terminados».</dd>
             <dt><span class="badge" style="background:rgba(214,59,75,.15);color:#7d2530">OBSERVADO</span></dt>
             <dd>Excepción, fuera del flujo: está detenido porque hay que corregir algo o no continuó.</dd>
           </dl>
-          <p class="glosario-tip">Con el botón <strong>⏭</strong> de cada fila avanzas al siguiente paso con un solo clic; en 5 clics repartidos en el tiempo, un expediente recorre todo su ciclo.</p>
+          <p class="glosario-tip">Con el botón <strong>⏭</strong> de cada fila avanzas al siguiente paso con un solo clic: <strong>4 clics</strong> repartidos en el tiempo y el expediente recorrió todo su ciclo.</p>
         </div>
 
         <div class="glosario-group">
@@ -1356,7 +1354,8 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
 
   // Listas configurables por defecto (el usuario puede cambiarlas en ⚙ Configurar)
   const DEF_CONFIG = {
-    // Seis pasos: uno por cada momento en que el expediente cambia de manos.
+    // Cinco pasos: solo los momentos en que el expediente SE QUEDA esperando algo.
+    // Certificar y entregar no son estados: se hacen de corrido y cierran el caso.
     // Color: gris = sin empezar · AZUL = me toca a mí · ÁMBAR = espero a otros ·
     // verde = cerrado · rojo = detenido (excepción, fuera del flujo).
     estados: [
@@ -1364,9 +1363,8 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
       { nombre: "INDAGACIÓN", color: "#3b56d6" },             // invito a postores y espero cotizaciones
       { nombre: "EN VALIDACIÓN", color: "#c77700" },          // con Grisel → área usuaria
       { nombre: "ESPERANDO PRESUPUESTO", color: "#a86400" },  // validado; en cola de presupuesto
-      { nombre: "CERTIFICANDO", color: "#6d28d9" },           // SIGA + cuadro comparativo + nota
-      { nombre: "TERMINADO", color: "#0e8a6a" },              // entregado a planeamiento (se archiva)
-      { nombre: "OBSERVADO", color: "#d63b4b" },              // detenido: el área debe corregir
+      { nombre: "TERMINADO", color: "#0e8a6a" },              // certificado y entregado (se archiva)
+      { nombre: "OBSERVADO", color: "#d63b4b" },              // detenido: hay que corregir algo
     ],
     tipos: [
       { nombre: "BIEN", color: "#4a7a2e" },
@@ -1650,13 +1648,16 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
     "DISPONIBILIDAD PRESUPUESTAL": "ESPERANDO PRESUPUESTO",
     "ENTREGADO A GRISEL": "EN VALIDACIÓN",
     "VALIDADO": "ESPERANDO PRESUPUESTO",
-    "CUADRO COMPARATIVO": "CERTIFICANDO",
+    // Los que estaban certificando siguen abiertos: se dejan en el último paso
+    // en espera (no en TERMINADO, para no archivar algo que aún no entregaste).
+    "CUADRO COMPARATIVO": "ESPERANDO PRESUPUESTO",
+    "CERTIFICANDO": "ESPERANDO PRESUPUESTO",
     // versión detallada intermedia
     "INDAGACIÓN DE MERCADO": "INDAGACIÓN",
     "ESPERANDO COTIZACIONES": "INDAGACIÓN",
     "PREPARANDO VALIDACIÓN": "EN VALIDACIÓN",
     "EN VALIDACIÓN (ÁREA USUARIA)": "EN VALIDACIÓN",
-    "PARA CERTIFICAR (SIGA)": "CERTIFICANDO",
+    "PARA CERTIFICAR (SIGA)": "ESPERANDO PRESUPUESTO",
     "ENTREGADO A PLANEAMIENTO": "TERMINADO",
     "OBSERVADO / DEVUELTO": "OBSERVADO",
     "ANULADO": "OBSERVADO",
@@ -1665,11 +1666,12 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
   // los valores en requerimientos, papelera e historial. No borra nada.
   function migrarEstadosProceso() {
     try {
-      if (localStorage.getItem("priority_migr_estados_v3")) return;
+      if (localStorage.getItem("priority_migr_estados_v4")) return;
       // Solo si aún se tiene una lista anterior (no pisar personalizaciones propias)
       const nombres = (config.estados || []).map((e) => String(e.nombre).toUpperCase());
       const esHeredada = nombres.indexOf("ENTREGADO A GRISEL") >= 0 || nombres.indexOf("INVITACION") >= 0
-        || nombres.indexOf("INDAGACIÓN DE MERCADO") >= 0 || nombres.indexOf("PARA CERTIFICAR (SIGA)") >= 0;
+        || nombres.indexOf("INDAGACIÓN DE MERCADO") >= 0 || nombres.indexOf("PARA CERTIFICAR (SIGA)") >= 0
+        || nombres.indexOf("CERTIFICANDO") >= 0;
       if (esHeredada) {
         config.estados = clone(DEF_CONFIG.estados);
         try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch (e) {}
@@ -1685,7 +1687,7 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
         });
         guardar(); guardarPapelera();
       }
-      localStorage.setItem("priority_migr_estados_v3", "1");
+      localStorage.setItem("priority_migr_estados_v4", "1");
     } catch (e) {}
   }
   function guardarConfig() {

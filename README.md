@@ -143,7 +143,7 @@ indicadores de «Heredados» y «Mi trabajo» **no cuentan** lo que ya está en 
   oscuro**. Tu elección **queda recordada** en el navegador. La primera vez respeta
   el tema que use tu sistema operativo.
 
-## Estados: 6 pasos, uno por cada vez que el expediente cambia de manos
+## Estados: 5 pasos, solo donde el expediente se queda esperando
 
 | # | Estado | Qué significa | Depende de |
 |---|--------|----------------|------------|
@@ -151,18 +151,17 @@ indicadores de «Heredados» y «Mi trabajo» **no cuentan** lo que ya está en 
 | 2 | INDAGACIÓN | Invito a los postores y espero sus cotizaciones | 🔵 mí |
 | 3 | EN VALIDACIÓN | Entregado a Grisel → el área usuaria valida y devuelve | 🟠 otros |
 | 4 | ESPERANDO PRESUPUESTO | Validado y registrado; en cola de presupuesto | 🟠 otros |
-| 5 | CERTIFICANDO | Certifico en SIGA + cuadro comparativo y nota a planeamiento | 🟣 mí |
-| 6 | TERMINADO | Última entrega a Grisel (pasa solo a «Terminados») | 🟢 cerrado |
+| 5 | TERMINADO | Llegó el presupuesto: certificas, entregas y se cierra (pasa solo a «Terminados») | 🟢 cerrado |
 | — | OBSERVADO | Excepción: detenido, hay que corregir algo | 🔴 |
 
-- **Botón ⏭** en cada fila: **avanza al siguiente paso** con un clic. En 5 clics
+- **Botón ⏭** en cada fila: **avanza al siguiente paso** con un clic. En 4 clics
   repartidos en el tiempo un expediente recorre todo su ciclo. Queda anotado en
   el historial 🕘 y se deshace con Ctrl+Z. Se detiene en TERMINADO (OBSERVADO se
   elige a mano porque está fuera del flujo).
 - Si vienes de una lista anterior, la app **convierte sola** tus expedientes
   (p. ej. Invitación → Indagación · Validado y Disponibilidad presupuestal →
-  Esperando presupuesto · Entregado a Grisel → En validación · Cuadro comparativo
-  → Certificando). Se actualizan también la papelera y el historial.
+  Esperando presupuesto · Entregado a Grisel → En validación · Cuadro comparativo y
+  Certificando → Esperando presupuesto). Se actualizan también la papelera y el historial.
 - ¿Necesitas más detalle en algún tramo? Agrega el estado que quieras en
   ⋯ → ⚙ Configurar listas: el botón ⏭ respeta el orden que definas.
 

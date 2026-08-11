@@ -100,7 +100,8 @@
 
   // Listas configurables por defecto (el usuario puede cambiarlas en ⚙ Configurar)
   const DEF_CONFIG = {
-    // Seis pasos: uno por cada momento en que el expediente cambia de manos.
+    // Cinco pasos: solo los momentos en que el expediente SE QUEDA esperando algo.
+    // Certificar y entregar no son estados: se hacen de corrido y cierran el caso.
     // Color: gris = sin empezar · AZUL = me toca a mí · ÁMBAR = espero a otros ·
     // verde = cerrado · rojo = detenido (excepción, fuera del flujo).
     estados: [
@@ -108,9 +109,8 @@
       { nombre: "INDAGACIÓN", color: "#3b56d6" },             // invito a postores y espero cotizaciones
       { nombre: "EN VALIDACIÓN", color: "#c77700" },          // con Grisel → área usuaria
       { nombre: "ESPERANDO PRESUPUESTO", color: "#a86400" },  // validado; en cola de presupuesto
-      { nombre: "CERTIFICANDO", color: "#6d28d9" },           // SIGA + cuadro comparativo + nota
-      { nombre: "TERMINADO", color: "#0e8a6a" },              // entregado a planeamiento (se archiva)
-      { nombre: "OBSERVADO", color: "#d63b4b" },              // detenido: el área debe corregir
+      { nombre: "TERMINADO", color: "#0e8a6a" },              // certificado y entregado (se archiva)
+      { nombre: "OBSERVADO", color: "#d63b4b" },              // detenido: hay que corregir algo
     ],
     tipos: [
       { nombre: "BIEN", color: "#4a7a2e" },
@@ -394,13 +394,16 @@
     "DISPONIBILIDAD PRESUPUESTAL": "ESPERANDO PRESUPUESTO",
     "ENTREGADO A GRISEL": "EN VALIDACIÓN",
     "VALIDADO": "ESPERANDO PRESUPUESTO",
-    "CUADRO COMPARATIVO": "CERTIFICANDO",
+    // Los que estaban certificando siguen abiertos: se dejan en el último paso
+    // en espera (no en TERMINADO, para no archivar algo que aún no entregaste).
+    "CUADRO COMPARATIVO": "ESPERANDO PRESUPUESTO",
+    "CERTIFICANDO": "ESPERANDO PRESUPUESTO",
     // versión detallada intermedia
     "INDAGACIÓN DE MERCADO": "INDAGACIÓN",
     "ESPERANDO COTIZACIONES": "INDAGACIÓN",
     "PREPARANDO VALIDACIÓN": "EN VALIDACIÓN",
     "EN VALIDACIÓN (ÁREA USUARIA)": "EN VALIDACIÓN",
-    "PARA CERTIFICAR (SIGA)": "CERTIFICANDO",
+    "PARA CERTIFICAR (SIGA)": "ESPERANDO PRESUPUESTO",
     "ENTREGADO A PLANEAMIENTO": "TERMINADO",
     "OBSERVADO / DEVUELTO": "OBSERVADO",
     "ANULADO": "OBSERVADO",
@@ -409,11 +412,12 @@
   // los valores en requerimientos, papelera e historial. No borra nada.
   function migrarEstadosProceso() {
     try {
-      if (localStorage.getItem("priority_migr_estados_v3")) return;
+      if (localStorage.getItem("priority_migr_estados_v4")) return;
       // Solo si aún se tiene una lista anterior (no pisar personalizaciones propias)
       const nombres = (config.estados || []).map((e) => String(e.nombre).toUpperCase());
       const esHeredada = nombres.indexOf("ENTREGADO A GRISEL") >= 0 || nombres.indexOf("INVITACION") >= 0
-        || nombres.indexOf("INDAGACIÓN DE MERCADO") >= 0 || nombres.indexOf("PARA CERTIFICAR (SIGA)") >= 0;
+        || nombres.indexOf("INDAGACIÓN DE MERCADO") >= 0 || nombres.indexOf("PARA CERTIFICAR (SIGA)") >= 0
+        || nombres.indexOf("CERTIFICANDO") >= 0;
       if (esHeredada) {
         config.estados = clone(DEF_CONFIG.estados);
         try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch (e) {}
@@ -429,7 +433,7 @@
         });
         guardar(); guardarPapelera();
       }
-      localStorage.setItem("priority_migr_estados_v3", "1");
+      localStorage.setItem("priority_migr_estados_v4", "1");
     } catch (e) {}
   }
   function guardarConfig() {
