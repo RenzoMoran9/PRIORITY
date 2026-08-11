@@ -143,29 +143,28 @@ indicadores de «Heredados» y «Mi trabajo» **no cuentan** lo que ya está en 
   oscuro**. Tu elección **queda recordada** en el navegador. La primera vez respeta
   el tema que use tu sistema operativo.
 
-## Estados: el flujo real, con colores que dicen de quién depende
+## Estados: 6 pasos, uno por cada vez que el expediente cambia de manos
 
 | # | Estado | Qué significa | Depende de |
 |---|--------|----------------|------------|
-| 1 | PENDIENTE | Llegó el requerimiento; aún no lo empiezo | gris · por iniciar |
-| 2 | INDAGACIÓN DE MERCADO | Envío invitaciones a los postores | 🔵 mí |
-| 3 | ESPERANDO COTIZACIONES | Espero que respondan los postores | 🟠 otros |
-| 4 | PREPARANDO VALIDACIÓN | Armo el cuadro de validación y el memo | 🔵 mí |
-| 5 | EN VALIDACIÓN (ÁREA USUARIA) | Entregado a Grisel → área usuaria | 🟠 otros |
-| 6 | VALIDADO | Me lo devolvieron: lo registro en el Excel de la unidad | 🔵 mí |
-| 7 | ESPERANDO PRESUPUESTO | En cola para asignación presupuestal | 🟠 otros |
-| 8 | PARA CERTIFICAR (SIGA) | Hay presupuesto: certifico en el SIGA | 🟣 mí (hito) |
-| 9 | CUADRO COMPARATIVO | Cuadro comparativo + nota a planeamiento | 🔵 mí |
-| 10 | ENTREGADO A PLANEAMIENTO | Última entrega a Grisel | 🟢 cerrado |
-| 11 | TERMINADO | Cerrado del todo (pasa a la pestaña «Terminados») | 🟢 cerrado |
-| — | OBSERVADO / DEVUELTO · ANULADO | Detenido o no continuó | 🔴 |
+| 1 | PENDIENTE | Llegó el requerimiento; aún no lo empiezo | ⚪ por iniciar |
+| 2 | INDAGACIÓN | Invito a los postores y espero sus cotizaciones | 🔵 mí |
+| 3 | EN VALIDACIÓN | Entregado a Grisel → el área usuaria valida y devuelve | 🟠 otros |
+| 4 | ESPERANDO PRESUPUESTO | Validado y registrado; en cola de presupuesto | 🟠 otros |
+| 5 | CERTIFICANDO | Certifico en SIGA + cuadro comparativo y nota a planeamiento | 🟣 mí |
+| 6 | TERMINADO | Última entrega a Grisel (pasa solo a «Terminados») | 🟢 cerrado |
+| — | OBSERVADO | Excepción: detenido, hay que corregir algo | 🔴 |
 
-- **Botón ⏭** en cada fila: **avanza al siguiente estado** del proceso con un clic
-  (queda anotado en el historial 🕘 y se deshace con Ctrl+Z).
-- Si vienes del formato anterior, la app **renombra sola** tus expedientes:
-  Invitación → Indagación de mercado · Disponibilidad presupuestal → Esperando
-  presupuesto · Entregado a Grisel → En validación (área usuaria). No se pierde
-  nada: se actualizan también la papelera y el historial.
+- **Botón ⏭** en cada fila: **avanza al siguiente paso** con un clic. En 5 clics
+  repartidos en el tiempo un expediente recorre todo su ciclo. Queda anotado en
+  el historial 🕘 y se deshace con Ctrl+Z. Se detiene en TERMINADO (OBSERVADO se
+  elige a mano porque está fuera del flujo).
+- Si vienes de una lista anterior, la app **convierte sola** tus expedientes
+  (p. ej. Invitación → Indagación · Validado y Disponibilidad presupuestal →
+  Esperando presupuesto · Entregado a Grisel → En validación · Cuadro comparativo
+  → Certificando). Se actualizan también la papelera y el historial.
+- ¿Necesitas más detalle en algún tramo? Agrega el estado que quieras en
+  ⋯ → ⚙ Configurar listas: el botón ⏭ respeta el orden que definas.
 
 ## Vista de trabajo (reestructurada) y 👁 Columnas
 

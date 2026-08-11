@@ -382,45 +382,30 @@
         </div>
 
         <div class="glosario-group">
-          <h3>Estado del requerimiento <span class="config-hint">el flujo real, paso a paso · el color dice de quién depende</span></h3>
+          <h3>Estado del requerimiento <span class="config-hint">6 pasos · el color dice de quién depende</span></h3>
           <p class="glosario-leyenda">
             <span class="badge estado">gris</span> sin empezar ·
             <span class="badge" style="background:rgba(59,86,214,.15);color:#22337f">azul</span> me toca a mí ·
             <span class="badge" style="background:rgba(199,119,0,.15);color:#734500">ámbar</span> espero a otros ·
-            <span class="badge" style="background:rgba(109,40,217,.15);color:#3f1780">morado</span> certificación ·
             <span class="badge" style="background:rgba(14,138,106,.15);color:#085040">verde</span> cerrado
           </p>
           <dl class="glosario-list">
-            <dt><span class="badge estado" data-e="PENDIENTE">PENDIENTE</span></dt>
+            <dt><span class="badge estado" data-e="PENDIENTE">1 · PENDIENTE</span></dt>
             <dd>Llegó el requerimiento del área usuaria; aún no lo empiezo.</dd>
-            <dt><span class="badge" style="background:rgba(59,86,214,.15);color:#22337f">INDAGACIÓN DE MERCADO</span></dt>
-            <dd>Envío las invitaciones a los postores según el ítem.</dd>
-            <dt><span class="badge" style="background:rgba(199,119,0,.15);color:#734500">ESPERANDO COTIZACIONES</span></dt>
-            <dd>Ya invité; espero que los postores respondan con sus cotizaciones.</dd>
-            <dt><span class="badge" style="background:rgba(47,95,208,.15);color:#1c3878">PREPARANDO VALIDACIÓN</span></dt>
-            <dd>Llegaron las cotizaciones: armo el cuadro de validación y el memo.</dd>
-            <dt><span class="badge" style="background:rgba(176,111,0,.15);color:#674100">EN VALIDACIÓN (ÁREA USUARIA)</span></dt>
-            <dd>Se lo entregué a Grisel, que lo envía al área usuaria. Espero que validen y lo devuelvan.</dd>
-            <dt><span class="badge" style="background:rgba(31,95,214,.15);color:#12377d">VALIDADO</span></dt>
-            <dd>Ya me lo devolvieron validado: lo registro en el Excel compartido de la unidad de programación.</dd>
-            <dt><span class="badge" style="background:rgba(168,100,0,.15);color:#623b00">ESPERANDO PRESUPUESTO</span></dt>
-            <dd>En cola para que le asignen presupuesto.</dd>
-            <dt><span class="badge" style="background:rgba(109,40,217,.15);color:#3f1780">PARA CERTIFICAR (SIGA)</span></dt>
-            <dd>Ya hay presupuesto: me toca entrar al SIGA y certificar el ítem.</dd>
-            <dt><span class="badge" style="background:rgba(26,115,168,.15);color:#0f4462">CUADRO COMPARATIVO</span></dt>
-            <dd>Certificado: preparo el cuadro comparativo y la nota informativa a planeamiento.</dd>
-            <dt><span class="badge" style="background:rgba(21,130,74,.15);color:#0c4c2b">ENTREGADO A PLANEAMIENTO</span></dt>
-            <dd>Última entrega a Grisel, que lo envía a planeamiento. Para mí ya está prácticamente cerrado.</dd>
-            <dt><span class="badge estado" data-e="TERMINADO">TERMINADO</span></dt>
-            <dd>Cerrado del todo. Al marcarlo, el expediente pasa solo a la pestaña «Terminados».</dd>
-            <dt><span class="badge" style="background:rgba(214,59,75,.15);color:#7d2530">OBSERVADO / DEVUELTO</span></dt>
-            <dd>Está detenido porque el área usuaria debe corregir algo.</dd>
-            <dt><span class="badge" style="background:rgba(138,90,98,.15);color:#513539">ANULADO</span></dt>
-            <dd>El requerimiento no continuó.</dd>
-            <dt><span class="badge estado" data-e="PARA SALDO">PARA SALDO</span></dt>
-            <dd>Heredado del formato anterior. Si ya no lo usas, bórralo desde ⋯ → ⚙ Configurar listas.</dd>
+            <dt><span class="badge" style="background:rgba(59,86,214,.15);color:#22337f">2 · INDAGACIÓN</span></dt>
+            <dd>Indagación de mercado: invito a los postores y espero sus cotizaciones.</dd>
+            <dt><span class="badge" style="background:rgba(199,119,0,.15);color:#734500">3 · EN VALIDACIÓN</span></dt>
+            <dd>Armé el cuadro de validación y el memo, y se lo entregué a Grisel: el área usuaria tiene que validarlo y devolverlo.</dd>
+            <dt><span class="badge" style="background:rgba(168,100,0,.15);color:#623b00">4 · ESPERANDO PRESUPUESTO</span></dt>
+            <dd>Ya está validado y registrado en el Excel de la unidad; espero que le asignen presupuesto.</dd>
+            <dt><span class="badge" style="background:rgba(109,40,217,.15);color:#3f1780">5 · CERTIFICANDO</span></dt>
+            <dd>Hay presupuesto: certifico en el SIGA y preparo el cuadro comparativo con la nota a planeamiento.</dd>
+            <dt><span class="badge estado" data-e="TERMINADO">6 · TERMINADO</span></dt>
+            <dd>Última entrega a Grisel, que lo envía a planeamiento. Al marcarlo pasa solo a la pestaña «Terminados».</dd>
+            <dt><span class="badge" style="background:rgba(214,59,75,.15);color:#7d2530">OBSERVADO</span></dt>
+            <dd>Excepción, fuera del flujo: está detenido porque hay que corregir algo o no continuó.</dd>
           </dl>
-          <p class="glosario-tip">Con el botón <strong>⏭</strong> de cada fila avanzas al siguiente estado del proceso con un solo clic.</p>
+          <p class="glosario-tip">Con el botón <strong>⏭</strong> de cada fila avanzas al siguiente paso con un solo clic; en 5 clics repartidos en el tiempo, un expediente recorre todo su ciclo.</p>
         </div>
 
         <div class="glosario-group">

@@ -100,24 +100,17 @@
 
   // Listas configurables por defecto (el usuario puede cambiarlas en ⚙ Configurar)
   const DEF_CONFIG = {
-    // Estados en el orden real del proceso de UPROG.
-    // Código de color: gris = sin empezar · AZUL = me toca a mí · ÁMBAR = espero a
-    // otros · morado = certificación (hito) · verde = cerrado · rojo = detenido.
+    // Seis pasos: uno por cada momento en que el expediente cambia de manos.
+    // Color: gris = sin empezar · AZUL = me toca a mí · ÁMBAR = espero a otros ·
+    // verde = cerrado · rojo = detenido (excepción, fuera del flujo).
     estados: [
-      { nombre: "PENDIENTE", color: "#6b7280" },                     // llegó, aún no lo trabajo
-      { nombre: "INDAGACIÓN DE MERCADO", color: "#3b56d6" },         // envío invitaciones a postores
-      { nombre: "ESPERANDO COTIZACIONES", color: "#c77700" },        // esperan los postores
-      { nombre: "PREPARANDO VALIDACIÓN", color: "#2f5fd0" },         // armo cuadro + memo de validación
-      { nombre: "EN VALIDACIÓN (ÁREA USUARIA)", color: "#b06f00" },  // entregado a Grisel → área usuaria
-      { nombre: "VALIDADO", color: "#1f5fd6" },                      // me lo devolvieron: registro en Excel UPROG
-      { nombre: "ESPERANDO PRESUPUESTO", color: "#a86400" },         // espero asignación presupuestal
-      { nombre: "PARA CERTIFICAR (SIGA)", color: "#6d28d9" },        // me dieron presupuesto: certifico
-      { nombre: "CUADRO COMPARATIVO", color: "#1a73a8" },            // cuadro + nota a planeamiento
-      { nombre: "ENTREGADO A PLANEAMIENTO", color: "#15824a" },      // última entrega a Grisel
-      { nombre: "TERMINADO", color: "#0e8a6a" },                     // cerrado (pasa a «Terminados»)
-      { nombre: "OBSERVADO / DEVUELTO", color: "#d63b4b" },          // el área usuaria debe corregir
-      { nombre: "ANULADO", color: "#8a5a62" },                       // no continuó
-      { nombre: "PARA SALDO", color: "#7b3fd1" },                    // heredado: bórralo si ya no aplica
+      { nombre: "PENDIENTE", color: "#6b7280" },              // llegó; aún no lo empiezo
+      { nombre: "INDAGACIÓN", color: "#3b56d6" },             // invito a postores y espero cotizaciones
+      { nombre: "EN VALIDACIÓN", color: "#c77700" },          // con Grisel → área usuaria
+      { nombre: "ESPERANDO PRESUPUESTO", color: "#a86400" },  // validado; en cola de presupuesto
+      { nombre: "CERTIFICANDO", color: "#6d28d9" },           // SIGA + cuadro comparativo + nota
+      { nombre: "TERMINADO", color: "#0e8a6a" },              // entregado a planeamiento (se archiva)
+      { nombre: "OBSERVADO", color: "#d63b4b" },              // detenido: el área debe corregir
     ],
     tipos: [
       { nombre: "BIEN", color: "#4a7a2e" },
@@ -391,21 +384,36 @@
     derivarConfig();
   }
 
-  // Estados heredados del formato anterior → estados del proceso real de UPROG.
+  // Estados antiguos (los heredados del Excel anterior y los de la versión
+  // detallada) → los seis pasos actuales. «PARA SALDO» no se toca a propósito:
+  // no está claro qué significa, así que se conserva tal cual.
   const MAPA_ESTADOS_2 = {
-    "INVITACION": "INDAGACIÓN DE MERCADO",
-    "INVITACIÓN": "INDAGACIÓN DE MERCADO",
+    // formato heredado
+    "INVITACION": "INDAGACIÓN",
+    "INVITACIÓN": "INDAGACIÓN",
     "DISPONIBILIDAD PRESUPUESTAL": "ESPERANDO PRESUPUESTO",
-    "ENTREGADO A GRISEL": "EN VALIDACIÓN (ÁREA USUARIA)",
+    "ENTREGADO A GRISEL": "EN VALIDACIÓN",
+    "VALIDADO": "ESPERANDO PRESUPUESTO",
+    "CUADRO COMPARATIVO": "CERTIFICANDO",
+    // versión detallada intermedia
+    "INDAGACIÓN DE MERCADO": "INDAGACIÓN",
+    "ESPERANDO COTIZACIONES": "INDAGACIÓN",
+    "PREPARANDO VALIDACIÓN": "EN VALIDACIÓN",
+    "EN VALIDACIÓN (ÁREA USUARIA)": "EN VALIDACIÓN",
+    "PARA CERTIFICAR (SIGA)": "CERTIFICANDO",
+    "ENTREGADO A PLANEAMIENTO": "TERMINADO",
+    "OBSERVADO / DEVUELTO": "OBSERVADO",
+    "ANULADO": "OBSERVADO",
   };
   // Migración única: cambia la lista de estados a la del proceso real y renombra
   // los valores en requerimientos, papelera e historial. No borra nada.
   function migrarEstadosProceso() {
     try {
-      if (localStorage.getItem("priority_migr_estados_v2")) return;
-      // Solo si el usuario aún tiene la lista heredada (no pisar personalizaciones)
+      if (localStorage.getItem("priority_migr_estados_v3")) return;
+      // Solo si aún se tiene una lista anterior (no pisar personalizaciones propias)
       const nombres = (config.estados || []).map((e) => String(e.nombre).toUpperCase());
-      const esHeredada = nombres.indexOf("ENTREGADO A GRISEL") >= 0 || nombres.indexOf("INVITACION") >= 0;
+      const esHeredada = nombres.indexOf("ENTREGADO A GRISEL") >= 0 || nombres.indexOf("INVITACION") >= 0
+        || nombres.indexOf("INDAGACIÓN DE MERCADO") >= 0 || nombres.indexOf("PARA CERTIFICAR (SIGA)") >= 0;
       if (esHeredada) {
         config.estados = clone(DEF_CONFIG.estados);
         try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch (e) {}
@@ -421,7 +429,7 @@
         });
         guardar(); guardarPapelera();
       }
-      localStorage.setItem("priority_migr_estados_v2", "1");
+      localStorage.setItem("priority_migr_estados_v3", "1");
     } catch (e) {}
   }
   function guardarConfig() {
@@ -628,9 +636,8 @@
 
   function filaHTML(it) {
     const dias = diasDesde(it.fechaIngreso);
-    // Etapas cerradas: ya no dependen de mí, no cuentan como "viejo" ni "sin movimiento"
-    const CERRADOS = ["ENTREGADO A PLANEAMIENTO", "PARA SALDO", "ANULADO", "ENTREGADO A GRISEL"];
-    const cerrado = CERRADOS.indexOf(it.estado) >= 0 || esTerminado(it.estado);
+    // Cerrado: ya no depende de mí, no cuenta como "viejo" ni "sin movimiento"
+    const cerrado = esTerminado(it.estado) || it.estado === "PARA SALDO";
     const vieja = dias !== null && dias > 30 && !cerrado;
     const antig = dias !== null ? `<span class="antig-tag ${vieja ? "alerta" : ""}">${dias} d</span>` : "";
     // Días sin movimiento: desde la última edición (o su registro si nunca se editó)
@@ -663,10 +670,9 @@
       item: () => ed("item", celdaItem, "cell-item2"),
       tipo: () => ed("tipo", badge(it.tipo, COL.tipo)),
       estado: () => {
-        // ⏭ avanza al siguiente estado del proceso con un clic (el flujo es lineal)
-        const lista = config.estados.map((o) => o.nombre);
-        const i = lista.indexOf(it.estado);
-        const sig = (i >= 0 && i < lista.length - 1) ? lista[i + 1] : null;
+        // ⏭ avanza al siguiente paso con un clic (el flujo es lineal y acaba en TERMINADO;
+        // lo que va después de TERMINADO son excepciones, se eligen a mano)
+        const sig = siguienteEstado(it.estado);
         const btnSig = sig
           ? `<button class="paso-sig" data-sig="${it.id}" title="Avanzar a: ${esc(sig)}">⏭</button>` : "";
         return ed("estado", `<div class="estado-linea">${badge(it.estado, COL.estado)}${btnSig}</div>` + movTag);
@@ -874,14 +880,22 @@
     back.addEventListener("mousedown", commit);
   }
 
+  // Siguiente paso del flujo (null si ya está al final o fuera del flujo).
+  // El flujo va del primer estado hasta TERMINADO; lo posterior son excepciones.
+  function siguienteEstado(actual) {
+    const lista = config.estados.map((o) => o.nombre);
+    const i = lista.indexOf(actual);
+    if (i < 0) return null;
+    let fin = lista.findIndex(esTerminado);
+    if (fin < 0) fin = lista.length - 1;
+    return i < fin ? lista[i + 1] : null;
+  }
   // Avanza un requerimiento al siguiente estado del proceso (botón ⏭)
   function avanzarEstado(id) {
     const it = items.find((x) => x.id === id);
     if (!it) return;
-    const lista = config.estados.map((o) => o.nombre);
-    const i = lista.indexOf(it.estado);
-    if (i < 0 || i >= lista.length - 1) return;
-    const nuevo = lista[i + 1];
+    const nuevo = siguienteEstado(it.estado);
+    if (!nuevo) return;
     snapshot();
     logEstado(it, it.estado, nuevo);
     it.estado = nuevo;
