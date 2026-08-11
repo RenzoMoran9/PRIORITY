@@ -1342,6 +1342,25 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
     return Object.keys(freq).filter((f) => freq[f] >= 2)
       .sort((a, b) => freq[b] - freq[a]).slice(0, 8);
   }
+  // ¿Los dos textos dicen prácticamente lo mismo? Se usa para no repetir la
+  // denominación bajo el ítem cuando solo le agrega palabras de trámite
+  // ("SOLICITO ADQUISICION DE… PARA EL SERVICIO DE…"). Compara por palabras, así
+  // que tolera variantes como «3» vs «TRES» o erratas sueltas.
+  const PALABRAS_VACIAS = new Set(["DE", "DEL", "LA", "EL", "LOS", "LAS", "PARA", "POR",
+    "CON", "UN", "UNA", "Y", "EN", "AL", "SE", "SU", "SOLICITO", "SOLICITUD", "REQUERIMIENTO",
+    "ADQUISICION", "SERVICIO", "REMITO", "SOLICITADO", "HNAL", "PERSISTENCIA", "NECESIDAD"]);
+  function seParecen(a, b) {
+    const palabras = (s) => String(s || "").toUpperCase()
+      .normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .replace(/[^0-9A-Z ]/g, " ").split(/\s+/)
+      .filter((w) => w.length > 2 && !PALABRAS_VACIAS.has(w));
+    const x = palabras(a), y = palabras(b);
+    if (!x.length || !y.length) return false;
+    const corto = x.length <= y.length ? x : y;
+    const largo = new Set(x.length <= y.length ? y : x);
+    const comunes = corto.filter((w) => largo.has(w)).length;
+    return comunes / corto.length >= 0.6;   // el corto ya está casi todo en el largo
+  }
   function buscarDuplicado(val, exceptoId) {
     val = String(val == null ? "" : val).trim();
     if (!val) return null;
@@ -1913,10 +1932,15 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
     const txt = (f, cls) => ed(f, esc(it[f]) || GUION, cls);
     const esAlta = !!it.prioridad && it.prioridad === prioridadTop();
 
-    // Ítem con la denominación completa debajo (editable con su propio clic)
-    const denSub = it.denominacion
+    // Ítem con la denominación debajo, PERO solo si aporta algo distinto: en la
+    // mayoría de expedientes la denominación es el mismo ítem con relleno
+    // ("SOLICITO ADQUISICION DE… PARA EL SERVICIO DE…") y se veía repetido.
+    const denAporta = it.denominacion && !seParecen(it.item, it.denominacion);
+    const denSub = denAporta
       ? `<span class="sub-linea sub-edit" data-sub="denominacion" data-id="${it.id}" title="Denominación completa · clic para editarla">${esc(it.denominacion)}</span>` : "";
-    const celdaItem = `<div class="item-main">${esc(it.item) || GUION}</div>` + denSub;
+    // Si no se muestra, la denominación sigue accesible al pasar el mouse por el ítem
+    const tituloItem = (it.denominacion && !denAporta) ? ` title="${esc(it.denominacion)}"` : "";
+    const celdaItem = `<div class="item-main"${tituloItem}>${esc(it.item) || GUION}</div>` + denSub;
     // Área usuaria con la estratégica debajo SOLO si difiere (94% son iguales)
     const difEstr = it.areaEstrategica && String(it.areaEstrategica).trim().toUpperCase() !== String(it.areaUsuaria || "").trim().toUpperCase();
     const celdaArea = (esc(it.areaUsuaria) || GUION) +
