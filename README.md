@@ -37,9 +37,8 @@ Basados en tu hoja "JUNIO MEJORADO":
     indicación médica o urgencia).
 - **Denominación del requerimiento** (completo) e **Ítem** (resumen corto)
 - **Especialista a cargo** y **Fecha de pase a especialista**
-- **Estado del requerimiento**: Pendiente, Disponibilidad presupuestal, Invitación,
-  Cuadro comparativo, Validado, Entregado a Grisel, Para saldo, **Terminado**
-  (puedes editar esta lista en ⚙ Configurar)
+- **Estado del requerimiento**: sigue el flujo real de UPROG, paso a paso
+  (ver la sección «Estados» más abajo). Puedes editar la lista en ⋯ → ⚙ Configurar.
 - **Observaciones**: el texto se **ajusta y se ve completo** dentro de la celda; al
   editarla se abre un cuadro multilínea (Esc cancela, clic fuera guarda)
 - **Prioridad**: Alta / Media / Baja
@@ -143,6 +142,30 @@ indicadores de «Heredados» y «Mi trabajo» **no cuentan** lo que ya está en 
 - Arriba, junto al zoom, hay un botón **🌙 / ☀** para cambiar entre **tema claro y
   oscuro**. Tu elección **queda recordada** en el navegador. La primera vez respeta
   el tema que use tu sistema operativo.
+
+## Estados: el flujo real, con colores que dicen de quién depende
+
+| # | Estado | Qué significa | Depende de |
+|---|--------|----------------|------------|
+| 1 | PENDIENTE | Llegó el requerimiento; aún no lo empiezo | gris · por iniciar |
+| 2 | INDAGACIÓN DE MERCADO | Envío invitaciones a los postores | 🔵 mí |
+| 3 | ESPERANDO COTIZACIONES | Espero que respondan los postores | 🟠 otros |
+| 4 | PREPARANDO VALIDACIÓN | Armo el cuadro de validación y el memo | 🔵 mí |
+| 5 | EN VALIDACIÓN (ÁREA USUARIA) | Entregado a Grisel → área usuaria | 🟠 otros |
+| 6 | VALIDADO | Me lo devolvieron: lo registro en el Excel de la unidad | 🔵 mí |
+| 7 | ESPERANDO PRESUPUESTO | En cola para asignación presupuestal | 🟠 otros |
+| 8 | PARA CERTIFICAR (SIGA) | Hay presupuesto: certifico en el SIGA | 🟣 mí (hito) |
+| 9 | CUADRO COMPARATIVO | Cuadro comparativo + nota a planeamiento | 🔵 mí |
+| 10 | ENTREGADO A PLANEAMIENTO | Última entrega a Grisel | 🟢 cerrado |
+| 11 | TERMINADO | Cerrado del todo (pasa a la pestaña «Terminados») | 🟢 cerrado |
+| — | OBSERVADO / DEVUELTO · ANULADO | Detenido o no continuó | 🔴 |
+
+- **Botón ⏭** en cada fila: **avanza al siguiente estado** del proceso con un clic
+  (queda anotado en el historial 🕘 y se deshace con Ctrl+Z).
+- Si vienes del formato anterior, la app **renombra sola** tus expedientes:
+  Invitación → Indagación de mercado · Disponibilidad presupuestal → Esperando
+  presupuesto · Entregado a Grisel → En validación (área usuaria). No se pierde
+  nada: se actualizan también la papelera y el historial.
 
 ## Vista de trabajo (reestructurada) y 👁 Columnas
 

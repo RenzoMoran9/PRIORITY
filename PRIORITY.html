@@ -694,6 +694,30 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
 .hist-fecha { color: var(--muted); font-size: 11px; white-space: nowrap; }
 .hist-vacio { color: var(--muted); font-size: 12.5px; padding: 6px 2px; }
 
+/* ---------- Glosario: leyenda de colores y consejo ---------- */
+.glosario-leyenda {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  margin: 0 0 12px; font-size: 12px; color: var(--muted);
+}
+.glosario-tip {
+  margin: 12px 0 0; padding: 9px 12px;
+  background: var(--primary-soft); border-radius: 9px;
+  font-size: 12.5px; color: var(--text);
+}
+
+/* ---------- Botón ⏭ (avanzar al siguiente estado) ---------- */
+.estado-linea { display: flex; align-items: center; gap: 6px; }
+.paso-sig {
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--muted); border-radius: 6px; cursor: pointer;
+  font-size: 11px; line-height: 1; padding: 3px 5px;
+  opacity: 0; transition: opacity .12s ease, color .12s ease, border-color .12s ease;
+}
+.grid tbody tr:hover .paso-sig { opacity: 1; }
+.paso-sig:hover { color: var(--primary); border-color: var(--primary); }
+/* En pantallas táctiles no hay hover: el botón se ve siempre */
+@media (hover: none) { .paso-sig { opacity: 1; } }
+
 /* ---------- Días sin movimiento ---------- */
 .sinmov-tag { display: block; font-size: 10.5px; color: var(--warn); margin-top: 3px; white-space: nowrap; }
 
@@ -1152,25 +1176,45 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
         </div>
 
         <div class="glosario-group">
-          <h3>Estado del requerimiento <span class="config-hint">flujo típico, de inicio a fin</span></h3>
+          <h3>Estado del requerimiento <span class="config-hint">el flujo real, paso a paso · el color dice de quién depende</span></h3>
+          <p class="glosario-leyenda">
+            <span class="badge estado">gris</span> sin empezar ·
+            <span class="badge" style="background:rgba(59,86,214,.15);color:#22337f">azul</span> me toca a mí ·
+            <span class="badge" style="background:rgba(199,119,0,.15);color:#734500">ámbar</span> espero a otros ·
+            <span class="badge" style="background:rgba(109,40,217,.15);color:#3f1780">morado</span> certificación ·
+            <span class="badge" style="background:rgba(14,138,106,.15);color:#085040">verde</span> cerrado
+          </p>
           <dl class="glosario-list">
             <dt><span class="badge estado" data-e="PENDIENTE">PENDIENTE</span></dt>
-            <dd>Recién ingresó a UPROG; aún no se ha iniciado la gestión.</dd>
-            <dt><span class="badge estado" data-e="DISPONIBILIDAD PRESUPUESTAL">DISPONIBILIDAD PRESUPUESTAL</span></dt>
-            <dd>Se está verificando que exista presupuesto para atenderlo.</dd>
-            <dt><span class="badge estado" data-e="INVITACION">INVITACION</span></dt>
-            <dd>Se cursó la invitación a proveedores para cotizar.</dd>
-            <dt><span class="badge estado" data-e="CUADRO COMPARATIVO">CUADRO COMPARATIVO</span></dt>
-            <dd>Se están comparando las cotizaciones/ofertas recibidas.</dd>
-            <dt><span class="badge estado" data-e="VALIDADO">VALIDADO</span></dt>
-            <dd>La documentación o el proceso ya fue validado.</dd>
-            <dt><span class="badge estado" data-e="ENTREGADO A GRISEL">ENTREGADO A [PERSONA]</span></dt>
-            <dd>Pasó a la siguiente persona o área responsable (renombra este estado con el nombre de quien corresponda desde ⚙ Configurar).</dd>
-            <dt><span class="badge estado" data-e="PARA SALDO">PARA SALDO</span></dt>
-            <dd>Queda pendiente un saldo o complemento posterior.</dd>
+            <dd>Llegó el requerimiento del área usuaria; aún no lo empiezo.</dd>
+            <dt><span class="badge" style="background:rgba(59,86,214,.15);color:#22337f">INDAGACIÓN DE MERCADO</span></dt>
+            <dd>Envío las invitaciones a los postores según el ítem.</dd>
+            <dt><span class="badge" style="background:rgba(199,119,0,.15);color:#734500">ESPERANDO COTIZACIONES</span></dt>
+            <dd>Ya invité; espero que los postores respondan con sus cotizaciones.</dd>
+            <dt><span class="badge" style="background:rgba(47,95,208,.15);color:#1c3878">PREPARANDO VALIDACIÓN</span></dt>
+            <dd>Llegaron las cotizaciones: armo el cuadro de validación y el memo.</dd>
+            <dt><span class="badge" style="background:rgba(176,111,0,.15);color:#674100">EN VALIDACIÓN (ÁREA USUARIA)</span></dt>
+            <dd>Se lo entregué a Grisel, que lo envía al área usuaria. Espero que validen y lo devuelvan.</dd>
+            <dt><span class="badge" style="background:rgba(31,95,214,.15);color:#12377d">VALIDADO</span></dt>
+            <dd>Ya me lo devolvieron validado: lo registro en el Excel compartido de la unidad de programación.</dd>
+            <dt><span class="badge" style="background:rgba(168,100,0,.15);color:#623b00">ESPERANDO PRESUPUESTO</span></dt>
+            <dd>En cola para que le asignen presupuesto.</dd>
+            <dt><span class="badge" style="background:rgba(109,40,217,.15);color:#3f1780">PARA CERTIFICAR (SIGA)</span></dt>
+            <dd>Ya hay presupuesto: me toca entrar al SIGA y certificar el ítem.</dd>
+            <dt><span class="badge" style="background:rgba(26,115,168,.15);color:#0f4462">CUADRO COMPARATIVO</span></dt>
+            <dd>Certificado: preparo el cuadro comparativo y la nota informativa a planeamiento.</dd>
+            <dt><span class="badge" style="background:rgba(21,130,74,.15);color:#0c4c2b">ENTREGADO A PLANEAMIENTO</span></dt>
+            <dd>Última entrega a Grisel, que lo envía a planeamiento. Para mí ya está prácticamente cerrado.</dd>
             <dt><span class="badge estado" data-e="TERMINADO">TERMINADO</span></dt>
-            <dd>El requerimiento concluyó.</dd>
+            <dd>Cerrado del todo. Al marcarlo, el expediente pasa solo a la pestaña «Terminados».</dd>
+            <dt><span class="badge" style="background:rgba(214,59,75,.15);color:#7d2530">OBSERVADO / DEVUELTO</span></dt>
+            <dd>Está detenido porque el área usuaria debe corregir algo.</dd>
+            <dt><span class="badge" style="background:rgba(138,90,98,.15);color:#513539">ANULADO</span></dt>
+            <dd>El requerimiento no continuó.</dd>
+            <dt><span class="badge estado" data-e="PARA SALDO">PARA SALDO</span></dt>
+            <dd>Heredado del formato anterior. Si ya no lo usas, bórralo desde ⋯ → ⚙ Configurar listas.</dd>
           </dl>
+          <p class="glosario-tip">Con el botón <strong>⏭</strong> de cada fila avanzas al siguiente estado del proceso con un solo clic.</p>
         </div>
 
         <div class="glosario-group">
@@ -1327,15 +1371,24 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
 
   // Listas configurables por defecto (el usuario puede cambiarlas en ⚙ Configurar)
   const DEF_CONFIG = {
+    // Estados en el orden real del proceso de UPROG.
+    // Código de color: gris = sin empezar · AZUL = me toca a mí · ÁMBAR = espero a
+    // otros · morado = certificación (hito) · verde = cerrado · rojo = detenido.
     estados: [
-      { nombre: "PENDIENTE", color: "#6b7280" },
-      { nombre: "DISPONIBILIDAD PRESUPUESTAL", color: "#c77700" },
-      { nombre: "INVITACION", color: "#3b56d6" },
-      { nombre: "CUADRO COMPARATIVO", color: "#1f5fd6" },
-      { nombre: "VALIDADO", color: "#1f9d57" },
-      { nombre: "ENTREGADO A GRISEL", color: "#15824a" },
-      { nombre: "PARA SALDO", color: "#7b3fd1" },
-      { nombre: "TERMINADO", color: "#0e8a6a" },
+      { nombre: "PENDIENTE", color: "#6b7280" },                     // llegó, aún no lo trabajo
+      { nombre: "INDAGACIÓN DE MERCADO", color: "#3b56d6" },         // envío invitaciones a postores
+      { nombre: "ESPERANDO COTIZACIONES", color: "#c77700" },        // esperan los postores
+      { nombre: "PREPARANDO VALIDACIÓN", color: "#2f5fd0" },         // armo cuadro + memo de validación
+      { nombre: "EN VALIDACIÓN (ÁREA USUARIA)", color: "#b06f00" },  // entregado a Grisel → área usuaria
+      { nombre: "VALIDADO", color: "#1f5fd6" },                      // me lo devolvieron: registro en Excel UPROG
+      { nombre: "ESPERANDO PRESUPUESTO", color: "#a86400" },         // espero asignación presupuestal
+      { nombre: "PARA CERTIFICAR (SIGA)", color: "#6d28d9" },        // me dieron presupuesto: certifico
+      { nombre: "CUADRO COMPARATIVO", color: "#1a73a8" },            // cuadro + nota a planeamiento
+      { nombre: "ENTREGADO A PLANEAMIENTO", color: "#15824a" },      // última entrega a Grisel
+      { nombre: "TERMINADO", color: "#0e8a6a" },                     // cerrado (pasa a «Terminados»)
+      { nombre: "OBSERVADO / DEVUELTO", color: "#d63b4b" },          // el área usuaria debe corregir
+      { nombre: "ANULADO", color: "#8a5a62" },                       // no continuó
+      { nombre: "PARA SALDO", color: "#7b3fd1" },                    // heredado: bórralo si ya no aplica
     ],
     tipos: [
       { nombre: "BIEN", color: "#4a7a2e" },
@@ -1608,6 +1661,40 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
     } catch (e) {}
     derivarConfig();
   }
+
+  // Estados heredados del formato anterior → estados del proceso real de UPROG.
+  const MAPA_ESTADOS_2 = {
+    "INVITACION": "INDAGACIÓN DE MERCADO",
+    "INVITACIÓN": "INDAGACIÓN DE MERCADO",
+    "DISPONIBILIDAD PRESUPUESTAL": "ESPERANDO PRESUPUESTO",
+    "ENTREGADO A GRISEL": "EN VALIDACIÓN (ÁREA USUARIA)",
+  };
+  // Migración única: cambia la lista de estados a la del proceso real y renombra
+  // los valores en requerimientos, papelera e historial. No borra nada.
+  function migrarEstadosProceso() {
+    try {
+      if (localStorage.getItem("priority_migr_estados_v2")) return;
+      // Solo si el usuario aún tiene la lista heredada (no pisar personalizaciones)
+      const nombres = (config.estados || []).map((e) => String(e.nombre).toUpperCase());
+      const esHeredada = nombres.indexOf("ENTREGADO A GRISEL") >= 0 || nombres.indexOf("INVITACION") >= 0;
+      if (esHeredada) {
+        config.estados = clone(DEF_CONFIG.estados);
+        try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch (e) {}
+        derivarConfig();
+        const renombrar = (v) => MAPA_ESTADOS_2[String(v || "").trim().toUpperCase()] || v;
+        [items, papelera].forEach((lista) => {
+          lista.forEach((it) => {
+            if (it.estado) it.estado = renombrar(it.estado);
+            if (Array.isArray(it.historial)) {
+              it.historial.forEach((h) => { h.de = renombrar(h.de); h.a = renombrar(h.a); });
+            }
+          });
+        });
+        guardar(); guardarPapelera();
+      }
+      localStorage.setItem("priority_migr_estados_v2", "1");
+    } catch (e) {}
+  }
   function guardarConfig() {
     try { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); } catch (e) {}
     derivarConfig();
@@ -1812,7 +1899,9 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
 
   function filaHTML(it) {
     const dias = diasDesde(it.fechaIngreso);
-    const cerrado = it.estado === "PARA SALDO" || it.estado === "ENTREGADO A GRISEL" || esTerminado(it.estado);
+    // Etapas cerradas: ya no dependen de mí, no cuentan como "viejo" ni "sin movimiento"
+    const CERRADOS = ["ENTREGADO A PLANEAMIENTO", "PARA SALDO", "ANULADO", "ENTREGADO A GRISEL"];
+    const cerrado = CERRADOS.indexOf(it.estado) >= 0 || esTerminado(it.estado);
     const vieja = dias !== null && dias > 30 && !cerrado;
     const antig = dias !== null ? `<span class="antig-tag ${vieja ? "alerta" : ""}">${dias} d</span>` : "";
     // Días sin movimiento: desde la última edición (o su registro si nunca se editó)
@@ -1844,7 +1933,15 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
       expLogistica: () => txt("expLogistica", "cell-strong cell-exp"),
       item: () => ed("item", celdaItem, "cell-item2"),
       tipo: () => ed("tipo", badge(it.tipo, COL.tipo)),
-      estado: () => ed("estado", badge(it.estado, COL.estado) + movTag),
+      estado: () => {
+        // ⏭ avanza al siguiente estado del proceso con un clic (el flujo es lineal)
+        const lista = config.estados.map((o) => o.nombre);
+        const i = lista.indexOf(it.estado);
+        const sig = (i >= 0 && i < lista.length - 1) ? lista[i + 1] : null;
+        const btnSig = sig
+          ? `<button class="paso-sig" data-sig="${it.id}" title="Avanzar a: ${esc(sig)}">⏭</button>` : "";
+        return ed("estado", `<div class="estado-linea">${badge(it.estado, COL.estado)}${btnSig}</div>` + movTag);
+      },
       prioridad: () => ed("prioridad", badge(it.prioridad, COL.prioridad)),
       fechaIngreso: () => ed("fechaIngreso", fmtFecha(it.fechaIngreso) + antig),
       areaUsuaria: () => ed("areaUsuaria", celdaArea, "cell-area"),
@@ -2046,6 +2143,23 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
       else if (e.key === "Enter" && !multilinea && !e.shiftKey) { e.preventDefault(); commit(); }
     });
     back.addEventListener("mousedown", commit);
+  }
+
+  // Avanza un requerimiento al siguiente estado del proceso (botón ⏭)
+  function avanzarEstado(id) {
+    const it = items.find((x) => x.id === id);
+    if (!it) return;
+    const lista = config.estados.map((o) => o.nombre);
+    const i = lista.indexOf(it.estado);
+    if (i < 0 || i >= lista.length - 1) return;
+    const nuevo = lista[i + 1];
+    snapshot();
+    logEstado(it, it.estado, nuevo);
+    it.estado = nuevo;
+    it.actualizado = Date.now();
+    const movido = autoArchivarTerminado(it);
+    guardar(); render();
+    toast(`N° ${it.nro || "—"} → ${nuevo}` + (movido ? ` · se movió a «${tabNombre(it.pestana)}»` : "") + " · Ctrl+Z para deshacer");
   }
 
   // Prioridad con clic rápido: cada clic rota Alta → Media → Baja (triaje de un segundo)
@@ -2914,6 +3028,8 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
     DATOS_JUNIO.forEach((d) => {
       if (existentes.has(String(d.expLogistica))) return;
       const obj = Object.assign({ id: uid(), creado: Date.now(), aCargo: "", pestana: tabs[0].id }, d);
+      // Los datos vienen con los estados del formato anterior: se traducen al proceso actual
+      obj.estado = MAPA_ESTADOS_2[String(obj.estado || "").trim().toUpperCase()] || obj.estado;
       logEstado(obj, "", obj.estado);
       items.push(obj);
       n++;
@@ -3234,6 +3350,13 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
       }
       const his = e.target.closest("[data-hist]");
       if (his) { abrirHistorial(his.getAttribute("data-hist"), his); return; }
+      // ⏭ Avanzar al siguiente estado del proceso
+      const sig = e.target.closest("[data-sig]");
+      if (sig) {
+        e.stopPropagation();
+        avanzarEstado(sig.getAttribute("data-sig"));
+        return;
+      }
       // Sublíneas editables (denominación bajo el ítem, estratégica bajo el área)
       const sub = e.target.closest(".sub-edit");
       if (sub) {
@@ -3384,6 +3507,7 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
     poblarSelects();
     conectarEventos();
     cargar();
+    migrarEstadosProceso();
     render();
     cargarZoom();
     conectarModoFoco();
