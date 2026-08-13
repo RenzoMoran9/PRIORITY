@@ -32,12 +32,16 @@
           <button id="btn-config" class="menu-item" title="Configurar estados, tipos y prioridades">⚙ Configurar listas</button>
           <button id="btn-vincular" class="menu-item" title="Vincular a un archivo CSV que se actualiza solo (Chrome/Edge)">🔗 Vincular Excel</button>
           <button id="btn-importar" class="menu-item" title="Importar desde CSV/Excel (actualiza los existentes, no duplica)">⬆ Importar</button>
+          <div class="menu-sep"></div>
+          <button id="btn-respaldo" class="menu-item" title="Guardar TODO en un archivo: requerimientos, historial, papelera, listas y preferencias (para pasar a otra PC)">💾 Guardar copia de todo</button>
+          <button id="btn-restaurar" class="menu-item" title="Restaurar desde una copia de seguridad (reemplaza lo que haya en esta PC)">📂 Restaurar copia</button>
         </div>
       </div>
       <span class="tb-sep"></span>
       <button id="btn-express" class="btn btn-ghost" title="Registro exprés: solo los datos esenciales, el resto se completa después">⚡ Exprés</button>
       <button id="btn-nuevo" class="btn btn-primary">+ Nuevo requerimiento</button>
       <input type="file" id="file-import" accept=".csv,.xls,.xlsx,.html,text/csv,application/vnd.ms-excel" hidden />
+      <input type="file" id="file-respaldo" accept=".json,application/json" hidden />
     </div>
   </header>
 

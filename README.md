@@ -230,7 +230,31 @@ La configuración también se guarda en tu navegador.
 - **Supabase / nube / Excel en vivo / multi-dispositivo**: ver la guía completa en
   **[CONEXIONES.md](CONEXIONES.md)**.
 
-## Respaldo y traslado de datos
+## Respaldo y traslado a otra PC
+
+> **Importante:** tus datos NO están dentro de `PRIORITY.html`; se guardan en el
+> navegador de esa computadora. Copiar solo el archivo te deja la app vacía.
+
+**Para pasar todo a otra PC (recomendado):**
+
+1. En la PC actual: **⋯ → 💾 Guardar copia de todo**. Baja un archivo
+   `PRIORITY_copia_AAAA-MM-DD.json` con **absolutamente todo**: requerimientos,
+   historial 🕘, papelera, pestañas, listas de estados/tipos/prioridades con sus
+   colores, columnas visibles, tema y zoom.
+2. Lleva ese `.json` **y** el archivo `PRIORITY.html` a la otra PC (USB, correo,
+   Drive…). El `PRIORITY.html` también puedes descargarlo del repositorio.
+3. En la PC nueva: abre `PRIORITY.html` y pulsa **⋯ → 📂 Restaurar copia**, elige
+   el `.json` y confirma. La app se recarga con todo tal cual lo dejaste.
+
+> Restaurar **reemplaza** lo que hubiera en esa PC, así que pide confirmación.
+> Haz una copia cada cierto tiempo: también sirve como respaldo si se borra el
+> navegador o falla el equipo.
+
+**Alternativa parcial:** ⬇ Exportar Excel y ⬆ Importar en la otra PC traslada los
+requerimientos (y su pestaña), pero **no** el historial, la papelera ni tus
+preferencias de vista. Para una mudanza completa usa la copia `.json`.
+
+### Nota
 
 Los datos se guardan en el navegador de **esa** computadora. Para respaldarlos o
 pasarlos a otra PC: usa **⬇ Exportar** (te baja un CSV que abre Excel) y, en la otra

@@ -115,6 +115,7 @@ body {
   white-space: nowrap;
 }
 .menu-item:hover { background: var(--primary-soft); }
+.menu-sep { height: 1px; background: var(--border); margin: 4px 6px; }
 
 /* Control de zoom: una sola píldora */
 .zoom-ctl {

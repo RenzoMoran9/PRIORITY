@@ -1790,6 +1790,59 @@
     v = (v || "").trim().toUpperCase();
     return v.startsWith("S") ? "SÍ" : (v.startsWith("N") ? "NO" : "");
   }
+  // ---------- Copia de seguridad completa (para pasar a otra PC) ----------
+  // Los datos viven en el navegador, no dentro del archivo HTML: esto empaqueta
+  // TODO (requerimientos, historial, papelera, listas, columnas, tema y zoom).
+  function guardarRespaldo() {
+    const datos = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf("priority_") === 0) datos[k] = localStorage.getItem(k);
+      }
+    } catch (e) { toast("No se pudo leer el almacenamiento del navegador."); return; }
+    if (!Object.keys(datos).length) { toast("Todavía no hay nada que respaldar."); return; }
+    const paquete = {
+      app: "PRIORITY",
+      formato: 1,
+      fecha: new Date().toISOString(),
+      requerimientos: items.length,
+      datos,
+    };
+    const blob = new Blob([JSON.stringify(paquete, null, 2)], { type: "application/json;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `PRIORITY_copia_${hoyISO()}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast(`Copia guardada (${items.length} requerimientos, con historial y papelera). Llévala a la otra PC.`);
+  }
+  function restaurarRespaldo(texto) {
+    let paquete;
+    try { paquete = JSON.parse(texto); } catch (e) { toast("Ese archivo no es una copia de PRIORITY."); return; }
+    if (!paquete || paquete.app !== "PRIORITY" || !paquete.datos || typeof paquete.datos !== "object") {
+      toast("Ese archivo no es una copia de PRIORITY (usa el .json de «Guardar copia de todo»)."); return;
+    }
+    const n = paquete.requerimientos != null ? paquete.requerimientos : "?";
+    const cuando = paquete.fecha ? new Date(paquete.fecha).toLocaleString("es-PE") : "fecha desconocida";
+    if (!confirm(`Restaurar la copia del ${cuando} (${n} requerimientos).\n\n` +
+      `ATENCIÓN: reemplaza TODO lo que haya ahora en esta PC (${items.length} requerimientos).\n¿Continuar?`)) return;
+    try {
+      // Limpiar solo las claves de la app y escribir las de la copia
+      const viejas = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf("priority_") === 0) viejas.push(k);
+      }
+      viejas.forEach((k) => localStorage.removeItem(k));
+      Object.keys(paquete.datos).forEach((k) => {
+        if (k.indexOf("priority_") === 0) localStorage.setItem(k, String(paquete.datos[k]));
+      });
+    } catch (e) { toast("No se pudo escribir la copia (¿almacenamiento lleno?)."); return; }
+    toast("Copia restaurada. Recargando…");
+    setTimeout(() => location.reload(), 700);
+  }
+
   // ---------- Cargar datos de JUNIO ----------
   function cargarJunio() {
     if (!DATOS_JUNIO.length) { toast("No hay datos de junio embebidos."); return; }
@@ -2267,6 +2320,17 @@
       e.target.value = "";
     });
     $("#btn-borrar-todo").addEventListener("click", borrarTodo);
+
+    // Copia de seguridad completa
+    $("#btn-respaldo").addEventListener("click", guardarRespaldo);
+    $("#btn-restaurar").addEventListener("click", () => $("#file-respaldo").click());
+    $("#file-respaldo").addEventListener("change", (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => restaurarRespaldo(ev.target.result);
+      reader.readAsText(file, "UTF-8");
+      e.target.value = "";
+    });
   }
 
   document.addEventListener("DOMContentLoaded", () => {
