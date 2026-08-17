@@ -1790,6 +1790,76 @@
     v = (v || "").trim().toUpperCase();
     return v.startsWith("S") ? "SÍ" : (v.startsWith("N") ? "NO" : "");
   }
+  // ---------- Resumen para consultar con Claude (u otra IA) ----------
+  // Un .md legible, con una ficha por expediente: así se puede preguntar
+  // "¿en qué va el 2728?" desde el celular subiéndolo a un Proyecto o a Drive.
+  function resumenTexto() {
+    const hoy = new Date();
+    const L = [];
+    L.push("# PRIORITY · Estado de expedientes · Logística UPROG");
+    L.push("");
+    L.push(`Actualizado: ${hoy.toLocaleString("es-PE")} · ${items.length} expedientes en total.`);
+    L.push("");
+    L.push("## Cómo leer este documento");
+    L.push("");
+    L.push("Flujo de estados, en orden: " + config.estados.map((e) => e.nombre).join(" → ") + ".");
+    L.push("");
+    L.push("- **Días en UPROG**: días transcurridos desde que ingresó el requerimiento.");
+    L.push("- **Sin movimiento**: días desde la última vez que se actualizó el expediente.");
+    L.push("- **Hoja**: en qué pestaña de trabajo está (" + tabs.map((t) => t.nombre).join(", ") + ").");
+    L.push("");
+    L.push("## Resumen por estado");
+    L.push("");
+    const porEstado = {};
+    items.forEach((it) => { const k = it.estado || "(sin estado)"; porEstado[k] = (porEstado[k] || 0) + 1; });
+    Object.keys(porEstado).sort((a, b) => porEstado[b] - porEstado[a])
+      .forEach((k) => L.push(`- ${k}: ${porEstado[k]}`));
+    L.push("");
+    const sinFisico = items.filter((it) => (it.tengoExp || "") === "NO").length;
+    L.push(`Sin expediente físico: ${sinFisico}.`);
+    L.push("");
+    L.push("## Expedientes");
+    L.push("");
+    const orden = items.slice().sort((a, b) => (parseInt(a.nro, 10) || 0) - (parseInt(b.nro, 10) || 0));
+    orden.forEach((it) => {
+      const dias = diasDesde(it.fechaIngreso);
+      const ts = it.actualizado || it.creado;
+      const sinMov = ts ? Math.floor((hoy.getTime() - ts) / 86400000) : null;
+      L.push(`### Exp. Logística ${it.expLogistica || "—"} — ${it.item || it.denominacion || "(sin descripción)"}`);
+      L.push("");
+      L.push(`- Estado: **${it.estado || "—"}** · N°: ${it.nro || "—"} · Hoja: ${tabNombre(it.pestana)}`);
+      L.push(`- Área usuaria: ${it.areaUsuaria || "—"}`);
+      if (it.areaEstrategica && it.areaEstrategica !== it.areaUsuaria) L.push(`- Área estratégica: ${it.areaEstrategica}`);
+      L.push(`- Documento del área: ${it.docArea || "—"} · Exp. Dirección: ${it.expDireccion || "—"}`);
+      L.push(`- Tipo: ${it.tipo || "—"} · Prioridad: ${it.prioridad || "—"} · ¿Tengo el expediente físico?: ${it.tengoExp || "—"}`);
+      L.push(`- Ingreso a UPROG: ${fmtFecha(it.fechaIngreso)}` +
+        (dias !== null ? ` (${dias} días en UPROG)` : "") +
+        (sinMov !== null ? ` · Sin movimiento: ${sinMov} días` : ""));
+      if (it.denominacion && !seParecen(it.item, it.denominacion)) L.push(`- Denominación: ${it.denominacion}`);
+      if (it.especialista) L.push(`- Especialista: ${it.especialista}`);
+      if (it.observaciones) L.push(`- Observaciones: ${it.observaciones}`);
+      if (Array.isArray(it.historial) && it.historial.length) {
+        const h = it.historial.map((x) => {
+          const f = new Date(x.f).toLocaleDateString("es-PE");
+          return `${f}: ${x.de ? x.de + " → " : ""}${x.a}`;
+        }).join(" · ");
+        L.push(`- Historial: ${h}`);
+      }
+      L.push("");
+    });
+    return L.join("\n");
+  }
+  function exportarResumen() {
+    if (!items.length) { toast("No hay requerimientos que resumir."); return; }
+    const blob = new Blob([resumenTexto()], { type: "text/markdown;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `PRIORITY_estado_${hoyISO()}.md`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast(`Resumen listo (${items.length} expedientes). Súbelo a tu Proyecto de Claude o a Drive para consultarlo desde el celular.`);
+  }
+
   // ---------- Copia de seguridad completa (para pasar a otra PC) ----------
   // Los datos viven en el navegador, no dentro del archivo HTML: esto empaqueta
   // TODO (requerimientos, historial, papelera, listas, columnas, tema y zoom).
@@ -2320,6 +2390,9 @@
       e.target.value = "";
     });
     $("#btn-borrar-todo").addEventListener("click", borrarTodo);
+
+    // Resumen para consultar con IA
+    $("#btn-resumen").addEventListener("click", exportarResumen);
 
     // Copia de seguridad completa
     $("#btn-respaldo").addEventListener("click", guardarRespaldo);

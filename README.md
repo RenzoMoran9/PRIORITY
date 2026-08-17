@@ -230,6 +230,26 @@ La configuración también se guarda en tu navegador.
 - **Supabase / nube / Excel en vivo / multi-dispositivo**: ver la guía completa en
   **[CONEXIONES.md](CONEXIONES.md)**.
 
+## Consultar tus expedientes desde el celular (con Claude u otra IA)
+
+La app vive en tu PC, pero puedes llevarte una foto de tu registro para
+preguntarle a Claude «¿en qué va el expediente 2728?» desde cualquier lugar.
+
+1. En la app: **⋯ → 🤖 Resumen para consultar con IA**. Baja un archivo
+   `PRIORITY_estado_AAAA-MM-DD.md` con una **ficha por expediente**: estado,
+   área, documento, días en UPROG, días sin movimiento, observaciones e
+   historial de estados, además de un resumen por estado al inicio.
+2. Sube ese archivo al **conocimiento de un Proyecto de Claude** (o guárdalo en
+   Google Drive si tienes el conector activado).
+3. Pregunta con normalidad: *«¿en qué va el exp 2728?»*, *«¿cuáles están
+   esperando presupuesto?»*, *«¿qué expedientes llevan más de 30 días sin
+   moverse?»*, *«¿cuáles no tengo en físico?»*.
+
+> Es una **foto del momento**, no una conexión en vivo: vuelve a exportar y
+> reemplazar el archivo cuando quieras tenerlo al día (por ejemplo, al final de
+> cada semana). Si lo guardas en Drive y lo reemplazas ahí, Claude siempre leerá
+> la versión más reciente sin que tengas que volver a subirlo al Proyecto.
+
 ## Respaldo y traslado a otra PC
 
 > **Importante:** tus datos NO están dentro de `PRIORITY.html`; se guardan en el
