@@ -167,6 +167,7 @@
   let pestanaActiva = "t1";
   let zoom = 1;
   let fileHandle = null;  // archivo CSV vinculado (File System Access API)
+  let mdHandle = null;    // archivo .md del resumen para IA (se reescribe con cada cambio)
   let seleccion = new Set();      // ids seleccionados para acciones en lote
   let papelera = [];              // requerimientos eliminados (restaurables)
   const PAPELERA_KEY = "priority_papelera_v1";
@@ -382,6 +383,7 @@
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
     catch (e) { toast("No se pudo guardar (almacenamiento lleno o bloqueado)."); }
     if (fileHandle) escribirVinculado(false);
+    if (mdHandle) escribirResumen(false);
   }
 
   function cargarConfig() {
@@ -1849,6 +1851,54 @@
     });
     return L.join("\n");
   }
+  // --- Resumen vinculado a un archivo (p. ej. dentro de la carpeta de Google Drive):
+  // la app lo reescribe con cada cambio, así Claude siempre lee lo último. ---
+  async function vincularResumen() {
+    if (!window.showSaveFilePicker) {
+      toast("Para vincular el resumen usa Chrome o Edge. Mientras tanto, usa «🤖 Resumen para consultar con IA».");
+      return;
+    }
+    if (mdHandle) { await escribirResumen(true); return; }
+    try {
+      mdHandle = await window.showSaveFilePicker({
+        suggestedName: "PRIORITY_estado.md",
+        types: [{ description: "Resumen para IA (Markdown)", accept: { "text/markdown": [".md"] } }],
+      });
+      await escribirResumen(true);
+      actualizarBotonResumenVinculo();
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+      mdHandle = null;
+      toast("No se pudo vincular aquí. Suele requerir abrir la app desde un servidor (no con doble clic).");
+    }
+  }
+  async function escribirResumen(avisar) {
+    if (!mdHandle) return;
+    try {
+      const w = await mdHandle.createWritable();
+      await w.write(resumenTexto());
+      await w.close();
+      if (avisar) toast(`Resumen vinculado (${items.length} expedientes). Se actualizará solo con cada cambio.`);
+    } catch (e) {
+      mdHandle = null;
+      actualizarBotonResumenVinculo();
+      toast("Se perdió el vínculo con el archivo del resumen. Vincúlalo de nuevo.");
+    }
+  }
+  function actualizarBotonResumenVinculo() {
+    const b = $("#btn-resumen-link");
+    if (!b) return;
+    if (mdHandle) {
+      b.textContent = "🤖 Resumen vinculado ✓";
+      b.classList.add("vinculado");
+      b.title = "El resumen se reescribe con cada cambio. Clic para actualizarlo ahora.";
+    } else {
+      b.textContent = "🔄 Vincular resumen (Drive)";
+      b.classList.remove("vinculado");
+      b.title = "Vincula un archivo .md (por ejemplo dentro de tu carpeta de Google Drive) que se actualice solo con cada cambio";
+    }
+  }
+
   function exportarResumen() {
     if (!items.length) { toast("No hay requerimientos que resumir."); return; }
     const blob = new Blob([resumenTexto()], { type: "text/markdown;charset=utf-8;" });
@@ -2393,6 +2443,7 @@
 
     // Resumen para consultar con IA
     $("#btn-resumen").addEventListener("click", exportarResumen);
+    $("#btn-resumen-link").addEventListener("click", vincularResumen);
 
     // Copia de seguridad completa
     $("#btn-respaldo").addEventListener("click", guardarRespaldo);

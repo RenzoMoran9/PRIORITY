@@ -245,6 +245,23 @@ preguntarle a Claude «¿en qué va el expediente 2728?» desde cualquier lugar.
    esperando presupuesto?»*, *«¿qué expedientes llevan más de 30 días sin
    moverse?»*, *«¿cuáles no tengo en físico?»*.
 
+### Que se mantenga solo al día (Google Drive)
+
+Con **⋯ → 🔄 Vincular resumen (Drive)** eliges una vez el archivo `.md` y la app lo
+**reescribe con cada cambio** que hagas. Si ese archivo está dentro de la carpeta de
+**Google Drive para escritorio**, Drive lo sube solo y Claude siempre lee lo último,
+sin que vuelvas a exportar nada.
+
+1. Instala **Google Drive para escritorio** y espera a que aparezca su carpeta
+   (por ejemplo `G:\Mi unidad`).
+2. En la app: **⋯ → 🔄 Vincular resumen (Drive)** y guarda el archivo dentro de esa
+   carpeta (p. ej. `G:\Mi unidad\PRIORITY\PRIORITY_estado.md`).
+3. Activa el **conector de Google Drive** en Claude y pregunta lo que necesites.
+
+El botón queda como **«🤖 Resumen vinculado ✓»** mientras el vínculo esté activo
+(hay que volver a vincularlo cada vez que cierres y abras la app; es una medida de
+seguridad del navegador). Requiere **Chrome o Edge**.
+
 > Es una **foto del momento**, no una conexión en vivo: vuelve a exportar y
 > reemplazar el archivo cuando quieras tenerlo al día (por ejemplo, al final de
 > cada semana). Si lo guardas en Drive y lo reemplazas ahí, Claude siempre leerá
