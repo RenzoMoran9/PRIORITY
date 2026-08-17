@@ -44,14 +44,26 @@ app ahí cambia esto:
 | Excel automático | Limitado | **Sí** (Power Query/ODBC a Postgres) |
 | Configuración | Ninguna | Crear proyecto + tabla + claves |
 
+### El objetivo: link público, datos privados
+
+La app queda en una dirección web que puede abrir cualquiera, pero **al entrar pide
+tu correo y contraseña** y solo entonces aparecen tus expedientes. Quien entre sin
+tu clave ve únicamente la pantalla de acceso: **no puede leer nada**.
+
+Eso se consigue con **Supabase Auth** (usuarios) + **RLS** (cada fila pertenece a un
+usuario y la base solo entrega las tuyas). No basta con "esconder" el enlace: la
+protección la aplica el servidor.
+
 ### Pasos para dejarlo listo (plan gratuito)
 
-1. Crea una cuenta en **https://supabase.com** y un **proyecto nuevo**.
-2. En el proyecto, abre **SQL Editor** y ejecuta esto para crear la tabla:
+1. Crea una cuenta en **https://supabase.com** y un **proyecto nuevo** (anota la
+   contraseña de la base que te pida; no la necesitarás para la app).
+2. En el proyecto, abre **SQL Editor** y ejecuta esto tal cual:
 
    ```sql
    create table requerimientos (
      id uuid primary key default gen_random_uuid(),
+     user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
      pestana text,
      nro text,
      fecha_ingreso date,
@@ -70,26 +82,70 @@ app ahí cambia esto:
      observaciones text,
      tengo_exp text,
      a_cargo text,
+     historial jsonb default '[]'::jsonb,
      creado timestamptz default now(),
      actualizado timestamptz default now()
    );
 
-   -- Seguridad por filas (RLS)
+   create index requerimientos_user_idx on requerimientos(user_id);
+
+   -- Seguridad por filas: cada quien ve SOLO lo suyo
    alter table requerimientos enable row level security;
 
-   -- Para empezar rápido (acceso con la clave anónima). Más adelante conviene
-   -- restringir por usuario con Supabase Auth.
-   create policy "acceso_basico" on requerimientos
-     for all using (true) with check (true);
+   create policy "ver lo mio"      on requerimientos for select
+     using (auth.uid() = user_id);
+   create policy "crear lo mio"    on requerimientos for insert
+     with check (auth.uid() = user_id);
+   create policy "editar lo mio"   on requerimientos for update
+     using (auth.uid() = user_id) with check (auth.uid() = user_id);
+   create policy "borrar lo mio"   on requerimientos for delete
+     using (auth.uid() = user_id);
+
+   -- Mismo esquema para tus preferencias (pestañas, listas, columnas)
+   create table ajustes (
+     user_id uuid primary key default auth.uid() references auth.users(id) on delete cascade,
+     datos jsonb not null default '{}'::jsonb,
+     actualizado timestamptz default now()
+   );
+   alter table ajustes enable row level security;
+   create policy "mis ajustes" on ajustes for all
+     using (auth.uid() = user_id) with check (auth.uid() = user_id);
    ```
 
-3. En **Project Settings → API**, copia:
-   - **Project URL** (algo como `https://xxxx.supabase.co`)
-   - **anon public key** (clave pública; es segura de usar en el front si tienes RLS).
+3. En **Authentication → Users**, crea tu usuario con **Add user → Create new user**
+   (tu correo y una contraseña). Con eso entrarás a la app.
+   > En *Authentication → Providers → Email*, desactiva **"Confirm email"** si no
+   > quieres el paso de confirmación por correo.
 
-4. Avísame y yo adapto la app para que use Supabase: guardará y leerá de la nube,
-   con **sincronización en vivo** (varios equipos verán los cambios al instante) y
-   manteniendo todo lo actual (pestañas, edición en celda, filtros, zoom…).
+4. En **Project Settings → API**, copia y mándame:
+   - **Project URL** (algo como `https://xxxx.supabase.co`)
+   - **anon public key** (es una clave pública: **con RLS activo es seguro** que
+     viaje en la página, porque sin iniciar sesión no devuelve ninguna fila).
+   - ⚠️ **Nunca** compartas la `service_role key`: esa sí salta la seguridad.
+
+5. Con esos dos datos adapto la app: pantalla de acceso, sincronización con la nube
+   (y caché local para seguir trabajando si se cae el internet), conservando todo lo
+   actual: pestañas, edición en celda, filtros, historial, Excel, etc.
+
+### Dónde publicar la app (gratis)
+
+- **GitHub Pages**: ya tienes el repositorio; se activa en *Settings → Pages* y queda
+  en `https://renzomoran9.github.io/PRIORITY/`.
+- **Netlify / Vercel**: arrastras la carpeta y te dan una dirección; permiten poner
+  un nombre propio más fácil.
+
+En ambos casos **solo se publica el programa**, nunca tus expedientes: esos viajan
+por la sesión iniciada contra Supabase.
+
+### Que un Proyecto de Claude consulte esos expedientes
+
+Claude no puede iniciar sesión en tu app, así que hay dos caminos:
+
+- **Google Drive (recomendado)**: la app guarda/actualiza el resumen `.md` en tu
+  Drive y activas el conector de Drive en Claude. Privado y siempre al día.
+- **Enlace secreto**: una función de Supabase que entrega el resumen solo si la
+  dirección incluye un código largo que únicamente tú conoces. Cómodo, pero quien
+  vea ese enlace podría leerlo: menos seguro que Drive.
 
 ### Excel desde Supabase
 
