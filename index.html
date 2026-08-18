@@ -92,11 +92,12 @@
     <input type="text" id="ex-exp" class="select ex-input" placeholder="N° Exp. Logística *" />
     <input type="text" id="ex-doc" class="select ex-input ex-ancho" placeholder="N° doc. del área (NOTA INFORMATIVA…)" list="dl-ex-doc" />
     <input type="text" id="ex-area" class="select ex-input ex-ancho" placeholder="Área usuaria" list="dl-ex-area" />
-    <input type="text" id="ex-den" class="select ex-input ex-max" placeholder="Denominación del requerimiento" />
+    <input type="text" id="ex-den" class="select ex-input ex-max" placeholder="Requerimiento (descripción)" />
     <select id="ex-tipo" class="select ex-input"></select>
     <button id="ex-guardar" class="btn btn-primary btn-sm" title="Guardar y seguir con el siguiente (Enter)">Guardar ↵</button>
     <button id="ex-cerrar" class="btn btn-ghost btn-sm" title="Cerrar (Esc)">✕</button>
     <span class="express-ayuda">Fecha de hoy, N° y pestaña se ponen solos · Enter guarda y sigue</span>
+    <div class="anticipa hidden" id="ex-anticipa"></div>
     <datalist id="dl-ex-doc"></datalist>
     <datalist id="dl-ex-area"></datalist>
   </section>
@@ -235,13 +236,10 @@
             </span>
             <select id="f-tipo" class="select"></select>
           </label>
-          <label class="field">
-            <span>Ítem (resumen corto)</span>
-            <input type="text" id="f-item" placeholder="Ej. ESTANTE DE MELAMINA" />
-          </label>
           <label class="field field-wide">
-            <span>Denominación del requerimiento (completo)</span>
-            <textarea id="f-denominacion" rows="2" placeholder="Descripción completa del requerimiento" spellcheck="true" lang="es"></textarea>
+            <span>Requerimiento (descripción)</span>
+            <textarea id="f-denominacion" rows="2" placeholder="Ej. SERVICIO DE MANTENIMIENTO CORRECTIVO DE VENTILADOR MECANICO" spellcheck="true" lang="es"></textarea>
+            <div class="anticipa hidden" id="f-anticipa"></div>
           </label>
         </div>
 

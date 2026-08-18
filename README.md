@@ -37,7 +37,9 @@ Basados en tu hoja "JUNIO MEJORADO":
     significativo que se registra como activo fijo de la institución.
   - **Paciente**: requerimiento ligado a un paciente específico (compra puntual por
     indicación médica o urgencia).
-- **Denominación del requerimiento** (completo) e **Ítem** (resumen corto)
+- **Requerimiento (descripción)**: una sola descripción; ya no se pide aparte un
+  «ítem» resumido (se guardaba dos veces lo mismo). El Excel exportado sigue
+  trayendo ambas columnas.
 - **Especialista a cargo** y **Fecha de pase a especialista**
 - **Estado del requerimiento**: sigue el flujo real de UPROG, paso a paso
   (ver la sección «Estados» más abajo). Puedes editar la lista en ⋯ → ⚙ Configurar.
@@ -100,6 +102,11 @@ indicadores de «Heredados» y «Mi trabajo» **no cuentan** lo que ya está en 
   pestaña activa y «a mi cargo = SÍ» se ponen solos, y el área estratégica se
   copia del área usuaria. **Enter guarda y deja el cursor listo** para el
   siguiente. El resto se completa después directo en la tabla.
+- **Se anticipa a lo que escribes**: al teclear la descripción, la app **elige sola
+  el Tipo** (Bien / Servicio / Insumo) aprendiendo de tus propios expedientes —
+  con tus 50 registros de junio acierta en los 50— y te avisa si **ya trabajaste
+  algo parecido**, mostrando ese expediente y en qué estado quedó. Si eliges el
+  tipo a mano, la app respeta tu elección y deja de sugerir.
 - **Tarjetas del tablero clickeables**: tocar «Sin expediente físico», «A mi
   cargo», «Prioridad alta» o «Pendientes» **filtra la tabla al instante**
   (segundo toque = quitar el filtro; «Total» limpia todo).

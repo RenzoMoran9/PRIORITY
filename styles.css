@@ -715,6 +715,21 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
 /* ---------- Días sin movimiento ---------- */
 .sinmov-tag { display: block; font-size: 10.5px; color: var(--warn); margin-top: 3px; white-space: nowrap; }
 
+/* ---------- Anticipación (tipo detectado y expediente parecido) ---------- */
+.anticipa {
+  display: flex; flex-wrap: wrap; gap: 6px 14px;
+  margin-top: 6px; font-size: 12px; line-height: 1.5;
+}
+.ant-tipo { color: var(--primary); }
+.ant-par { color: var(--muted); }
+.ant-par b { color: var(--text); }
+.express-bar .anticipa { flex-basis: 100%; margin-top: 2px; }
+/* Campo rellenado por la app: se distingue hasta que el usuario lo cambie */
+.campo-sugerido {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--primary-soft);
+}
+
 /* ---------- Conectar con Google Drive ---------- */
 .drive-pop { max-height: 86vh; overflow-y: auto; }
 .drive-pasos { margin: 4px 0 10px; padding-left: 20px; font-size: 12.5px; line-height: 1.6; }

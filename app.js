@@ -1041,7 +1041,6 @@
     set("#f-docArea", it ? it.docArea : "");
     set("#f-areaUsuaria", it ? it.areaUsuaria : "");
     set("#f-tipo", it ? it.tipo : defTipo());
-    set("#f-item", it ? it.item : "");
     set("#f-denominacion", it ? it.denominacion : "");
     set("#f-prioridad", it ? it.prioridad : defPrioridad());
     set("#f-estado", it ? it.estado : defEstado());
@@ -1051,6 +1050,8 @@
     set("#f-aCargo", it ? it.aCargo : "");
     set("#f-observaciones", it ? it.observaciones : "");
     poblarDatalist("dl-areaUsuaria", "areaUsuaria");
+    const cajaAnt = $("#f-anticipa"); if (cajaAnt) { cajaAnt.innerHTML = ""; cajaAnt.classList.add("hidden"); }
+    const selTipo = $("#f-tipo"); if (selTipo) { delete selTipo.dataset.tocado; selTipo.classList.remove("campo-sugerido"); }
     poblarDatalist("dl-especialista", "especialista");
     $("#modal").classList.remove("hidden");
     setTimeout(() => $("#f-expLogistica").focus(), 50);
@@ -1077,7 +1078,8 @@
       areaEstrategica: $("#f-areaUsuaria").value.trim(),
       areaUsuaria: $("#f-areaUsuaria").value.trim(),
       tipo: $("#f-tipo").value,
-      item: $("#f-item").value.trim(),
+      // El «ítem» se conserva para que el Excel exportado no cambie de columnas
+      item: $("#f-denominacion").value.trim(),
       denominacion: $("#f-denominacion").value.trim(),
       prioridad: $("#f-prioridad").value,
       estado: $("#f-estado").value,
@@ -2307,6 +2309,86 @@
   }
   function cambiarZoom(delta) { zoom += delta; aplicarZoom(); }
 
+
+  // ---------- Anticipación: la app aprende de tus propios expedientes ----------
+  // 1) Deduce el TIPO a partir de las palabras de la descripción.
+  // 2) Encuentra un expediente anterior parecido, para tener el precedente a mano.
+  const VACIAS_ANT = new Set(["PARA", "CON", "LOS", "LAS", "DEL", "POR", "SOLICITO",
+    "SOLICITUD", "REMITO", "SEGUN", "SOLICITADO", "HNAL", "HOSPITAL", "NACIONAL",
+    "ARZOBISPO", "LOAYZA", "DEPARTAMENTO", "DPTO", "SERVICIO", "UNIDAD"]);
+  function palabrasClave(txt) {
+    return String(txt || "").toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .replace(/[^A-Z0-9 ]/g, " ").split(/\s+/)
+      .filter((w) => w.length > 3 && !VACIAS_ANT.has(w));
+  }
+  // Palabras que en TUS datos aparecen siempre con un mismo tipo
+  function aprenderTipos() {
+    const freq = {};
+    items.forEach((it) => {
+      if (!it.tipo) return;
+      new Set(palabrasClave(it.denominacion + " " + it.item)).forEach((w) => {
+        (freq[w] = freq[w] || {})[it.tipo] = (freq[w][it.tipo] || 0) + 1;
+      });
+    });
+    return freq;
+  }
+  function predecirTipo(texto, vocabTipos) {
+    const freq = vocabTipos || aprenderTipos();
+    const puntos = {};
+    new Set(palabrasClave(texto)).forEach((w) => {
+      const c = freq[w];
+      if (!c) return;
+      const tipos = Object.keys(c);
+      // solo cuentan las palabras que nunca se han usado con otro tipo
+      if (tipos.length === 1) puntos[tipos[0]] = (puntos[tipos[0]] || 0) + c[tipos[0]];
+    });
+    let mejor = null, max = 0, total = 0;
+    Object.keys(puntos).forEach((t) => { total += puntos[t]; if (puntos[t] > max) { max = puntos[t]; mejor = t; } });
+    if (!mejor || total < 2) return null;
+    return { tipo: mejor, seguridad: max / total };
+  }
+  // Expediente anterior más parecido (por palabras compartidas)
+  function expedienteParecido(texto, exceptoId) {
+    const busca = new Set(palabrasClave(texto));
+    if (busca.size < 2) return null;
+    let mejor = null, mejorPuntaje = 0;
+    items.forEach((it) => {
+      if (it.id === exceptoId) return;
+      const suyas = new Set(palabrasClave(it.denominacion + " " + it.item));
+      if (!suyas.size) return;
+      let comunes = 0;
+      busca.forEach((w) => { if (suyas.has(w)) comunes++; });
+      const puntaje = comunes / Math.max(busca.size, 3);
+      if (comunes >= 2 && puntaje > mejorPuntaje) { mejorPuntaje = puntaje; mejor = it; }
+    });
+    return mejorPuntaje >= 0.4 ? mejor : null;
+  }
+  // Pinta las sugerencias y aplica el tipo detectado
+  function anticipar(texto, idCaja, selectTipo, exceptoId) {
+    const caja = $(idCaja);
+    if (!caja) return;
+    const partes = [];
+    const pt = predecirTipo(texto);
+    if (pt && selectTipo) {
+      const sel = $(selectTipo);
+      // Solo se impone si el usuario no eligió otro tipo a mano
+      if (sel && !sel.dataset.tocado && sel.value !== pt.tipo) {
+        const existe = [...sel.options].some((o) => o.value === pt.tipo);
+        if (existe) { sel.value = pt.tipo; sel.classList.add("campo-sugerido"); }
+      }
+      partes.push('<span class="ant-tipo">Tipo detectado: <b>' + esc(pt.tipo) + "</b></span>");
+    }
+    const par = expedienteParecido(texto, exceptoId);
+    if (par) {
+      const dias = diasDesde(par.fechaIngreso);
+      partes.push('<span class="ant-par">Ya trabajaste algo parecido: <b>Exp. ' + esc(par.expLogistica || "—") +
+        "</b> — " + esc((par.item || par.denominacion || "").slice(0, 60)) +
+        " · <b>" + esc(par.estado || "—") + "</b>" + (dias !== null ? " · " + dias + " d" : "") + "</span>");
+    }
+    caja.innerHTML = partes.join("");
+    caja.classList.toggle("hidden", !partes.length);
+  }
+
   // ---------- KPIs clickeables (tocar una tarjeta filtra la tabla) ----------
   function clickKpi(tipo) {
     if (tipo === "total") { resetFiltros(); renderTabla(); marcarKpis(); return; }
@@ -2366,7 +2448,7 @@
       // El área estratégica casi siempre coincide con el área usuaria; se copia y se corrige luego si difiere
       areaEstrategica: area, areaUsuaria: area,
       tipo: $("#ex-tipo").value || defTipo(),
-      item: "", denominacion: $("#ex-den").value.trim(),
+      item: $("#ex-den").value.trim(), denominacion: $("#ex-den").value.trim(),
       prioridad: defPrioridad(), estado: defEstado(),
       especialista: "", fechaPase: "", tengoExp: "", aCargo: "SÍ",
       observaciones: "",
@@ -2375,6 +2457,8 @@
     items.push(nuevo);
     guardar(); render();
     ["#ex-exp", "#ex-doc", "#ex-area", "#ex-den"].forEach((s) => { $(s).value = ""; });
+    const ca = $("#ex-anticipa"); if (ca) { ca.innerHTML = ""; ca.classList.add("hidden"); }
+    const st = $("#ex-tipo"); if (st) { delete st.dataset.tocado; st.classList.remove("campo-sugerido"); }
     poblarDatalist("dl-ex-doc", "docArea");
     poblarDatalist("dl-ex-area", "areaUsuaria");
     $("#ex-exp").focus();
@@ -2540,6 +2624,17 @@
     $("#btn-express").addEventListener("click", () => toggleExpress());
     $("#ex-guardar").addEventListener("click", guardarExpress);
     $("#ex-cerrar").addEventListener("click", () => toggleExpress(false));
+    // Anticipación mientras escribe (exprés)
+    $("#ex-den").addEventListener("input", (e) => {
+      anticipar(e.target.value, "#ex-anticipa", "#ex-tipo", null);
+    });
+    $("#ex-tipo").addEventListener("change", (e) => { e.target.dataset.tocado = "1"; e.target.classList.remove("campo-sugerido"); });
+    // Anticipación mientras escribe (formulario)
+    $("#f-denominacion").addEventListener("input", (e) => {
+      anticipar(e.target.value, "#f-anticipa", "#f-tipo", $("#f-id").value || null);
+    });
+    $("#f-tipo").addEventListener("change", (e) => { e.target.dataset.tocado = "1"; e.target.classList.remove("campo-sugerido"); });
+
     $("#express-bar").addEventListener("keydown", (e) => {
       if (e.key === "Enter") { e.preventDefault(); guardarExpress(); }
       else if (e.key === "Escape") { e.preventDefault(); toggleExpress(false); }
