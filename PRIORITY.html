@@ -1430,6 +1430,7 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
   let zoom = 1;
   let fileHandle = null;  // archivo CSV vinculado (File System Access API)
   let mdHandle = null;    // archivo .md del resumen para IA (se reescribe con cada cambio)
+  let mdPendiente = null; // vínculo recordado que solo espera confirmar el permiso
   let seleccion = new Set();      // ids seleccionados para acciones en lote
   let papelera = [];              // requerimientos eliminados (restaurables)
   const PAPELERA_KEY = "priority_papelera_v1";
@@ -3116,17 +3117,78 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
   }
   // --- Resumen vinculado a un archivo (p. ej. dentro de la carpeta de Google Drive):
   // la app lo reescribe con cada cambio, así Claude siempre lee lo último. ---
+  // El vínculo se recuerda entre sesiones: el navegador permite guardar la
+  // referencia al archivo (no su contenido) para no volver a elegirlo cada vez.
+  function idbAbrir() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open("priority_fs", 1);
+      r.onupgradeneeded = () => { r.result.createObjectStore("handles"); };
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+  }
+  async function idbGuardar(clave, valor) {
+    const db = await idbAbrir();
+    await new Promise((res, rej) => {
+      const tx = db.transaction("handles", "readwrite");
+      tx.objectStore("handles").put(valor, clave);
+      tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+    });
+  }
+  async function idbLeer(clave) {
+    const db = await idbAbrir();
+    return new Promise((res, rej) => {
+      const tx = db.transaction("handles", "readonly");
+      const q = tx.objectStore("handles").get(clave);
+      q.onsuccess = () => res(q.result || null);
+      q.onerror = () => rej(q.error);
+    });
+  }
+
+  // Al abrir la app: si ya había un archivo vinculado, se reanuda solo (o queda
+  // a un clic, si el navegador exige confirmar el permiso de nuevo).
+  async function restaurarVinculoResumen() {
+    if (!window.indexedDB) return;
+    try {
+      const h = await idbLeer("resumen");
+      if (!h || typeof h.queryPermission !== "function") return;
+      const permiso = await h.queryPermission({ mode: "readwrite" });
+      if (permiso === "granted") {
+        mdHandle = h;
+        actualizarBotonResumenVinculo();
+        escribirResumen(false);
+      } else if (permiso === "prompt") {
+        mdPendiente = h;
+        actualizarBotonResumenVinculo();
+      }
+    } catch (e) {}
+  }
+
   async function vincularResumen() {
     if (!window.showSaveFilePicker) {
       toast("Para vincular el resumen usa Chrome o Edge. Mientras tanto, usa «🤖 Resumen para consultar con IA».");
       return;
     }
     if (mdHandle) { await escribirResumen(true); return; }
+    // Reconexión de un vínculo anterior: basta con dar permiso, sin volver a elegir archivo
+    if (mdPendiente) {
+      try {
+        const ok = await mdPendiente.requestPermission({ mode: "readwrite" });
+        if (ok === "granted") {
+          mdHandle = mdPendiente; mdPendiente = null;
+          actualizarBotonResumenVinculo();
+          await escribirResumen(true);
+          return;
+        }
+      } catch (e) {}
+      mdPendiente = null;   // si no se pudo, se elige archivo de nuevo
+    }
     try {
       mdHandle = await window.showSaveFilePicker({
         suggestedName: "PRIORITY_estado.md",
         types: [{ description: "Resumen para IA (Markdown)", accept: { "text/markdown": [".md"] } }],
       });
+      try { await idbGuardar("resumen", mdHandle); } catch (e) {}
       await escribirResumen(true);
       actualizarBotonResumenVinculo();
     } catch (e) {
@@ -3155,6 +3217,10 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
       b.textContent = "🤖 Resumen vinculado ✓";
       b.classList.add("vinculado");
       b.title = "El resumen se reescribe con cada cambio. Clic para actualizarlo ahora.";
+    } else if (mdPendiente) {
+      b.textContent = "🔄 Reconectar resumen (1 clic)";
+      b.classList.remove("vinculado");
+      b.title = "Ya tienes un archivo vinculado; solo falta confirmar el permiso del navegador.";
     } else {
       b.textContent = "🔄 Vincular resumen (Drive)";
       b.classList.remove("vinculado");
@@ -3733,6 +3799,7 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
     render();
     cargarZoom();
     conectarModoFoco();
+    restaurarVinculoResumen();
   });
 })();
 
