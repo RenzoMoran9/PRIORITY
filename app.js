@@ -1053,10 +1053,26 @@
     const cajaAnt = $("#f-anticipa"); if (cajaAnt) { cajaAnt.innerHTML = ""; cajaAnt.classList.add("hidden"); }
     const selTipo = $("#f-tipo"); if (selTipo) { delete selTipo.dataset.tocado; selTipo.classList.remove("campo-sugerido"); }
     poblarDatalist("dl-especialista", "especialista");
+    formFoto = fotoFormulario();
     $("#modal").classList.remove("hidden");
     setTimeout(() => $("#f-expLogistica").focus(), 50);
   }
-  function cerrarModal() { $("#modal").classList.add("hidden"); }
+  // Foto del formulario al abrirlo, para saber si hay algo escrito sin guardar
+  let formFoto = "";
+  const CAMPOS_FORM = ["#f-pestana", "#f-nro", "#f-fechaIngreso", "#f-expLogistica",
+    "#f-expDireccion", "#f-docArea", "#f-areaUsuaria", "#f-tipo", "#f-denominacion",
+    "#f-prioridad", "#f-estado", "#f-especialista", "#f-fechaPase", "#f-tengoExp",
+    "#f-aCargo", "#f-observaciones"];
+  function fotoFormulario() {
+    return CAMPOS_FORM.map((sel) => { const el = $(sel); return el ? el.value : ""; }).join("\u0001");
+  }
+  function formTieneCambios() { return fotoFormulario() !== formFoto; }
+  // Solo se cierra con los botones (✕ o Cancelar) y avisando si hay algo escrito
+  function cerrarModal(forzar) {
+    if (!forzar && formTieneCambios() &&
+        !confirm("Tienes datos sin guardar en este requerimiento.\n\n¿Cerrar y perderlos?")) return;
+    $("#modal").classList.add("hidden");
+  }
 
   function guardarDesdeForm(ev) {
     ev.preventDefault();
@@ -1109,7 +1125,7 @@
       items.push(nuevo);
       toast("Requerimiento agregado.");
     }
-    guardar(); cerrarModal(); render();
+    guardar(); cerrarModal(true); render();
   }
 
   function eliminar(id) {
@@ -2623,7 +2639,10 @@
     // Registro exprés
     $("#btn-express").addEventListener("click", () => toggleExpress());
     $("#ex-guardar").addEventListener("click", guardarExpress);
-    $("#ex-cerrar").addEventListener("click", () => toggleExpress(false));
+    $("#ex-cerrar").addEventListener("click", () => {
+      const algo = ["#ex-exp", "#ex-doc", "#ex-area", "#ex-den"].some((sel) => $(sel).value.trim());
+      if (!algo || confirm("Tienes datos escritos en el registro exprés.\n\n¿Cerrar y perderlos?")) toggleExpress(false);
+    });
     // Anticipación mientras escribe (exprés)
     $("#ex-den").addEventListener("input", (e) => {
       anticipar(e.target.value, "#ex-anticipa", "#ex-tipo", null);
@@ -2637,7 +2656,11 @@
 
     $("#express-bar").addEventListener("keydown", (e) => {
       if (e.key === "Enter") { e.preventDefault(); guardarExpress(); }
-      else if (e.key === "Escape") { e.preventDefault(); toggleExpress(false); }
+      else if (e.key === "Escape") {
+        e.preventDefault();
+        const algo = ["#ex-exp", "#ex-doc", "#ex-area", "#ex-den"].some((sel) => $(sel).value.trim());
+        if (!algo || confirm("Tienes datos escritos en el registro exprés.\n\n¿Cerrar y perderlos?")) toggleExpress(false);
+      }
     });
 
     // KPIs clickeables
@@ -2656,10 +2679,9 @@
     $("#zoom-mas").addEventListener("click", () => cambiarZoom(0.1));
     $("#zoom-nivel").addEventListener("click", () => { zoom = 1; aplicarZoom(); });
     $("#btn-tema").addEventListener("click", alternarTema);
-    $("#modal-close").addEventListener("click", cerrarModal);
-    $("#btn-cancelar").addEventListener("click", cerrarModal);
+    $("#modal-close").addEventListener("click", () => cerrarModal());
+    $("#btn-cancelar").addEventListener("click", () => cerrarModal());
     $("#form").addEventListener("submit", guardarDesdeForm);
-    $("#modal").addEventListener("click", (e) => { if (e.target.id === "modal") cerrarModal(); });
 
     conectarAyudas();
 
@@ -2770,7 +2792,6 @@
     $("#config-cancelar").addEventListener("click", cerrarConfig);
     $("#config-guardar").addEventListener("click", guardarConfigDesdeEditor);
     $("#config-restaurar").addEventListener("click", restaurarConfig);
-    $("#modal-config").addEventListener("click", (e) => { if (e.target.id === "modal-config") cerrarConfig(); });
     $$("[data-add]").forEach((b) => b.addEventListener("click", () => agregarConfig(b.getAttribute("data-add"))));
 
     document.addEventListener("keydown", (e) => {
@@ -2779,7 +2800,7 @@
       // requerimiento"); Escape debe cerrar primero el glosario sin perder el formulario.
       if (!$("#modal-glosario").classList.contains("hidden")) cerrarGlosario();
       else if (!$("#modal-papelera").classList.contains("hidden")) cerrarPapelera();
-      else if (!$("#modal").classList.contains("hidden")) cerrarModal();
+      else if (!$("#modal").classList.contains("hidden")) cerrarModal();  // avisa si hay cambios
       else if (!$("#modal-config").classList.contains("hidden")) cerrarConfig();
     });
 
