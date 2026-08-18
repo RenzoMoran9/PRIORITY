@@ -40,7 +40,8 @@ Basados en tu hoja "JUNIO MEJORADO":
 - **Requerimiento (descripción)**: una sola descripción; ya no se pide aparte un
   «ítem» resumido (se guardaba dos veces lo mismo). El Excel exportado sigue
   trayendo ambas columnas.
-- **Especialista a cargo** y **Fecha de pase a especialista**
+- **Fecha de pase a especialista** (el campo «Especialista a cargo» ya no se pide;
+  la columna sigue existiendo en el Excel exportado)
 - **Estado del requerimiento**: sigue el flujo real de UPROG, paso a paso
   (ver la sección «Estados» más abajo). Puedes editar la lista en ⋯ → ⚙ Configurar.
 - **Observaciones**: el texto se **ajusta y se ve completo** dentro de la celda; al

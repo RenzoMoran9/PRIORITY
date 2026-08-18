@@ -40,9 +40,9 @@
   const MULTILINEA = new Set(["observaciones", "denominacion", "docArea", "areaUsuaria", "item"]);
 
   // Campos con sugerencias de valores ya usados (autocompletado)
-  const AUTOCOMP = new Set(["areaUsuaria", "especialista", "docArea", "item"]);
+  const AUTOCOMP = new Set(["areaUsuaria", "docArea", "item"]);
   // Campos cuyo texto alimenta el diccionario de predicción de palabras
-  const CAMPOS_TEXTO_VOCAB = ["docArea", "areaUsuaria", "item", "denominacion", "observaciones", "especialista"];
+  const CAMPOS_TEXTO_VOCAB = ["docArea", "areaUsuaria", "item", "denominacion", "observaciones"];
 
   function normalizarTxt(str) {
     return String(str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -594,7 +594,6 @@
     { f: "aCargo",       h: "A cargo",         def: "auto" }, // solo en «Heredados»
     { f: "pestana",      h: "Pestaña",         def: false },
     { f: "denominacion", h: "Denominación",    def: false },
-    { f: "especialista", h: "Especialista",    def: false },
     { f: "fechaPase",    h: "F. pase",         def: false },
     { f: "observaciones", h: "Observaciones",  def: true },
   ];
@@ -716,7 +715,6 @@
       aCargo: () => ed("aCargo", cargoBadge),
       pestana: () => ed("pestana", `<span class="badge pest-badge">${esc(tabNombre(it.pestana))}</span>`),
       denominacion: () => txt("denominacion", "cell-den"),
-      especialista: () => txt("especialista"),
       fechaPase: () => ed("fechaPase", fmtFecha(it.fechaPase)),
       observaciones: () => txt("observaciones", "cell-obs"),
     };
@@ -1044,7 +1042,6 @@
     set("#f-denominacion", it ? it.denominacion : "");
     set("#f-prioridad", it ? it.prioridad : defPrioridad());
     set("#f-estado", it ? it.estado : defEstado());
-    set("#f-especialista", it ? it.especialista : "");
     set("#f-fechaPase", it ? it.fechaPase : "");
     set("#f-tengoExp", it ? it.tengoExp : "");
     set("#f-aCargo", it ? it.aCargo : "");
@@ -1052,7 +1049,6 @@
     poblarDatalist("dl-areaUsuaria", "areaUsuaria");
     const cajaAnt = $("#f-anticipa"); if (cajaAnt) { cajaAnt.innerHTML = ""; cajaAnt.classList.add("hidden"); }
     const selTipo = $("#f-tipo"); if (selTipo) { delete selTipo.dataset.tocado; selTipo.classList.remove("campo-sugerido"); }
-    poblarDatalist("dl-especialista", "especialista");
     formFoto = fotoFormulario();
     $("#modal").classList.remove("hidden");
     setTimeout(() => $("#f-expLogistica").focus(), 50);
@@ -1061,7 +1057,7 @@
   let formFoto = "";
   const CAMPOS_FORM = ["#f-pestana", "#f-nro", "#f-fechaIngreso", "#f-expLogistica",
     "#f-expDireccion", "#f-docArea", "#f-areaUsuaria", "#f-tipo", "#f-denominacion",
-    "#f-prioridad", "#f-estado", "#f-especialista", "#f-fechaPase", "#f-tengoExp",
+    "#f-prioridad", "#f-estado", "#f-fechaPase", "#f-tengoExp",
     "#f-aCargo", "#f-observaciones"];
   function fotoFormulario() {
     return CAMPOS_FORM.map((sel) => { const el = $(sel); return el ? el.value : ""; }).join("\u0001");
@@ -1099,7 +1095,8 @@
       denominacion: $("#f-denominacion").value.trim(),
       prioridad: $("#f-prioridad").value,
       estado: $("#f-estado").value,
-      especialista: $("#f-especialista").value.trim(),
+      // Campo retirado de la vista; se conserva vacío para que el Excel no cambie
+      especialista: "",
       fechaPase: $("#f-fechaPase").value,
       tengoExp: $("#f-tengoExp").value,
       aCargo: $("#f-aCargo").value,
@@ -1854,7 +1851,6 @@
         (dias !== null ? ` (${dias} días en UPROG)` : "") +
         (sinMov !== null ? ` · Sin movimiento: ${sinMov} días` : ""));
       if (it.denominacion && !seParecen(it.item, it.denominacion)) L.push(`- Denominación: ${it.denominacion}`);
-      if (it.especialista) L.push(`- Especialista: ${it.especialista}`);
       if (it.observaciones) L.push(`- Observaciones: ${it.observaciones}`);
       if (Array.isArray(it.historial) && it.historial.length) {
         const h = it.historial.map((x) => {
@@ -2751,11 +2747,6 @@
     $("#batch-prioridad").addEventListener("change", (e) => { const v = e.target.value; e.target.value = ""; if (v) aplicarLote("prioridad", v, "Prioridad"); });
     $("#batch-pestana").addEventListener("change", (e) => { const v = e.target.value; e.target.value = ""; if (v) aplicarLote("pestana", v, "Pestaña"); });
     $("#batch-cargo").addEventListener("change", (e) => { const v = e.target.value; e.target.value = ""; if (v) aplicarLote("aCargo", v, "A cargo"); });
-    $("#batch-especialista").addEventListener("click", () => {
-      const nombre = prompt("Especialista a asignar a los seleccionados:", "");
-      if (nombre === null) return;
-      aplicarLote("especialista", nombre.trim(), "Especialista");
-    });
     $("#batch-eliminar").addEventListener("click", eliminarLote);
     $("#batch-cancelar").addEventListener("click", () => { seleccion.clear(); renderTabla(); sincronizarSeleccion(); });
 

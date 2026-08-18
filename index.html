@@ -106,7 +106,7 @@
   <section class="toolbar">
     <div class="search">
       <span class="search-icon">🔎</span>
-      <input type="search" id="buscar" placeholder="Buscar por exp., documento, área, denominación, especialista…" />
+      <input type="search" id="buscar" placeholder="Buscar por exp., documento, área o descripción…" />
     </div>
     <div class="filters">
       <select id="filtro-cargo" class="select">
@@ -139,7 +139,6 @@
       <option value="SÍ">SÍ (a mi cargo)</option>
       <option value="NO">NO (de otra persona)</option>
     </select>
-    <button id="batch-especialista" class="btn btn-ghost btn-sm">👤 Asignar especialista</button>
     <button id="batch-eliminar" class="btn btn-ghost btn-sm">🗑 Eliminar</button>
     <button id="batch-cancelar" class="btn btn-ghost btn-sm">✕ Quitar selección</button>
   </section>
@@ -252,11 +251,6 @@
           <label class="field">
             <span>Estado del requerimiento</span>
             <select id="f-estado" class="select"></select>
-          </label>
-          <label class="field">
-            <span>Especialista a cargo</span>
-            <input type="text" id="f-especialista" placeholder="Nombre del especialista" list="dl-especialista" autocomplete="off" />
-            <datalist id="dl-especialista"></datalist>
           </label>
           <label class="field">
             <span>Fecha de pase a especialista</span>
