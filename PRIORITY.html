@@ -722,6 +722,16 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
 /* ---------- Días sin movimiento ---------- */
 .sinmov-tag { display: block; font-size: 10.5px; color: var(--warn); margin-top: 3px; white-space: nowrap; }
 
+/* ---------- Conectar con Google Drive ---------- */
+.drive-pop { max-height: 86vh; overflow-y: auto; }
+.drive-pasos { margin: 4px 0 10px; padding-left: 20px; font-size: 12.5px; line-height: 1.6; }
+.drive-pasos li { margin-bottom: 5px; }
+.drive-url { width: 100%; font-size: 12px; }
+.drive-foot { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+.drive-estado { font-size: 11.5px; color: var(--muted); flex: 1 1 100%; }
+.drive-estado.bien { color: var(--ok); font-weight: 600; }
+.drive-estado.mal { color: var(--danger); font-weight: 600; }
+
 /* ---------- Selector de columnas (👁) ---------- */
 .cols-lista { display: flex; flex-direction: column; gap: 7px; max-height: 330px; overflow-y: auto; padding: 2px 0; }
 .cols-item { display: flex; gap: 8px; align-items: center; font-size: 13px; cursor: pointer; user-select: none; }
@@ -830,6 +840,7 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
           <div class="menu-sep"></div>
           <button id="btn-resumen" class="menu-item" title="Baja un resumen legible (.md) para subirlo a un Proyecto de Claude o a Drive y consultar tus expedientes desde el celular">🤖 Resumen para consultar con IA</button>
           <button id="btn-resumen-link" class="menu-item" title="Vincula un archivo .md (por ejemplo dentro de tu carpeta de Google Drive) que se actualice solo con cada cambio">🔄 Vincular resumen (Drive)</button>
+          <button id="btn-drive" class="menu-item" title="Guarda el resumen en tu Drive automáticamente, sin instalar nada">☁ Conectar con Google Drive…</button>
           <div class="menu-sep"></div>
           <button id="btn-respaldo" class="menu-item" title="Guardar TODO en un archivo: requerimientos, historial, papelera, listas y preferencias (para pasar a otra PC)">💾 Guardar copia de todo</button>
           <button id="btn-restaurar" class="menu-item" title="Restaurar desde una copia de seguridad (reemplaza lo que haya en esta PC)">📂 Restaurar copia</button>
@@ -1647,6 +1658,7 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
     catch (e) { toast("No se pudo guardar (almacenamiento lleno o bloqueado)."); }
     if (fileHandle) escribirVinculado(false);
     if (mdHandle) escribirResumen(false);
+    sincronizarDrive();
   }
 
   function cargarConfig() {
@@ -3239,6 +3251,189 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
     toast(`Resumen listo (${items.length} expedientes). Súbelo a tu Proyecto de Claude o a Drive para consultarlo desde el celular.`);
   }
 
+
+  // ---------- Puente con Google Drive (Apps Script) ----------
+  // Un pequeño programa en la cuenta de Google del usuario recibe el resumen y lo
+  // guarda en una carpeta «PRIORITY» de su Drive. Así no hace falta instalar nada
+  // ni exportar a mano: cada cambio viaja solo.
+  const DRIVE_KEY = "priority_drive_v1";
+  let drive = { url: "", clave: "", ultimoRespaldo: 0 };
+  let driveTimer = null;
+
+  function cargarDrive() {
+    try {
+      const g = JSON.parse(localStorage.getItem(DRIVE_KEY));
+      if (g && typeof g === "object") drive = Object.assign(drive, g);
+    } catch (e) {}
+    if (!drive.clave) drive.clave = uid().replace(/-/g, "").slice(0, 24);
+    actualizarBotonDrive();
+  }
+  function guardarDrive() {
+    try { localStorage.setItem(DRIVE_KEY, JSON.stringify(drive)); } catch (e) {}
+    actualizarBotonDrive();
+  }
+  function actualizarBotonDrive() {
+    const b = $("#btn-drive");
+    if (!b) return;
+    if (drive.url) {
+      b.textContent = "☁ Drive conectado ✓";
+      b.classList.add("vinculado");
+      b.title = "Cada cambio se guarda solo en la carpeta PRIORITY de tu Drive. Clic para revisar o cambiar la conexión.";
+    } else {
+      b.textContent = "☁ Conectar con Google Drive…";
+      b.classList.remove("vinculado");
+      b.title = "Guarda el resumen en tu Drive automáticamente, sin instalar nada";
+    }
+  }
+
+  // Código del Apps Script, ya con la clave del usuario puesta
+  function codigoAppsScript() {
+    return [
+      "/** PRIORITY · Puente con Google Drive",
+      " *  Guarda el resumen de tus expedientes en la carpeta CARPETA de tu Drive.",
+      " *  No toca ningún otro archivo. */",
+      "",
+      "const CLAVE   = '" + drive.clave + "';   // debe coincidir con la de la app",
+      "const CARPETA = 'PRIORITY';              // carpeta donde se guarda todo",
+      "",
+      "function doPost(e) {",
+      "  try {",
+      "    const d = JSON.parse(e.postData.contents);",
+      "    if (!d || d.clave !== CLAVE) return respuesta_({ ok: false, error: 'Clave incorrecta' });",
+      "    const carpeta = carpetaDestino_();",
+      "    const nombre  = String(d.nombre || 'PRIORITY_estado.md').replace(/[\\/\\\\]/g, '-');",
+      "    const it = carpeta.getFilesByName(nombre);",
+      "    if (it.hasNext()) it.next().setContent(d.contenido || '');",
+      "    else carpeta.createFile(nombre, d.contenido || '', tipoMime_(nombre));",
+      "    return respuesta_({ ok: true, archivo: nombre, carpeta: carpeta.getName() });",
+      "  } catch (err) {",
+      "    return respuesta_({ ok: false, error: String(err) });",
+      "  }",
+      "}",
+      "",
+      "function doGet() { return respuesta_({ ok: true, mensaje: 'Puente de PRIORITY activo' }); }",
+      "",
+      "function carpetaDestino_() {",
+      "  const it = DriveApp.getFoldersByName(CARPETA);",
+      "  return it.hasNext() ? it.next() : DriveApp.createFolder(CARPETA);",
+      "}",
+      "function tipoMime_(n) {",
+      "  return n.slice(-5).toLowerCase() === '.json' ? 'application/json' : 'text/plain';",
+      "}",
+      "function respuesta_(o) {",
+      "  return ContentService.createTextOutput(JSON.stringify(o))",
+      "    .setMimeType(ContentService.MimeType.JSON);",
+      "}",
+    ].join("\n");
+  }
+
+  async function enviarADrive(nombre, contenido) {
+    if (!drive.url) return { ok: false, error: "sin conectar" };
+    try {
+      const r = await fetch(drive.url, {
+        method: "POST",
+        // texto plano: evita la comprobación previa del navegador (CORS)
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ clave: drive.clave, nombre: nombre, contenido: contenido }),
+        redirect: "follow",
+      });
+      const txt = await r.text();
+      try { return JSON.parse(txt); } catch (e) { return { ok: r.ok }; }
+    } catch (e) {
+      return { ok: false, error: String(e) };
+    }
+  }
+
+  // Se llama tras cada guardado; espera un momento para no enviar en cada tecla
+  function sincronizarDrive() {
+    if (!drive.url) return;
+    clearTimeout(driveTimer);
+    driveTimer = setTimeout(async () => {
+      await enviarADrive("PRIORITY_estado.md", resumenTexto());
+      // Además, una copia de seguridad completa una vez al día
+      const unDia = 86400000;
+      if (Date.now() - (drive.ultimoRespaldo || 0) > unDia) {
+        const datos = {};
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.indexOf("priority_") === 0) datos[k] = localStorage.getItem(k);
+          }
+        } catch (e) {}
+        const paquete = { app: "PRIORITY", formato: 1, fecha: new Date().toISOString(), requerimientos: items.length, datos: datos };
+        const res = await enviarADrive("PRIORITY_copia.json", JSON.stringify(paquete));
+        if (res && res.ok) { drive.ultimoRespaldo = Date.now(); guardarDrive(); }
+      }
+    }, 2500);
+  }
+
+  function abrirConfigDrive(btn) {
+    const rect = btn.getBoundingClientRect();
+    const back = document.createElement("div"); back.className = "popover-backdrop";
+    const pop = document.createElement("div"); pop.className = "cell-popover drive-pop";
+    pop.innerHTML =
+      '<div class="cp-label">Guardar en Google Drive sin instalar nada</div>' +
+      '<ol class="drive-pasos">' +
+        '<li>Entra a <b>script.google.com</b> → <b>Nuevo proyecto</b>.</li>' +
+        '<li>Borra lo que haya y pega el código: <button type="button" class="btn btn-ghost btn-sm" id="drive-copiar">📋 Copiar código</button></li>' +
+        '<li>Pulsa <b>Implementar → Nueva implementación</b>, tipo <b>Aplicación web</b>, ' +
+            'en «Quién tiene acceso» elige <b>Cualquier usuario</b> y autoriza.</li>' +
+        '<li>Copia la dirección que termina en <b>/exec</b> y pégala aquí:</li>' +
+      '</ol>' +
+      '<input type="text" id="drive-url" class="select drive-url" placeholder="https://script.google.com/macros/s/…/exec" value="' + esc(drive.url) + '" />' +
+      '<div class="drive-foot">' +
+        '<button type="button" class="btn btn-primary btn-sm" id="drive-probar">Conectar y probar</button>' +
+        (drive.url ? '<button type="button" class="btn btn-ghost btn-sm" id="drive-quitar">Desconectar</button>' : "") +
+        '<span class="drive-estado" id="drive-estado"></span>' +
+      "</div>";
+    document.body.appendChild(back); document.body.appendChild(pop);
+    const w = Math.min(430, window.innerWidth - 16);
+    pop.style.width = w + "px";
+    pop.style.left = Math.max(8, Math.min(rect.left - w + 200, window.innerWidth - w - 8)) + "px";
+    pop.style.top = Math.max(8, Math.min(rect.bottom + 6, window.innerHeight - pop.offsetHeight - 12)) + "px";
+    const cerrar = () => { back.remove(); pop.remove(); document.removeEventListener("keydown", esche, true); };
+    const esche = (e) => { if (e.key === "Escape") { e.stopPropagation(); cerrar(); } };
+    back.addEventListener("mousedown", cerrar);
+    document.addEventListener("keydown", esche, true);
+
+    pop.querySelector("#drive-copiar").addEventListener("click", async (e) => {
+      const codigo = codigoAppsScript();
+      try { await navigator.clipboard.writeText(codigo); e.target.textContent = "✓ Copiado"; }
+      catch (err) {
+        const ta = document.createElement("textarea");
+        ta.value = codigo; document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); e.target.textContent = "✓ Copiado"; } catch (e2) {}
+        ta.remove();
+      }
+    });
+    pop.querySelector("#drive-probar").addEventListener("click", async () => {
+      const url = pop.querySelector("#drive-url").value.trim();
+      const est = pop.querySelector("#drive-estado");
+      if (!/^https:\/\/script\.google\.com\/.*\/exec$/.test(url)) {
+        est.textContent = "La dirección debe terminar en /exec"; est.className = "drive-estado mal"; return;
+      }
+      est.textContent = "Probando…"; est.className = "drive-estado";
+      const previa = drive.url; drive.url = url;
+      const res = await enviarADrive("PRIORITY_estado.md", resumenTexto());
+      if (res && res.ok) {
+        guardarDrive();
+        est.textContent = "✓ Conectado. Guardado en la carpeta «PRIORITY» de tu Drive.";
+        est.className = "drive-estado bien";
+        toast("Drive conectado: tus expedientes se guardarán solos en la carpeta «PRIORITY».");
+        setTimeout(cerrar, 1600);
+      } else {
+        drive.url = previa;
+        est.textContent = "No respondió. Revisa que el acceso sea «Cualquier usuario» y que la clave del código coincida.";
+        est.className = "drive-estado mal";
+      }
+    });
+    const q = pop.querySelector("#drive-quitar");
+    if (q) q.addEventListener("click", () => {
+      drive.url = ""; guardarDrive(); cerrar();
+      toast("Drive desconectado. Tus datos siguen intactos en esta PC.");
+    });
+  }
+
   // ---------- Copia de seguridad completa (para pasar a otra PC) ----------
   // Los datos viven en el navegador, no dentro del archivo HTML: esto empaqueta
   // TODO (requerimientos, historial, papelera, listas, columnas, tema y zoom).
@@ -3773,6 +3968,7 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
     // Resumen para consultar con IA
     $("#btn-resumen").addEventListener("click", exportarResumen);
     $("#btn-resumen-link").addEventListener("click", vincularResumen);
+    $("#btn-drive").addEventListener("click", (e) => abrirConfigDrive(e.currentTarget));
 
     // Copia de seguridad completa
     $("#btn-respaldo").addEventListener("click", guardarRespaldo);
@@ -3800,6 +3996,7 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
     cargarZoom();
     conectarModoFoco();
     restaurarVinculoResumen();
+    cargarDrive();
   });
 })();
 

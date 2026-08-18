@@ -245,7 +245,32 @@ preguntarle a Claude «¿en qué va el expediente 2728?» desde cualquier lugar.
    esperando presupuesto?»*, *«¿qué expedientes llevan más de 30 días sin
    moverse?»*, *«¿cuáles no tengo en físico?»*.
 
-### Que se mantenga solo al día (Google Drive)
+### Guardar en Drive sin instalar nada (recomendado)
+
+Con **⋯ → ☁ Conectar con Google Drive…** la app manda el resumen a tu Drive sola,
+sin programas que instalar y funcionando desde cualquier PC.
+
+Cómo se monta (una vez, ~10 minutos):
+
+1. Entra a **script.google.com** con tu cuenta → **Nuevo proyecto**.
+2. Borra lo que haya y pega el código con el botón **📋 Copiar código** del
+   asistente (ya viene con tu clave secreta incluida).
+3. **Implementar → Nueva implementación → Aplicación web**; en «Quién tiene
+   acceso» elige **Cualquier usuario** y autoriza con tu cuenta.
+4. Copia la dirección que termina en **/exec**, pégala en el asistente y pulsa
+   **Conectar y probar**.
+
+A partir de ahí, cada cambio que hagas se guarda solo en la carpeta **PRIORITY**
+de tu Drive:
+
+- `PRIORITY_estado.md` — el resumen que lee Claude (se **actualiza**, no se
+  duplica).
+- `PRIORITY_copia.json` — copia de seguridad completa, una vez al día.
+
+Todo queda dentro de **tu** cuenta: el script vive en tu Google y solo escribe en
+esa carpeta. La clave secreta impide que alguien más use tu dirección.
+
+### Que se mantenga solo al día (Google Drive de escritorio)
 
 Con **⋯ → 🔄 Vincular resumen (Drive)** eliges una vez el archivo `.md` y la app lo
 **reescribe con cada cambio** que hagas. Si ese archivo está dentro de la carpeta de
