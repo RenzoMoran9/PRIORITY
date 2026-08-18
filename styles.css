@@ -388,7 +388,7 @@ textarea.cell-editor { resize: vertical; min-height: 54px; line-height: 1.4; ove
 /* Anchos de celdas de la tabla editable */
 .cell-den { min-width: 240px; max-width: 360px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cell-item2 { min-width: 240px; max-width: 430px; font-weight: 600; }
-.item-main { font-weight: 700; font-size: 13.5px; }
+.item-main { font-weight: 700; font-size: 13.5px; line-height: 1.4; white-space: normal; }
 .cell-exp { font-size: 14px; }
 /* Sublínea gris (denominación bajo el ítem, estratégica bajo el área): editable con su clic */
 .sub-linea {

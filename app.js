@@ -680,24 +680,25 @@
     const txt = (f, cls) => ed(f, esc(it[f]) || GUION, cls);
     const esAlta = !!it.prioridad && it.prioridad === prioridadTop();
 
-    // Ítem con la denominación debajo, PERO solo si aporta algo distinto: en la
-    // mayoría de expedientes la denominación es el mismo ítem con relleno
-    // ("SOLICITO ADQUISICION DE… PARA EL SERVICIO DE…") y se veía repetido.
-    const denAporta = it.denominacion && !seParecen(it.item, it.denominacion);
-    const denSub = denAporta
-      ? `<span class="sub-linea sub-edit" data-sub="denominacion" data-id="${it.id}" title="Denominación completa · clic para editarla">${esc(it.denominacion)}</span>` : "";
-    // Si no se muestra, la denominación sigue accesible al pasar el mouse por el ítem
-    const tituloItem = (it.denominacion && !denAporta) ? ` title="${esc(it.denominacion)}"` : "";
-    const celdaItem = `<div class="item-main"${tituloItem}>${esc(it.item) || GUION}</div>` + denSub;
-    // Área usuaria con la estratégica debajo SOLO si difiere (94% son iguales)
-    const difEstr = it.areaEstrategica && String(it.areaEstrategica).trim().toUpperCase() !== String(it.areaUsuaria || "").trim().toUpperCase();
-    const celdaArea = (esc(it.areaUsuaria) || GUION) +
-      (difEstr ? `<span class="sub-linea sub-edit" data-sub="areaEstrategica" data-id="${it.id}" title="Área estratégica (difiere de la usuaria) · clic para editarla">Estr.: ${esc(it.areaEstrategica)}</span>` : "");
+    // ÍTEM: una sola línea grande y legible. Si el ítem está vacío se muestra la
+    // denominación en su lugar (antes quedaba un «—» grande con el texto real en
+    // gris chiquito debajo). El texto completo queda en el tooltip.
+    const textoItem = (it.item && String(it.item).trim()) || (it.denominacion && String(it.denominacion).trim()) || "";
+    const tituloItem = it.denominacion && !seParecen(textoItem, it.denominacion)
+      ? ` title="${esc(it.denominacion)}"` : "";
+    const celdaItem = `<div class="item-main"${tituloItem}>${esc(textoItem) || GUION}</div>`;
+    // ÁREA USUARIA: mismo criterio; si está vacía se muestra la estratégica.
+    const textoArea = (it.areaUsuaria && String(it.areaUsuaria).trim()) || (it.areaEstrategica && String(it.areaEstrategica).trim()) || "";
+    const difEstr = it.areaEstrategica && textoArea &&
+      String(it.areaEstrategica).trim().toUpperCase() !== String(textoArea).trim().toUpperCase();
+    const celdaArea = `<span${difEstr ? ` title="Área estratégica: ${esc(it.areaEstrategica)}"` : ""}>${esc(textoArea) || GUION}</span>`;
 
     const CELDA = {
       nro: () => ed("nro", esc(it.nro) || GUION, "num cell-strong col-nro"),
       expLogistica: () => txt("expLogistica", "cell-strong cell-exp"),
-      item: () => ed("item", celdaItem, "cell-item2"),
+      // Si la celda muestra la denominación (porque no hay ítem), el clic edita
+      // ese mismo texto y no un campo vacío que no se ve.
+      item: () => ed(it.item && String(it.item).trim() ? "item" : "denominacion", celdaItem, "cell-item2"),
       tipo: () => ed("tipo", badge(it.tipo, COL.tipo)),
       estado: () => {
         // ⏭ avanza al siguiente paso con un clic (el flujo es lineal y acaba en TERMINADO;
@@ -709,7 +710,7 @@
       },
       prioridad: () => ed("prioridad", badge(it.prioridad, COL.prioridad)),
       fechaIngreso: () => ed("fechaIngreso", fmtFecha(it.fechaIngreso) + antig),
-      areaUsuaria: () => ed("areaUsuaria", celdaArea, "cell-area"),
+      areaUsuaria: () => ed(it.areaUsuaria && String(it.areaUsuaria).trim() ? "areaUsuaria" : "areaEstrategica", celdaArea, "cell-area"),
       docArea: () => txt("docArea", "cell-doc"),
       expDireccion: () => txt("expDireccion"),
       tengoExp: () => ed("tengoExp", tengoBadge),
