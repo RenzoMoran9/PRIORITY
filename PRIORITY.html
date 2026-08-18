@@ -3331,18 +3331,33 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
 
   async function enviarADrive(nombre, contenido) {
     if (!drive.url) return { ok: false, error: "sin conectar" };
+    const cuerpo = JSON.stringify({ clave: drive.clave, nombre: nombre, contenido: contenido });
+    const opciones = {
+      method: "POST",
+      // texto plano: evita la comprobación previa del navegador (CORS)
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: cuerpo,
+      redirect: "follow",
+    };
     try {
-      const r = await fetch(drive.url, {
-        method: "POST",
-        // texto plano: evita la comprobación previa del navegador (CORS)
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ clave: drive.clave, nombre: nombre, contenido: contenido }),
-        redirect: "follow",
-      });
+      const r = await fetch(drive.url, opciones);
       const txt = await r.text();
-      try { return JSON.parse(txt); } catch (e) { return { ok: r.ok }; }
+      try { return JSON.parse(txt); } catch (e) {}
+      // Si devuelve la página de inicio de sesión, el acceso no es «Cualquier usuario»
+      if (/accounts\.google\.com|iniciar sesión|Sign in/i.test(txt)) {
+        return { ok: false, motivo: "acceso", error: "El script pide iniciar sesión: en la implementación, «Quién tiene acceso» debe ser «Cualquier usuario»." };
+      }
+      return { ok: r.ok, motivo: r.ok ? "" : "respuesta", error: "El script respondió " + r.status };
     } catch (e) {
-      return { ok: false, error: String(e) };
+      // Abrir la app con doble clic (file://) hace que el navegador bloquee la
+      // lectura de la respuesta. Se reintenta "a ciegas": el envío sí llega.
+      try {
+        await fetch(drive.url, Object.assign({}, opciones, { mode: "no-cors" }));
+        return { ok: true, aciegas: true };
+      } catch (e2) {
+        return { ok: false, motivo: "red",
+          error: "No se pudo contactar con el script. Revisa que la dirección sea la de la implementación (termina en /exec), que tengas internet y que el acceso sea «Cualquier usuario»." };
+      }
     }
   }
 
@@ -3417,15 +3432,22 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
       est.textContent = "Probando…"; est.className = "drive-estado";
       const previa = drive.url; drive.url = url;
       const res = await enviarADrive("PRIORITY_estado.md", resumenTexto());
-      if (res && res.ok) {
+      if (res && res.ok && !res.aciegas) {
         guardarDrive();
         est.textContent = "✓ Conectado. Guardado en la carpeta «PRIORITY» de tu Drive.";
         est.className = "drive-estado bien";
         toast("Drive conectado: tus expedientes se guardarán solos en la carpeta «PRIORITY».");
         setTimeout(cerrar, 1600);
+      } else if (res && res.aciegas) {
+        // Se envió, pero el navegador no deja leer la confirmación (típico con file://)
+        guardarDrive();
+        est.innerHTML = "Enviado ✓ — pero el navegador no deja confirmar la respuesta.<br>" +
+          "<b>Abre tu Google Drive y busca la carpeta «PRIORITY»</b>: si el archivo está ahí, quedó bien conectado.";
+        est.className = "drive-estado bien";
       } else {
         drive.url = previa;
-        est.textContent = "No respondió. Revisa que el acceso sea «Cualquier usuario» y que la clave del código coincida.";
+        est.textContent = (res && res.error) ? res.error
+          : "No respondió. Revisa que el acceso sea «Cualquier usuario» y que la clave del código coincida.";
         est.className = "drive-estado mal";
       }
     });
