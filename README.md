@@ -24,7 +24,9 @@ Basados en tu hoja "JUNIO MEJORADO":
 - **Fecha de ingreso a UPROG**
 - **N° Exp. Logística** y **N° Exp. Dirección**
 - **N° de documento del área que solicita** (ej. NOTA INFORMATIVA N°…)
-- **Área usuaria estratégica** y **Área usuaria**
+- **Área usuaria** (la «área estratégica» ya no se pide: en la práctica siempre
+  coincidía, así que se rellena sola con el mismo valor para que el Excel
+  exportado conserve todas sus columnas)
 - **Tipo** (Bien / Insumo / Servicio / Activo no financiero / Paciente). Junto al
   campo hay un ícono **ℹ** que explica el significado de cada uno al pasar el mouse
   o tocarlo:

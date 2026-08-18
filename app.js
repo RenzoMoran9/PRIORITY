@@ -37,12 +37,12 @@
     observaciones: "textarea",
   };
   // Campos de texto que se editan en el cuadro amplio multilínea
-  const MULTILINEA = new Set(["observaciones", "denominacion", "docArea", "areaEstrategica", "areaUsuaria", "item"]);
+  const MULTILINEA = new Set(["observaciones", "denominacion", "docArea", "areaUsuaria", "item"]);
 
   // Campos con sugerencias de valores ya usados (autocompletado)
-  const AUTOCOMP = new Set(["areaEstrategica", "areaUsuaria", "especialista", "docArea", "item"]);
+  const AUTOCOMP = new Set(["areaUsuaria", "especialista", "docArea", "item"]);
   // Campos cuyo texto alimenta el diccionario de predicción de palabras
-  const CAMPOS_TEXTO_VOCAB = ["docArea", "areaEstrategica", "areaUsuaria", "item", "denominacion", "observaciones", "especialista"];
+  const CAMPOS_TEXTO_VOCAB = ["docArea", "areaUsuaria", "item", "denominacion", "observaciones", "especialista"];
 
   function normalizarTxt(str) {
     return String(str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -593,7 +593,6 @@
     { f: "tengoExp",     h: "¿Tengo exp.?",    def: true },
     { f: "aCargo",       h: "A cargo",         def: "auto" }, // solo en «Heredados»
     { f: "pestana",      h: "Pestaña",         def: false },
-    { f: "areaEstrategica", h: "Área estratégica", def: false },
     { f: "denominacion", h: "Denominación",    def: false },
     { f: "especialista", h: "Especialista",    def: false },
     { f: "fechaPase",    h: "F. pase",         def: false },
@@ -691,9 +690,7 @@
     const celdaItem = `<div class="item-main"${tituloItem}>${esc(textoItem) || GUION}</div>`;
     // ÁREA USUARIA: mismo criterio; si está vacía se muestra la estratégica.
     const textoArea = (it.areaUsuaria && String(it.areaUsuaria).trim()) || (it.areaEstrategica && String(it.areaEstrategica).trim()) || "";
-    const difEstr = it.areaEstrategica && textoArea &&
-      String(it.areaEstrategica).trim().toUpperCase() !== String(textoArea).trim().toUpperCase();
-    const celdaArea = `<span${difEstr ? ` title="Área estratégica: ${esc(it.areaEstrategica)}"` : ""}>${esc(textoArea) || GUION}</span>`;
+    const celdaArea = esc(textoArea) || GUION;
 
     const CELDA = {
       nro: () => ed("nro", esc(it.nro) || GUION, "num cell-strong col-nro"),
@@ -718,7 +715,6 @@
       tengoExp: () => ed("tengoExp", tengoBadge),
       aCargo: () => ed("aCargo", cargoBadge),
       pestana: () => ed("pestana", `<span class="badge pest-badge">${esc(tabNombre(it.pestana))}</span>`),
-      areaEstrategica: () => txt("areaEstrategica", "cell-area"),
       denominacion: () => txt("denominacion", "cell-den"),
       especialista: () => txt("especialista"),
       fechaPase: () => ed("fechaPase", fmtFecha(it.fechaPase)),
@@ -1043,7 +1039,6 @@
     set("#f-expLogistica", it ? it.expLogistica : "");
     set("#f-expDireccion", it ? it.expDireccion : "");
     set("#f-docArea", it ? it.docArea : "");
-    set("#f-areaEstrategica", it ? it.areaEstrategica : "");
     set("#f-areaUsuaria", it ? it.areaUsuaria : "");
     set("#f-tipo", it ? it.tipo : defTipo());
     set("#f-item", it ? it.item : "");
@@ -1055,7 +1050,6 @@
     set("#f-tengoExp", it ? it.tengoExp : "");
     set("#f-aCargo", it ? it.aCargo : "");
     set("#f-observaciones", it ? it.observaciones : "");
-    poblarDatalist("dl-areaEstrategica", "areaEstrategica");
     poblarDatalist("dl-areaUsuaria", "areaUsuaria");
     poblarDatalist("dl-especialista", "especialista");
     $("#modal").classList.remove("hidden");
@@ -1078,7 +1072,9 @@
       expLogistica,
       expDireccion: $("#f-expDireccion").value.trim(),
       docArea: $("#f-docArea").value.trim(),
-      areaEstrategica: $("#f-areaEstrategica").value.trim(),
+      // Se conserva el campo por compatibilidad con el Excel exportado, con el
+      // mismo valor del área usuaria (en la práctica siempre coincidían).
+      areaEstrategica: $("#f-areaUsuaria").value.trim(),
       areaUsuaria: $("#f-areaUsuaria").value.trim(),
       tipo: $("#f-tipo").value,
       item: $("#f-item").value.trim(),
@@ -1834,7 +1830,6 @@
       L.push("");
       L.push(`- Estado: **${it.estado || "—"}** · N°: ${it.nro || "—"} · Hoja: ${tabNombre(it.pestana)}`);
       L.push(`- Área usuaria: ${it.areaUsuaria || "—"}`);
-      if (it.areaEstrategica && it.areaEstrategica !== it.areaUsuaria) L.push(`- Área estratégica: ${it.areaEstrategica}`);
       L.push(`- Documento del área: ${it.docArea || "—"} · Exp. Dirección: ${it.expDireccion || "—"}`);
       L.push(`- Tipo: ${it.tipo || "—"} · Prioridad: ${it.prioridad || "—"} · ¿Tengo el expediente físico?: ${it.tengoExp || "—"}`);
       L.push(`- Ingreso a UPROG: ${fmtFecha(it.fechaIngreso)}` +
