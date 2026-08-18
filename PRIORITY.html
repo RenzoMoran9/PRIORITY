@@ -3299,7 +3299,10 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
       "",
       "function doPost(e) {",
       "  try {",
-      "    const d = JSON.parse(e.postData.contents);",
+      "    // Acepta el envío directo y también el de formulario (campo 'datos'),",
+      "    // que es el que funciona cuando la app se abre con doble clic.",
+      "    const crudo = (e.parameter && e.parameter.datos) ? e.parameter.datos : e.postData.contents;",
+      "    const d = JSON.parse(crudo);",
       "    if (!d || d.clave !== CLAVE) return respuesta_({ ok: false, error: 'Clave incorrecta' });",
       "    const carpeta = carpetaDestino_();",
       "    const nombre  = String(d.nombre || 'PRIORITY_estado.md');",
@@ -3349,16 +3352,37 @@ body.modo-foco .table-wrap { margin-top: 6px; margin-bottom: 8px; }
       }
       return { ok: r.ok, motivo: r.ok ? "" : "respuesta", error: "El script respondió " + r.status };
     } catch (e) {
-      // Abrir la app con doble clic (file://) hace que el navegador bloquee la
-      // lectura de la respuesta. Se reintenta "a ciegas": el envío sí llega.
+      // Abrir la app con doble clic (file://) hace que el navegador bloquee este
+      // tipo de envío. Los formularios sí están permitidos: se manda por ahí.
       try {
-        await fetch(drive.url, Object.assign({}, opciones, { mode: "no-cors" }));
+        await enviarPorFormulario(cuerpo);
         return { ok: true, aciegas: true };
       } catch (e2) {
         return { ok: false, motivo: "red",
           error: "No se pudo contactar con el script. Revisa que la dirección sea la de la implementación (termina en /exec), que tengas internet y que el acceso sea «Cualquier usuario»." };
       }
     }
+  }
+
+  // Envío por formulario dentro de un marco oculto: los formularios no están
+  // sujetos a las restricciones que bloquean el envío normal desde file://.
+  function enviarPorFormulario(cuerpo) {
+    return new Promise((res) => {
+      const nombre = "priority_drive_" + Date.now();
+      const marco = document.createElement("iframe");
+      marco.name = nombre; marco.style.display = "none";
+      document.body.appendChild(marco);
+      const form = document.createElement("form");
+      form.action = drive.url; form.method = "POST"; form.target = nombre;
+      form.style.display = "none";
+      const campo = document.createElement("input");
+      campo.type = "hidden"; campo.name = "datos"; campo.value = cuerpo;
+      form.appendChild(campo);
+      document.body.appendChild(form);
+      form.submit();
+      // Se limpia después; no se puede leer la respuesta (otro dominio)
+      setTimeout(() => { form.remove(); marco.remove(); res(); }, 4000);
+    });
   }
 
   // Se llama tras cada guardado; espera un momento para no enviar en cada tecla
